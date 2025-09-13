@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>袋裝/杯裝 訂單</title>
+<title>每週豆漿團購登記</title>
 <style>
 :root{
   --radius: 10px; --border:#ddd; --cat:#d9edf7; --hi:#fff7b1;
@@ -85,7 +85,7 @@ input[type="text"]{width:100%;padding:8px;font-size:var(--fz-large);border:1px s
 </head>
 <body>
 <div class="wrap" id="wrap">
-  <h1>袋裝/杯裝 訂單</h1>
+  <h1>每週豆漿團購登記</h1>
 
   <label for="buyer">訂購人姓名</label>
   <input type="text" id="buyer" placeholder="輸入姓名" />
@@ -129,11 +129,11 @@ input[type="text"]{width:100%;padding:8px;font-size:var(--fz-large);border:1px s
 
     <!-- 加入清單 / 小計模式 / 清空所有紀錄 -->
     <div class="toolbar" style="margin-top:8px">
-      <button class="btn" id="btn-add-record">加入本次填寫到清單</button>
+      <button class="btn" id="btn-add-record">填寫完成/加入至統計表</button>
       <button class="btn" id="btn-bottom-mode">小計模式（截圖使用）/復原檢視模式</button>
     </div>
     <button class="btn danger" id="btn-clear-all" title="清除所有紀錄與輸入">⚠️ 清空所有紀錄（防呆）</button>
-    <div class="muted">提示：清空所有紀錄時，需輸入「清空」才會執行。</div>
+    <div class="muted">說明：僅限由團主執行"清空所有紀錄"，並且須輸入「清空」才會執行。</div>
   </div>
 
   <!-- 團購清單（使用者紀錄） -->
@@ -394,7 +394,7 @@ function renderRecords(){
   const listEl=$('#records-list'); if(!listEl) return;
   listEl.innerHTML='';
   const records=getRecords();
-  if(!records.length){ listEl.innerHTML='<div class="muted">尚無紀錄，請先在上方輸入並按「加入本次填寫到清單」。</div>'; renderAggregate(); return; }
+  if(!records.length){ listEl.innerHTML='<div class="muted">尚無紀錄，請先在上方輸入並按「填寫完成」。</div>'; renderAggregate(); return; }
 
   records.forEach((rec,ri)=>{
     const card=document.createElement('div'); card.className='record';
