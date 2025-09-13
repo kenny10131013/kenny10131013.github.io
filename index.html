@@ -10,107 +10,45 @@
   --fz-base: clamp(16px, 3vw, 20px);
   --fz-large: clamp(18px, 4vw, 24px);
 }
-
-/* 全域 */
 *{box-sizing:border-box}
-body{
-  margin:0; background:#fafafa;
-  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",sans-serif;
-  font-size:var(--fz-base); line-height:1.4;
-}
-
-/* 外框容器（有黑色外框，截圖清楚） */
-.wrap{
-  max-width:520px; margin:auto; padding:10px; background:#fff;
-  border:2px solid #000; border-radius:12px; box-sizing:border-box;
-}
-
+body{margin:0;background:#fafafa;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",sans-serif;font-size:var(--fz-base);line-height:1.4;}
+.wrap{max-width:520px;margin:auto;padding:10px;background:#fff;border:2px solid #000;border-radius:12px;box-sizing:border-box;}
 h1{font-size:var(--fz-large);margin:4px 0 12px;text-align:center;}
 label{display:block;margin-bottom:6px;font-weight:600;}
-input[type="text"]{
-  width:100%;padding:8px;font-size:var(--fz-large);
-  border:1px solid var(--border);border-radius:var(--radius);margin-bottom:10px;
-}
-
+input[type="text"]{width:100%;padding:8px;font-size:var(--fz-large);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:10px;}
 .toolbar{display:flex;gap:6px;margin-bottom:8px;}
-.btn{
-  flex:1;padding:10px;font-size:var(--fz-base);
-  border:1px solid var(--border);background:#fff;border-radius:var(--radius);cursor:pointer;
-}
+.btn{flex:1;padding:10px;font-size:var(--fz-base);border:1px solid var(--border);background:#fff;border-radius:var(--radius);cursor:pointer;}
 .btn:active{transform:scale(.97)}
-
-/* 類別 + 收合鈕 */
-.cat-header{
-  display:flex;justify-content:space-between;align-items:center;
-  background:var(--cat);padding:6px 8px;border-radius:var(--radius);
-  margin-top:10px;margin-bottom:6px;font-weight:700;
-}
-
-/* 品項卡（一般/檢視模式用） */
-.item{
-  background:#fff;border:1px solid var(--border);border-radius:var(--radius);
-  padding:6px;margin-bottom:4px;transition:background .15s;
-}
+.cat-header{display:flex;justify-content:space-between;align-items:center;background:var(--cat);padding:6px 8px;border-radius:var(--radius);margin-top:10px;margin-bottom:6px;font-weight:700;}
+.item{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:6px;margin-bottom:4px;transition:background .15s;}
 .item.highlight{background:var(--hi);}
 .name{font-weight:700;margin-bottom:2px;}
 .price{margin-bottom:4px;}
 .qty{display:flex;align-items:center;gap:6px;}
-.qty input{
-  width:70px;padding:6px;font-size:var(--fz-large);text-align:center;
-  border:1px solid var(--border);border-radius:8px;-moz-appearance:textfield;
-}
-.qty input::-webkit-inner-spin-button,
-.qty input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0;}
-.step{
-  padding:6px 10px;font-size:var(--fz-large);
-  border:1px solid var(--border);background:#fff;border-radius:8px;cursor:pointer;
-}
+.qty input{width:70px;padding:6px;font-size:var(--fz-large);text-align:center;border:1px solid var(--border);border-radius:8px;-moz-appearance:textfield;}
+.qty input::-webkit-inner-spin-button,.qty input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0;}
+.step{padding:6px 10px;font-size:var(--fz-large);border:1px solid var(--border);background:#fff;border-radius:8px;cursor:pointer;}
 .subtotal{text-align:right;font-weight:700;margin-top:2px;}
-
-/* 總計區 */
-.totals{
-  margin-top:10px;padding:8px;background:#fff;border:1px solid var(--border);
-  border-radius:var(--radius);font-size:var(--fz-large);
-}
+.totals{margin-top:10px;padding:8px;background:#fff;border:1px solid var(--border);border-radius:var(--radius);font-size:var(--fz-large);}
 .totals div{margin-bottom:4px;}
 .accent{color:#d2691e;font-weight:700;}
-
-/* 模式與收合 */
-.hide-empty .item:not(.highlight){display:none;} /* 檢視模式：只顯示有數量的 */
-.collapsed{display:none;}                        /* 收合分類 */
-
-/* ===== 精簡的小計清單（截圖用） ===== */
-.summary{display:none; margin-top:10px;}
-.summary-mode #catalog{display:none;}     /* 小計模式隱藏原卡片與標題 */
-.summary-mode .summary{display:block;}    /* 顯示精簡清單 */
-.summary .sec{
-  border:1px solid var(--border); border-radius:var(--radius);
-  background:#fff; margin-bottom:8px; overflow:hidden;
-}
-.summary .sec-title{
-  background:var(--cat); padding:6px 8px; font-weight:700;
-}
-.summary .row{
-  display:flex; gap:8px; justify-content:space-between; align-items:baseline;
-  padding:6px 8px; border-top:1px dashed #e6e6e6;
-}
-.summary .row .left{
-  display:flex; gap:8px; align-items:baseline; min-width:0; /* 防止溢位 */
-}
-.summary .qty-badge{
-  min-width:2.2em; text-align:center; font-weight:800; background:#fff7b1;
-  border:1px solid #f0df75; border-radius:6px; padding:2px 6px;
-}
-.summary .name{font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:280px;}
+.hide-empty .item:not(.highlight){display:none;}
+.collapsed{display:none;}
+/* 小計模式（精簡清單） */
+.summary{display:none;margin-top:10px;}
+.summary-mode #catalog{display:none;}
+.summary-mode .summary{display:block;}
+.summary .sec{border:1px solid var(--border);border-radius:var(--radius);background:#fff;margin-bottom:8px;overflow:hidden;}
+.summary .sec-title{background:var(--cat);padding:6px 8px;font-weight:700;}
+.summary .row{display:flex;gap:8px;justify-content:space-between;align-items:center;padding:6px 8px;border-top:1px dashed #e6e6e6;}
+.summary .left{display:flex;gap:8px;align-items:center;min-width:0;flex-wrap:wrap;}
+.summary .name{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:260px;}
+.summary .badge{border:1px solid #e0e0e0;border-radius:6px;padding:2px 6px;background:#fff;}
+.summary .qty-badge{font-weight:900;background:#fff7b1;border:1px solid #f0df75;border-radius:6px;padding:2px 8px;}
 .summary .money{font-weight:800;}
-.summary .sec-sub{
-  padding:6px 8px; text-align:right; font-weight:800; background:#fafafa;
-}
-
-/* 列印/截圖：保留外框、白底清楚 */
 @media print{
   body{background:#fff}
-  .wrap{border:2px solid #000; border-radius:12px}
+  .wrap{border:2px solid #000;border-radius:12px}
   .btn,.toolbar{display:none !important;}
   input[type="text"],input[type="number"]{border:none}
   .item{page-break-inside:avoid}
@@ -119,7 +57,6 @@ input[type="text"]{
 </head>
 <body>
 <div class="wrap" id="wrap">
-
   <h1>袋裝/杯裝 訂單</h1>
 
   <label for="buyer">訂購人姓名</label>
@@ -130,23 +67,20 @@ input[type="text"]{
     <button class="btn" id="btn-toggle">檢視模式</button>
   </div>
 
-  <!-- ===== 原本的目錄（一般/檢視模式會顯示；小計模式隱藏） ===== -->
+  <!-- 目錄（一般/檢視模式） -->
   <div id="catalog">
-    <!-- 2500 -->
     <div class="cat-header">
       <span>2500cc 袋裝</span>
       <button class="btn btn-toggle-cat" data-target="cat-2500">展開/收合</button>
     </div>
     <div id="cat-2500"></div>
 
-    <!-- 1050 -->
     <div class="cat-header">
       <span>1050cc 口栓袋</span>
       <button class="btn btn-toggle-cat" data-target="cat-1050">展開/收合</button>
     </div>
     <div id="cat-1050"></div>
 
-    <!-- 330 -->
     <div class="cat-header">
       <span>330cc 杯裝</span>
       <button class="btn btn-toggle-cat" data-target="cat-330">展開/收合</button>
@@ -154,24 +88,26 @@ input[type="text"]{
     <div id="cat-330"></div>
   </div>
 
-  <!-- ===== 精簡的小計清單（只在小計模式顯示） ===== -->
+  <!-- 小計清單（小計模式顯示） -->
   <div id="summary" class="summary"></div>
 
   <div class="totals">
     <div>訂購人：<span id="buyer-name"></span></div>
+    <div class="muted" style="font-size:0.9em;">統計時間：<span id="ts"></span></div>
     <div>2500cc 小計：$<span id="sub-2500" class="accent">0</span></div>
     <div>1050cc 小計：$<span id="sub-1050" class="accent">0</span></div>
     <div>330cc 小計：$<span id="sub-330"  class="accent">0</span></div>
     <div>總金額：$<span id="grand-total" class="accent">0</span></div>
-    <!-- 底部小計模式（新的精簡清單） -->
-    <button class="btn" id="btn-bottom-mode" style="width:100%;margin-top:6px;">小計模式（截圖使用）/復原檢視模式)</button>
+    <button class="btn" id="btn-bottom-mode" style="width:100%;margin-top:6px;">
+      小計模式（截圖使用）/復原檢視模式
+    </button>
   </div>
 </div>
 
 <script>
-/* ===== 資料 ===== */
+/* ---------- 資料 ---------- */
 const items2500 = [
-  {cat:"2500", name:"藍非/橙非", price:45},
+  {cat:"2500", name:"微糖豆漿", price:45},
   {cat:"2500", name:"黑豆漿",   price:55},
   {cat:"2500", name:"薏仁漿",   price:50},
   {cat:"2500", name:"米漿",     price:65},
@@ -192,15 +128,18 @@ const items1050 = [
   {cat:"1050", name:"小厚豆",   price:33},
   {cat:"1050", name:"小厚豆(無糖)", price:33},
 ];
+/* 330cc：豆漿拆成兩項 + 其它維持 */
 const items330 = [
-  {cat:"330", name:"豆漿（有糖/無糖）（非基改）", price:13},
+  {cat:"330", name:"豆漿（有糖）（非基改）", price:13},
+  {cat:"330", name:"豆漿（無糖）（非基改）", price:13},
   {cat:"330", name:"5.2 厚豆乳（有糖）（非基改）", price:17},
   {cat:"330", name:"燕麥薏仁（有糖）",           price:17},
   {cat:"330", name:"黑芝麻燕麥（有糖）",         price:17},
   {cat:"330", name:"黑芝麻堅果（減糖）",         price:17},
   {cat:"330", name:"黑芝麻豆漿（減糖）",         price:17},
   {cat:"330", name:"糙米漿（有糖）",             price:17},
-  {cat:"330", name:"杏仁漿（有糖/減糖）",         price:18},
+  {cat:"330", name:"杏仁漿（有糖）",             price:18},
+  {cat:"330", name:"杏仁漿（減糖）",             price:18},
   {cat:"330", name:"南瓜豆漿（有糖）（非基改）",   price:18},
   {cat:"330", name:"紅豆薏仁（有糖）",           price:18},
   {cat:"330", name:"黑芝麻牛奶（有糖）",         price:18},
@@ -208,17 +147,29 @@ const items330 = [
 ];
 const items=[...items2500,...items1050,...items330];
 
-/* ===== 產出 UI ===== */
+/* ---------- 工具 ---------- */
+const fmt = n => Number(n).toLocaleString('zh-Hant-TW');
+function nowTS(){
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  const hh = String(d.getHours()).padStart(2,'0');
+  const mm = String(d.getMinutes()).padStart(2,'0');
+  return `${y}/${m}/${day} ${hh}:${mm}`;
+}
+
+/* ---------- 產 UI ---------- */
 function renderItems(list,wrapId,offset){
   const wrap=document.getElementById(wrapId);
   list.forEach((item,i)=>{
-    const idx = offset + i; // 全部 items 的索引
+    const idx = offset + i;
     const el=document.createElement('div');
     el.className='item';
     el.dataset.index=idx;
     el.innerHTML=`
       <div class="name">${item.name}</div>
-      <div class="price">單價：$${item.price}</div>
+      <div class="price">單價：$${fmt(item.price)}</div>
       <div class="qty">
         <button class="step" data-step="-1">−</button>
         <input type="number" min="0" value="0">
@@ -232,18 +183,20 @@ renderItems(items2500,'cat-2500',0);
 renderItems(items1050,'cat-1050',items2500.length);
 renderItems(items330,'cat-330',items2500.length+items1050.length);
 
-/* ===== 計算 ===== */
+/* ---------- 計算 ---------- */
 const sub2500=document.getElementById('sub-2500');
 const sub1050=document.getElementById('sub-1050');
 const sub330=document.getElementById('sub-330');
 const grand=document.getElementById('grand-total');
 const buyerInput=document.getElementById('buyer');
 const buyerName=document.getElementById('buyer-name');
-const wrap=document.getElementById('wrap');
-const catalog=document.getElementById('catalog');
+const tsSpan=document.getElementById('ts');
+const wrapBox=document.getElementById('wrap');
 const summaryBox=document.getElementById('summary');
 
 buyerInput.addEventListener('input',()=>buyerName.textContent=buyerInput.value);
+
+function updateTS(){ tsSpan.textContent = nowTS(); }
 
 function recalc(){
   let t2500=0,t1050=0,t330=0;
@@ -252,19 +205,19 @@ function recalc(){
     const input=card.querySelector('input[type="number"]');
     const qty=Math.max(0,parseInt(input.value||'0',10));
     const subtotal=qty*items[idx].price;
-    card.querySelector('.subtotal-num').textContent=subtotal;
+    card.querySelector('.subtotal-num').textContent=fmt(subtotal);
     card.classList.toggle('highlight',qty>0);
     if(items[idx].cat==='2500')t2500+=subtotal;
     else if(items[idx].cat==='1050')t1050+=subtotal;
     else t330+=subtotal;
   });
-  sub2500.textContent=t2500;
-  sub1050.textContent=t1050;
-  sub330.textContent=t330;
-  grand.textContent=t2500+t1050+t330;
+  sub2500.textContent=fmt(t2500);
+  sub1050.textContent=fmt(t1050);
+  sub330.textContent=fmt(t330);
+  grand.textContent=fmt(t2500+t1050+t330);
 
-  // 若在小計模式，內容同步刷新清單
-  if (wrap.classList.contains('summary-mode')) buildSummary();
+  if (wrapBox.classList.contains('summary-mode')) buildSummary();
+  updateTS();
 }
 document.body.addEventListener('input',e=>{
   if(e.target.matches('.item input[type="number"]'))recalc();
@@ -284,15 +237,16 @@ document.getElementById('btn-clear').addEventListener('click',()=>{
   recalc();
 });
 
-/* 檢視模式（舊：隱藏空品項、仍是卡片） */
+/* 檢視模式（卡片隱藏空品項） */
 document.getElementById('btn-toggle').addEventListener('click',()=>{
-  wrap.classList.toggle('hide-empty');
+  wrapBox.classList.toggle('hide-empty');
 });
 
-/* ===== 小計模式（新：精簡清單） ===== */
-let prevCollapsed = {};  // 記住各分類原本的展開狀態
-document.getElementById('btn-bottom-mode').addEventListener('click',()=>{
-  if (wrap.classList.contains('summary-mode')) {
+/* ---------- 小計模式（精簡清單） ---------- */
+let prevCollapsed = {};
+const bottomBtn = document.getElementById('btn-bottom-mode');
+bottomBtn.addEventListener('click',()=>{
+  if (wrapBox.classList.contains('summary-mode')) {
     exitSummaryMode();
   } else {
     enterSummaryMode();
@@ -300,47 +254,39 @@ document.getElementById('btn-bottom-mode').addEventListener('click',()=>{
 });
 
 function enterSummaryMode(){
-  // 1) 紀錄各分類目前是否收合
-  prevCollapsed = {
-    "cat-2500": document.getElementById('cat-2500').classList.contains('collapsed'),
-    "cat-1050": document.getElementById('cat-1050').classList.contains('collapsed'),
-    "cat-330" : document.getElementById('cat-330').classList.contains('collapsed')
-  };
-  // 2) 全部展開，避免你遇到的「展不開」
   ['cat-2500','cat-1050','cat-330'].forEach(id=>{
-    document.getElementById(id).classList.remove('collapsed');
-  });
-  // 3) 切換模式並建立清單
-  wrap.classList.add('summary-mode');
-  buildSummary();
-}
-
-function exitSummaryMode(){
-  wrap.classList.remove('summary-mode');
-  // 還原各分類收合狀態
-  Object.entries(prevCollapsed).forEach(([id,isCollapsed])=>{
     const el=document.getElementById(id);
-    el.classList.toggle('collapsed', !!isCollapsed);
+    prevCollapsed[id]=el.classList.contains('collapsed');
+    el.classList.remove('collapsed');
   });
+  wrapBox.classList.add('summary-mode');
+  buildSummary();
+  updateTS();
 }
-
+function exitSummaryMode(){
+  wrapBox.classList.remove('summary-mode');
+  Object.entries(prevCollapsed).forEach(([id,flag])=>{
+    document.getElementById(id).classList.toggle('collapsed',!!flag);
+  });
+  updateTS();
+}
 function buildSummary(){
-  // 生成精簡清單（依分類）
   const cats = [
     {id:'2500', title:'2500cc 袋裝'},
     {id:'1050', title:'1050cc 口栓袋'},
     {id:'330',  title:'330cc 杯裝'}
   ];
-  summaryBox.innerHTML = ''; // 清空
+  summaryBox.innerHTML = '';
   cats.forEach(c=>{
     const list = []; let catSum = 0;
     document.querySelectorAll('.item').forEach(card=>{
       const idx=+card.dataset.index;
       const qty=parseInt(card.querySelector('input').value||'0',10);
       if (items[idx].cat!==c.id || qty<=0) return;
-      const money = qty*items[idx].price;
+      const price=items[idx].price;
+      const money = qty*price;
       catSum += money;
-      list.push({name:items[idx].name, qty, money});
+      list.push({name:items[idx].name, price, qty, money});
     });
     if (list.length===0) return;
     const sec = document.createElement('div');
@@ -351,30 +297,32 @@ function buildSummary(){
       div.className='row';
       div.innerHTML = `
         <div class="left">
-          <span class="qty-badge">${row.qty}</span>
           <span class="name">${row.name}</span>
+          <span class="badge">單價 $${fmt(row.price)}</span>
+          <span class="qty-badge">數量 ${row.qty}</span>
         </div>
-        <div class="money">$${row.money}</div>`;
+        <div class="money">$${fmt(row.money)}</div>`;
       sec.appendChild(div);
     });
     const sub = document.createElement('div');
     sub.className='sec-sub';
-    sub.textContent = `小計 $${catSum}`;
+    sub.textContent = `小計 $${fmt(catSum)}`;
     sec.appendChild(sub);
     summaryBox.appendChild(sec);
   });
 }
 
-/* 展開/收合分類（一般/檢視模式下使用） */
+/* 展開/收合 */
 document.querySelectorAll('.btn-toggle-cat').forEach(btn=>{
   btn.addEventListener('click',()=>{
     const target=document.getElementById(btn.dataset.target);
-    // 若正在小計模式，先退出再切換，以免混亂
-    if (wrap.classList.contains('summary-mode')) exitSummaryMode();
+    if (wrapBox.classList.contains('summary-mode')) exitSummaryMode();
     target.classList.toggle('collapsed');
   });
 });
 
+buyerName.textContent = buyerInput.value || '';
+updateTS();
 recalc();
 </script>
 </body>
