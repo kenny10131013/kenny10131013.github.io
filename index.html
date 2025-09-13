@@ -3,73 +3,99 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>袋裝飲品訂單</title>
+<title>袋裝/杯裝 訂單</title>
 <style>
 :root{
-  --radius: 10px;
-  --border: #ddd;
-  --cat: #d9edf7;
-  --hi: #fff7b1;
+  --radius: 10px; --border:#ddd; --cat:#d9edf7; --hi:#fff7b1;
   --fz-base: clamp(16px, 3vw, 20px);
   --fz-large: clamp(18px, 4vw, 24px);
 }
+
+/* 全域 */
 *{box-sizing:border-box}
 body{
-  margin:0; background:#fafafa; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",sans-serif;
+  margin:0; background:#fafafa;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",sans-serif;
   font-size:var(--fz-base); line-height:1.4;
 }
-.wrap{max-width:480px; margin:auto; padding:10px;}
-h1{font-size:var(--fz-large); margin:4px 0 12px; text-align:center;}
-label{display:block; margin-bottom:6px; font-weight:600;}
-input[type="text"]{
-  width:100%; padding:8px; font-size:var(--fz-large);
-  border:1px solid var(--border); border-radius:var(--radius);
-  margin-bottom:10px;
+
+/* === 外框容器（依照建議加入可視邊框） === */
+.wrap{
+  max-width:520px; margin:auto; padding:10px;
+  background:#fff;
+  border:2px solid #000;           /* ← 黑色外框 */
+  border-radius:12px;
+  box-sizing:border-box;            /* ← 防止邊框影響尺寸 */
 }
-.toolbar{display:flex; gap:6px; margin-bottom:8px;}
+
+h1{font-size:var(--fz-large);margin:4px 0 12px;text-align:center;}
+label{display:block;margin-bottom:6px;font-weight:600;}
+input[type="text"]{
+  width:100%;padding:8px;font-size:var(--fz-large);
+  border:1px solid var(--border);border-radius:var(--radius);margin-bottom:10px;
+}
+
+.toolbar{display:flex;gap:6px;margin-bottom:8px;}
 .btn{
-  flex:1; padding:10px; font-size:var(--fz-base);
-  border:1px solid var(--border); background:#fff; border-radius:var(--radius); cursor:pointer;
+  flex:1;padding:10px;font-size:var(--fz-base);
+  border:1px solid var(--border);background:#fff;border-radius:var(--radius);cursor:pointer;
 }
 .btn:active{transform:scale(.97)}
 
-.cat{
-  background:var(--cat); padding:6px 8px; border-radius: var(--radius);
-  margin-top:10px; margin-bottom:6px; font-weight:700;
+/* 類別 + 收合鈕 */
+.cat-header{
+  display:flex;justify-content:space-between;align-items:center;
+  background:var(--cat);padding:6px 8px;border-radius:var(--radius);
+  margin-top:10px;margin-bottom:6px;font-weight:700;
 }
+
+/* 品項卡 */
 .item{
-  background:#fff; border:1px solid var(--border); border-radius:var(--radius);
-  padding:6px; margin-bottom:4px; transition:background .15s;
+  background:#fff;border:1px solid var(--border);border-radius:var(--radius);
+  padding:6px;margin-bottom:4px;transition:background .15s;
 }
 .item.highlight{background:var(--hi);}
-.name{font-weight:700; margin-bottom:2px;}
+.name{font-weight:700;margin-bottom:2px;}
 .price{margin-bottom:4px;}
-.qty{display:flex; align-items:center; gap:6px;}
+.qty{display:flex;align-items:center;gap:6px;}
 .qty input{
-  width:70px; padding:6px; font-size:var(--fz-large); text-align:center;
-  border:1px solid var(--border); border-radius:8px; -moz-appearance:textfield;
+  width:70px;padding:6px;font-size:var(--fz-large);text-align:center;
+  border:1px solid var(--border);border-radius:8px;-moz-appearance:textfield;
 }
 .qty input::-webkit-inner-spin-button,
-.qty input::-webkit-outer-spin-button{ -webkit-appearance: none; margin:0;}
+.qty input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0;}
 .step{
-  padding:6px 10px; font-size:var(--fz-large); border:1px solid var(--border);
-  background:#fff; border-radius:8px; cursor:pointer;
+  padding:6px 10px;font-size:var(--fz-large);
+  border:1px solid var(--border);background:#fff;border-radius:8px;cursor:pointer;
 }
-.subtotal{text-align:right; font-weight:700; margin-top:2px;}
+.subtotal{text-align:right;font-weight:700;margin-top:2px;}
 
+/* 總計區 */
 .totals{
-  margin-top:10px; padding:8px; background:#fff; border:1px solid var(--border);
-  border-radius:var(--radius); font-size:var(--fz-large);
+  margin-top:10px;padding:8px;background:#fff;border:1px solid var(--border);
+  border-radius:var(--radius);font-size:var(--fz-large);
 }
 .totals div{margin-bottom:4px;}
-.accent{color:#d2691e; font-weight:700;}
+.accent{color:#d2691e;font-weight:700;}
 
-.hide-empty .item:not(.highlight){display:none;} /* 檢視模式只顯示有數量的 */
+/* 模式與收合 */
+.hide-empty .item:not(.highlight){display:none;} /* 檢視/小計模式：只顯示有數量的 */
+.collapsed{display:none;}                        /* 收合分類 */
+
+/* 列印/截圖：保留外框、白底清晰 */
+@media print{
+  body{background:#fff}
+  .wrap{border:2px solid #000; border-radius:12px}
+  .btn,.toolbar{display:none !important;}
+  input[type="text"],input[type="number"]{border:none}
+  .item{page-break-inside:avoid}
+}
 </style>
 </head>
 <body>
 <div class="wrap" id="wrap">
-  <h1>袋裝飲品訂單</h1>
+  <h1>袋裝/杯裝 訂單</h1>
+
   <label for="buyer">訂購人姓名</label>
   <input type="text" id="buyer" placeholder="輸入姓名" />
 
@@ -78,63 +104,106 @@ input[type="text"]{
     <button class="btn" id="btn-toggle">檢視模式</button>
   </div>
 
-  <div class="cat">2500cc 袋裝</div>
+  <!-- 2500 -->
+  <div class="cat-header">
+    <span>2500cc 袋裝</span>
+    <button class="btn btn-toggle-cat" data-target="cat-2500">展開/收合</button>
+  </div>
   <div id="cat-2500"></div>
-  <div class="cat">1050cc 口栓袋</div>
+
+  <!-- 1050 -->
+  <div class="cat-header">
+    <span>1050cc 口栓袋</span>
+    <button class="btn btn-toggle-cat" data-target="cat-1050">展開/收合</button>
+  </div>
   <div id="cat-1050"></div>
+
+  <!-- 330 -->
+  <div class="cat-header">
+    <span>330cc 杯裝</span>
+    <button class="btn btn-toggle-cat" data-target="cat-330">展開/收合</button>
+  </div>
+  <div id="cat-330"></div>
 
   <div class="totals">
     <div>訂購人：<span id="buyer-name"></span></div>
     <div>2500cc 小計：$<span id="sub-2500" class="accent">0</span></div>
     <div>1050cc 小計：$<span id="sub-1050" class="accent">0</span></div>
+    <div>330cc 小計：$<span id="sub-330"  class="accent">0</span></div>
     <div>總金額：$<span id="grand-total" class="accent">0</span></div>
+    <!-- 底部小計模式（=檢視模式） -->
+    <button class="btn" id="btn-bottom-mode" style="width:100%;margin-top:6px;">小計模式（截圖使用）</button>
   </div>
 </div>
 
 <script>
-const items = [
+/* ===== 資料 ===== */
+const items2500 = [
   {cat:"2500", name:"藍非/橙非", price:45},
-  {cat:"2500", name:"黑豆漿", price:55},
-  {cat:"2500", name:"薏仁漿", price:50},
-  {cat:"2500", name:"米漿", price:65},
+  {cat:"2500", name:"黑豆漿",   price:55},
+  {cat:"2500", name:"薏仁漿",   price:50},
+  {cat:"2500", name:"米漿",     price:65},
   {cat:"2500", name:"高濃豆漿", price:40},
   {cat:"2500", name:"新/舊無糖", price:45},
-  {cat:"1050", name:"小非基", price:28},
-  {cat:"1050", name:"小無糖", price:28},
-  {cat:"1050", name:"小芝麻", price:36},
-  {cat:"1050", name:"小杏仁", price:51},
-  {cat:"1050", name:"小薏麥", price:31},
-  {cat:"1050", name:"小米漿", price:36},
-  {cat:"1050", name:"小南瓜", price:48},
-  {cat:"1050", name:"小黑牛", price:40},
-  {cat:"1050", name:"小芝微", price:36},
-  {cat:"1050", name:"小杏微", price:51},
-  {cat:"1050", name:"小厚豆", price:33},
-  {cat:"1050", name:"小厚豆(無糖)", price:33}
 ];
+const items1050 = [
+  {cat:"1050", name:"小非基",   price:28},
+  {cat:"1050", name:"小無糖",   price:28},
+  {cat:"1050", name:"小芝麻",   price:36},
+  {cat:"1050", name:"小杏仁",   price:51},
+  {cat:"1050", name:"小薏麥",   price:31},
+  {cat:"1050", name:"小米漿",   price:36},
+  {cat:"1050", name:"小南瓜",   price:48},
+  {cat:"1050", name:"小黑牛",   price:40},
+  {cat:"1050", name:"小芝微",   price:36},
+  {cat:"1050", name:"小杏微",   price:51},
+  {cat:"1050", name:"小厚豆",   price:33},
+  {cat:"1050", name:"小厚豆(無糖)", price:33},
+];
+const items330 = [
+  {cat:"330", name:"豆漿（有糖/無糖）（非基改）", price:13},
+  {cat:"330", name:"5.2 厚豆乳（有糖）（非基改）", price:17},
+  {cat:"330", name:"燕麥薏仁（有糖）",           price:17},
+  {cat:"330", name:"黑芝麻燕麥（有糖）",         price:17},
+  {cat:"330", name:"黑芝麻堅果（減糖）",         price:17},
+  {cat:"330", name:"黑芝麻豆漿（減糖）",         price:17},
+  {cat:"330", name:"糙米漿（有糖）",             price:17},
+  {cat:"330", name:"杏仁漿（有糖/減糖）",         price:18},
+  {cat:"330", name:"南瓜豆漿（有糖）（非基改）",   price:18},
+  {cat:"330", name:"紅豆薏仁（有糖）",           price:18},
+  {cat:"330", name:"黑芝麻牛奶（有糖）",         price:18},
+  {cat:"330", name:"黑豆堅果（減糖）",           price:18},
+];
+const items=[...items2500,...items1050,...items330];
 
-const wrap2500 = document.getElementById('cat-2500');
-const wrap1050 = document.getElementById('cat-1050');
+/* ===== 產出 UI ===== */
+function renderItems(list,wrapId,offset){
+  const wrap=document.getElementById(wrapId);
+  list.forEach((item,i)=>{
+    const idx = offset + i; // 全部 items 的索引
+    const el=document.createElement('div');
+    el.className='item';
+    el.dataset.index=idx;
+    el.innerHTML=`
+      <div class="name">${item.name}</div>
+      <div class="price">單價：$${item.price}</div>
+      <div class="qty">
+        <button class="step" data-step="-1">−</button>
+        <input type="number" min="0" value="0">
+        <button class="step" data-step="1">＋</button>
+      </div>
+      <div class="subtotal">$<span class="subtotal-num">0</span></div>`;
+    wrap.appendChild(el);
+  });
+}
+renderItems(items2500,'cat-2500',0);
+renderItems(items1050,'cat-1050',items2500.length);
+renderItems(items330,'cat-330',items2500.length+items1050.length);
 
-items.forEach((item, idx) => {
-  const el = document.createElement('div');
-  el.className = 'item';
-  el.dataset.index = idx;
-  el.innerHTML = `
-    <div class="name">${item.name}</div>
-    <div class="price">單價：$${item.price}</div>
-    <div class="qty">
-      <button class="step" data-step="-1">−</button>
-      <input type="number" min="0" value="0">
-      <button class="step" data-step="1">＋</button>
-    </div>
-    <div class="subtotal">$<span class="subtotal-num">0</span></div>
-  `;
-  (item.cat === '2500'? wrap2500:wrap1050).appendChild(el);
-});
-
+/* ===== 計算 ===== */
 const sub2500=document.getElementById('sub-2500');
 const sub1050=document.getElementById('sub-1050');
+const sub330=document.getElementById('sub-330');
 const grand=document.getElementById('grand-total');
 const buyerInput=document.getElementById('buyer');
 const buyerName=document.getElementById('buyer-name');
@@ -142,7 +211,7 @@ const buyerName=document.getElementById('buyer-name');
 buyerInput.addEventListener('input',()=>buyerName.textContent=buyerInput.value);
 
 function recalc(){
-  let total2500=0,total1050=0;
+  let t2500=0,t1050=0,t330=0;
   document.querySelectorAll('.item').forEach(card=>{
     const idx=+card.dataset.index;
     const input=card.querySelector('input[type="number"]');
@@ -150,19 +219,21 @@ function recalc(){
     const subtotal=qty*items[idx].price;
     card.querySelector('.subtotal-num').textContent=subtotal;
     card.classList.toggle('highlight',qty>0);
-    if(items[idx].cat==='2500')total2500+=subtotal;else total1050+=subtotal;
+    if(items[idx].cat==='2500')t2500+=subtotal;
+    else if(items[idx].cat==='1050')t1050+=subtotal;
+    else t330+=subtotal;
   });
-  sub2500.textContent=total2500;
-  sub1050.textContent=total1050;
-  grand.textContent=total2500+total1050;
+  sub2500.textContent=t2500;
+  sub1050.textContent=t1050;
+  sub330.textContent=t330;
+  grand.textContent=t2500+t1050+t330;
 }
-
 document.body.addEventListener('input',e=>{
   if(e.target.matches('.item input[type="number"]'))recalc();
 });
 document.body.addEventListener('click',e=>{
   if(e.target.matches('.step')){
-    const input=e.target.parentElement.querySelector('input[type="number"]');
+    const input=e.target.parentElement.querySelector('input');
     const step=+e.target.dataset.step;
     input.value=Math.max(0,(+input.value||0)+step);
     recalc();
@@ -175,9 +246,22 @@ document.getElementById('btn-clear').addEventListener('click',()=>{
   recalc();
 });
 
-/* 檢視模式：隱藏空品項 */
+/* 檢視模式（頂部） */
 document.getElementById('btn-toggle').addEventListener('click',()=>{
   document.getElementById('wrap').classList.toggle('hide-empty');
+});
+
+/* 小計模式（底部）＝同樣效果 */
+document.getElementById('btn-bottom-mode').addEventListener('click',()=>{
+  document.getElementById('wrap').classList.toggle('hide-empty');
+});
+
+/* 展開/收合分類 */
+document.querySelectorAll('.btn-toggle-cat').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const target=document.getElementById(btn.dataset.target);
+    target.classList.toggle('collapsed');
+  });
 });
 
 recalc();
