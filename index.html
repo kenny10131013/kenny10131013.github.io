@@ -19,13 +19,10 @@ body{
   font-size:var(--fz-base); line-height:1.4;
 }
 
-/* === 外框容器（依照建議加入可視邊框） === */
+/* 外框容器（有黑色外框，截圖清楚） */
 .wrap{
-  max-width:520px; margin:auto; padding:10px;
-  background:#fff;
-  border:2px solid #000;           /* ← 黑色外框 */
-  border-radius:12px;
-  box-sizing:border-box;            /* ← 防止邊框影響尺寸 */
+  max-width:520px; margin:auto; padding:10px; background:#fff;
+  border:2px solid #000; border-radius:12px; box-sizing:border-box;
 }
 
 h1{font-size:var(--fz-large);margin:4px 0 12px;text-align:center;}
@@ -49,7 +46,7 @@ input[type="text"]{
   margin-top:10px;margin-bottom:6px;font-weight:700;
 }
 
-/* 品項卡 */
+/* 品項卡（一般/檢視模式用） */
 .item{
   background:#fff;border:1px solid var(--border);border-radius:var(--radius);
   padding:6px;margin-bottom:4px;transition:background .15s;
@@ -79,10 +76,38 @@ input[type="text"]{
 .accent{color:#d2691e;font-weight:700;}
 
 /* 模式與收合 */
-.hide-empty .item:not(.highlight){display:none;} /* 檢視/小計模式：只顯示有數量的 */
+.hide-empty .item:not(.highlight){display:none;} /* 檢視模式：只顯示有數量的 */
 .collapsed{display:none;}                        /* 收合分類 */
 
-/* 列印/截圖：保留外框、白底清晰 */
+/* ===== 精簡的小計清單（截圖用） ===== */
+.summary{display:none; margin-top:10px;}
+.summary-mode #catalog{display:none;}     /* 小計模式隱藏原卡片與標題 */
+.summary-mode .summary{display:block;}    /* 顯示精簡清單 */
+.summary .sec{
+  border:1px solid var(--border); border-radius:var(--radius);
+  background:#fff; margin-bottom:8px; overflow:hidden;
+}
+.summary .sec-title{
+  background:var(--cat); padding:6px 8px; font-weight:700;
+}
+.summary .row{
+  display:flex; gap:8px; justify-content:space-between; align-items:baseline;
+  padding:6px 8px; border-top:1px dashed #e6e6e6;
+}
+.summary .row .left{
+  display:flex; gap:8px; align-items:baseline; min-width:0; /* 防止溢位 */
+}
+.summary .qty-badge{
+  min-width:2.2em; text-align:center; font-weight:800; background:#fff7b1;
+  border:1px solid #f0df75; border-radius:6px; padding:2px 6px;
+}
+.summary .name{font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:280px;}
+.summary .money{font-weight:800;}
+.summary .sec-sub{
+  padding:6px 8px; text-align:right; font-weight:800; background:#fafafa;
+}
+
+/* 列印/截圖：保留外框、白底清楚 */
 @media print{
   body{background:#fff}
   .wrap{border:2px solid #000; border-radius:12px}
@@ -94,6 +119,7 @@ input[type="text"]{
 </head>
 <body>
 <div class="wrap" id="wrap">
+
   <h1>袋裝/杯裝 訂單</h1>
 
   <label for="buyer">訂購人姓名</label>
@@ -104,26 +130,32 @@ input[type="text"]{
     <button class="btn" id="btn-toggle">檢視模式</button>
   </div>
 
-  <!-- 2500 -->
-  <div class="cat-header">
-    <span>2500cc 袋裝</span>
-    <button class="btn btn-toggle-cat" data-target="cat-2500">展開/收合</button>
-  </div>
-  <div id="cat-2500"></div>
+  <!-- ===== 原本的目錄（一般/檢視模式會顯示；小計模式隱藏） ===== -->
+  <div id="catalog">
+    <!-- 2500 -->
+    <div class="cat-header">
+      <span>2500cc 袋裝</span>
+      <button class="btn btn-toggle-cat" data-target="cat-2500">展開/收合</button>
+    </div>
+    <div id="cat-2500"></div>
 
-  <!-- 1050 -->
-  <div class="cat-header">
-    <span>1050cc 口栓袋</span>
-    <button class="btn btn-toggle-cat" data-target="cat-1050">展開/收合</button>
-  </div>
-  <div id="cat-1050"></div>
+    <!-- 1050 -->
+    <div class="cat-header">
+      <span>1050cc 口栓袋</span>
+      <button class="btn btn-toggle-cat" data-target="cat-1050">展開/收合</button>
+    </div>
+    <div id="cat-1050"></div>
 
-  <!-- 330 -->
-  <div class="cat-header">
-    <span>330cc 杯裝</span>
-    <button class="btn btn-toggle-cat" data-target="cat-330">展開/收合</button>
+    <!-- 330 -->
+    <div class="cat-header">
+      <span>330cc 杯裝</span>
+      <button class="btn btn-toggle-cat" data-target="cat-330">展開/收合</button>
+    </div>
+    <div id="cat-330"></div>
   </div>
-  <div id="cat-330"></div>
+
+  <!-- ===== 精簡的小計清單（只在小計模式顯示） ===== -->
+  <div id="summary" class="summary"></div>
 
   <div class="totals">
     <div>訂購人：<span id="buyer-name"></span></div>
@@ -131,8 +163,8 @@ input[type="text"]{
     <div>1050cc 小計：$<span id="sub-1050" class="accent">0</span></div>
     <div>330cc 小計：$<span id="sub-330"  class="accent">0</span></div>
     <div>總金額：$<span id="grand-total" class="accent">0</span></div>
-    <!-- 底部小計模式（=檢視模式） -->
-    <button class="btn" id="btn-bottom-mode" style="width:100%;margin-top:6px;">小計模式（截圖使用）</button>
+    <!-- 底部小計模式（新的精簡清單） -->
+    <button class="btn" id="btn-bottom-mode" style="width:100%;margin-top:6px;">小計模式（截圖使用）/復原檢視模式)</button>
   </div>
 </div>
 
@@ -207,6 +239,9 @@ const sub330=document.getElementById('sub-330');
 const grand=document.getElementById('grand-total');
 const buyerInput=document.getElementById('buyer');
 const buyerName=document.getElementById('buyer-name');
+const wrap=document.getElementById('wrap');
+const catalog=document.getElementById('catalog');
+const summaryBox=document.getElementById('summary');
 
 buyerInput.addEventListener('input',()=>buyerName.textContent=buyerInput.value);
 
@@ -227,6 +262,9 @@ function recalc(){
   sub1050.textContent=t1050;
   sub330.textContent=t330;
   grand.textContent=t2500+t1050+t330;
+
+  // 若在小計模式，內容同步刷新清單
+  if (wrap.classList.contains('summary-mode')) buildSummary();
 }
 document.body.addEventListener('input',e=>{
   if(e.target.matches('.item input[type="number"]'))recalc();
@@ -246,20 +284,93 @@ document.getElementById('btn-clear').addEventListener('click',()=>{
   recalc();
 });
 
-/* 檢視模式（頂部） */
+/* 檢視模式（舊：隱藏空品項、仍是卡片） */
 document.getElementById('btn-toggle').addEventListener('click',()=>{
-  document.getElementById('wrap').classList.toggle('hide-empty');
+  wrap.classList.toggle('hide-empty');
 });
 
-/* 小計模式（底部）＝同樣效果 */
+/* ===== 小計模式（新：精簡清單） ===== */
+let prevCollapsed = {};  // 記住各分類原本的展開狀態
 document.getElementById('btn-bottom-mode').addEventListener('click',()=>{
-  document.getElementById('wrap').classList.toggle('hide-empty');
+  if (wrap.classList.contains('summary-mode')) {
+    exitSummaryMode();
+  } else {
+    enterSummaryMode();
+  }
 });
 
-/* 展開/收合分類 */
+function enterSummaryMode(){
+  // 1) 紀錄各分類目前是否收合
+  prevCollapsed = {
+    "cat-2500": document.getElementById('cat-2500').classList.contains('collapsed'),
+    "cat-1050": document.getElementById('cat-1050').classList.contains('collapsed'),
+    "cat-330" : document.getElementById('cat-330').classList.contains('collapsed')
+  };
+  // 2) 全部展開，避免你遇到的「展不開」
+  ['cat-2500','cat-1050','cat-330'].forEach(id=>{
+    document.getElementById(id).classList.remove('collapsed');
+  });
+  // 3) 切換模式並建立清單
+  wrap.classList.add('summary-mode');
+  buildSummary();
+}
+
+function exitSummaryMode(){
+  wrap.classList.remove('summary-mode');
+  // 還原各分類收合狀態
+  Object.entries(prevCollapsed).forEach(([id,isCollapsed])=>{
+    const el=document.getElementById(id);
+    el.classList.toggle('collapsed', !!isCollapsed);
+  });
+}
+
+function buildSummary(){
+  // 生成精簡清單（依分類）
+  const cats = [
+    {id:'2500', title:'2500cc 袋裝'},
+    {id:'1050', title:'1050cc 口栓袋'},
+    {id:'330',  title:'330cc 杯裝'}
+  ];
+  summaryBox.innerHTML = ''; // 清空
+  cats.forEach(c=>{
+    const list = []; let catSum = 0;
+    document.querySelectorAll('.item').forEach(card=>{
+      const idx=+card.dataset.index;
+      const qty=parseInt(card.querySelector('input').value||'0',10);
+      if (items[idx].cat!==c.id || qty<=0) return;
+      const money = qty*items[idx].price;
+      catSum += money;
+      list.push({name:items[idx].name, qty, money});
+    });
+    if (list.length===0) return;
+    const sec = document.createElement('div');
+    sec.className='sec';
+    sec.innerHTML = `<div class="sec-title">${c.title}</div>`;
+    list.forEach(row=>{
+      const div = document.createElement('div');
+      div.className='row';
+      div.innerHTML = `
+        <div class="left">
+          <span class="qty-badge">${row.qty}</span>
+          <span class="name">${row.name}</span>
+        </div>
+        <div class="money">$${row.money}</div>`;
+      sec.appendChild(div);
+    });
+    const sub = document.createElement('div');
+    sub.className='sec-sub';
+    sub.textContent = `小計 $${catSum}`;
+    sec.appendChild(sub);
+    summaryBox.appendChild(sec);
+  });
+}
+
+/* 展開/收合分類（一般/檢視模式下使用） */
 document.querySelectorAll('.btn-toggle-cat').forEach(btn=>{
   btn.addEventListener('click',()=>{
     const target=document.getElementById(btn.dataset.target);
+    // 若正在小計模式，先退出再切換，以免混亂
+    if (wrap.classList.contains('summary-mode')) exitSummaryMode();
     target.classList.toggle('collapsed');
   });
 });
