@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>袋裝/杯裝 訂單</title>
 <style>
 :root{
@@ -12,14 +12,18 @@
 }
 *{box-sizing:border-box}
 body{margin:0;background:#fafafa;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",sans-serif;font-size:var(--fz-base);line-height:1.4;}
-.wrap{max-width:520px;margin:auto;padding:10px;background:#fff;border:2px solid #000;border-radius:12px;box-sizing:border-box;}
+.wrap{max-width:520px;margin:auto;padding:10px;background:#fff;border:2px solid #000;border-radius:12px;}
 h1{font-size:var(--fz-large);margin:4px 0 12px;text-align:center;}
 label{display:block;margin-bottom:6px;font-weight:600;}
 input[type="text"]{width:100%;padding:8px;font-size:var(--fz-large);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:10px;}
-.toolbar{display:flex;gap:6px;margin-bottom:8px;}
-.btn{flex:1;padding:10px;font-size:var(--fz-base);border:1px solid var(--border);background:#fff;border-radius:var(--radius);cursor:pointer;}
+
+.toolbar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;}
+.btn{padding:10px 12px;font-size:var(--fz-base);border:1px solid var(--border);background:#fff;border-radius:var(--radius);cursor:pointer;}
 .btn:active{transform:scale(.97)}
+
 .cat-header{display:flex;justify-content:space-between;align-items:center;background:var(--cat);padding:6px 8px;border-radius:var(--radius);margin-top:10px;margin-bottom:6px;font-weight:700;}
+.cat-header .btn{flex:0 0 auto;} /* 修正：避免按鈕撐滿整列 */
+
 .item{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:6px;margin-bottom:4px;transition:background .15s;}
 .item.highlight{background:var(--hi);}
 .name{font-weight:700;margin-bottom:2px;}
@@ -29,12 +33,15 @@ input[type="text"]{width:100%;padding:8px;font-size:var(--fz-large);border:1px s
 .qty input::-webkit-inner-spin-button,.qty input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0;}
 .step{padding:6px 10px;font-size:var(--fz-large);border:1px solid var(--border);background:#fff;border-radius:8px;cursor:pointer;}
 .subtotal{text-align:right;font-weight:700;margin-top:2px;}
+
 .totals{margin-top:10px;padding:8px;background:#fff;border:1px solid var(--border);border-radius:var(--radius);font-size:var(--fz-large);}
 .totals div{margin-bottom:4px;}
 .accent{color:#d2691e;font-weight:700;}
+.muted{color:#666;font-size:.9em}
 .hide-empty .item:not(.highlight){display:none;}
 .collapsed{display:none;}
-/* 小計模式（精簡清單） */
+
+/* 小計模式（截圖精簡清單） */
 .summary{display:none;margin-top:10px;}
 .summary-mode #catalog{display:none;}
 .summary-mode .summary{display:block;}
@@ -46,12 +53,33 @@ input[type="text"]{width:100%;padding:8px;font-size:var(--fz-large);border:1px s
 .summary .badge{border:1px solid #e0e0e0;border-radius:6px;padding:2px 6px;background:#fff;}
 .summary .qty-badge{font-weight:900;background:#fff7b1;border:1px solid #f0df75;border-radius:6px;padding:2px 8px;}
 .summary .money{font-weight:800;}
+
+/* 團購清單 & 總彙總 */
+.section{margin-top:12px;padding:10px;border:1px solid var(--border);border-radius:var(--radius);background:#fff;}
+.section h2{margin:0 0 8px 0;font-size:1.1em}
+.record{border:1px solid #eee;border-radius:8px;padding:8px;margin-bottom:8px;background:#fafafa;}
+.record .hdr{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-weight:700;}
+.record .meta{font-weight:400}
+.record .details{margin-top:6px;border-top:1px dashed #e6e6e6;padding-top:6px;display:none}
+.record.open .details{display:block}
+.record table{width:100%;border-collapse:collapse;font-size:.95em}
+.record th, .record td{border-bottom:1px solid #eee;padding:4px;text-align:right}
+.record th:first-child, .record td:first-child{text-align:left}
+.table{width:100%;border-collapse:collapse}
+.table th,.table td{border-bottom:1px solid #eee;padding:6px;text-align:right}
+.table th:first-child,.table td:first-child{text-align:left}
+.table .group{background:#f7f7f7;font-weight:800;} /* 彙總分類列樣式 */
+.bad{color:#a00}
+.danger{background:#ffe8e8;border:1px solid #ffbdbd}
+
+/* 列印 */
 @media print{
   body{background:#fff}
   .wrap{border:2px solid #000;border-radius:12px}
   .btn,.toolbar{display:none !important;}
   input[type="text"],input[type="number"]{border:none}
   .item{page-break-inside:avoid}
+  .section{page-break-inside:avoid}
 }
 </style>
 </head>
@@ -63,7 +91,7 @@ input[type="text"]{width:100%;padding:8px;font-size:var(--fz-large);border:1px s
   <input type="text" id="buyer" placeholder="輸入姓名" />
 
   <div class="toolbar">
-    <button class="btn" id="btn-clear">清空</button>
+    <button class="btn" id="btn-clear-inputs">清空頁面數量</button>
     <button class="btn" id="btn-toggle">檢視模式</button>
   </div>
 
@@ -71,19 +99,19 @@ input[type="text"]{width:100%;padding:8px;font-size:var(--fz-large);border:1px s
   <div id="catalog">
     <div class="cat-header">
       <span>2500cc 袋裝</span>
-      <button class="btn btn-toggle-cat" data-target="cat-2500">展開/收合</button>
+      <button class="btn btn-toggle-cat" data-target="cat-2500" aria-expanded="true">收合</button>
     </div>
     <div id="cat-2500"></div>
 
     <div class="cat-header">
       <span>1050cc 口栓袋</span>
-      <button class="btn btn-toggle-cat" data-target="cat-1050">展開/收合</button>
+      <button class="btn btn-toggle-cat" data-target="cat-1050" aria-expanded="true">收合</button>
     </div>
     <div id="cat-1050"></div>
 
     <div class="cat-header">
       <span>330cc 杯裝</span>
-      <button class="btn btn-toggle-cat" data-target="cat-330">展開/收合</button>
+      <button class="btn btn-toggle-cat" data-target="cat-330" aria-expanded="true">收合</button>
     </div>
     <div id="cat-330"></div>
   </div>
@@ -93,14 +121,43 @@ input[type="text"]{width:100%;padding:8px;font-size:var(--fz-large);border:1px s
 
   <div class="totals">
     <div>訂購人：<span id="buyer-name"></span></div>
-    <div class="muted" style="font-size:0.9em;">統計時間：<span id="ts"></span></div>
+    <div class="muted">統計時間：<span id="ts"></span></div>
     <div>2500cc 小計：$<span id="sub-2500" class="accent">0</span></div>
     <div>1050cc 小計：$<span id="sub-1050" class="accent">0</span></div>
     <div>330cc 小計：$<span id="sub-330"  class="accent">0</span></div>
     <div>總金額：$<span id="grand-total" class="accent">0</span></div>
-    <button class="btn" id="btn-bottom-mode" style="width:100%;margin-top:6px;">
-      小計模式（截圖使用）/復原檢視模式
-    </button>
+
+    <!-- 加入清單 / 小計模式 / 清空所有紀錄 -->
+    <div class="toolbar" style="margin-top:8px">
+      <button class="btn" id="btn-add-record">加入本次填寫到清單</button>
+      <button class="btn" id="btn-bottom-mode">小計模式（截圖使用）/復原檢視模式</button>
+    </div>
+    <button class="btn danger" id="btn-clear-all" title="清除所有紀錄與輸入">⚠️ 清空所有紀錄（防呆）</button>
+    <div class="muted">提示：清空所有紀錄時，需輸入「清空」才會執行。</div>
+  </div>
+
+  <!-- 團購清單（使用者紀錄） -->
+  <div class="section" id="records-section">
+    <h2>團購清單（使用者紀錄）</h2>
+    <div id="records-list" class="records"></div>
+    <div class="muted">點「明細」可展開查看每位填寫者的品項與數量。</div>
+  </div>
+
+  <!-- 總彙總（全部紀錄；★已分大分類） -->
+  <div class="section" id="aggregate-section">
+    <h2>目前總彙總（全部紀錄）</h2>
+    <table class="table" id="agg-table">
+      <thead>
+        <tr><th>品項</th><th>單價</th><th>總數量</th><th>總金額</th></tr>
+      </thead>
+      <tbody id="agg-body"></tbody>
+      <tfoot>
+        <tr><th>2500cc 小計</th><td></td><td id="agg-q-2500" style="text-align:right"></td><td id="agg-s-2500" style="text-align:right"></td></tr>
+        <tr><th>1050cc 小計</th><td></td><td id="agg-q-1050" style="text-align:right"></td><td id="agg-s-1050" style="text-align:right"></td></tr>
+        <tr><th>330cc 小計</th><td></td><td id="agg-q-330"  style="text-align:right"></td><td id="agg-s-330"  style="text-align:right"></td></tr>
+        <tr><th>總金額</th><td></td><td id="agg-q-all"  style="text-align:right"></td><td id="agg-s-all"  style="text-align:right"></td></tr>
+      </tfoot>
+    </table>
   </div>
 </div>
 
@@ -128,7 +185,6 @@ const items1050 = [
   {cat:"1050", name:"小厚豆",   price:33},
   {cat:"1050", name:"小厚豆(無糖)", price:33},
 ];
-/* 330cc：豆漿拆成兩項 + 其它維持 */
 const items330 = [
   {cat:"330", name:"豆漿（有糖）（非基改）", price:13},
   {cat:"330", name:"豆漿（無糖）（非基改）", price:13},
@@ -147,19 +203,18 @@ const items330 = [
 ];
 const items=[...items2500,...items1050,...items330];
 
-/* ---------- 工具 ---------- */
+/* ---------- 小工具 ---------- */
+const $ = s => document.querySelector(s);
+const $$ = s => document.querySelectorAll(s);
 const fmt = n => Number(n).toLocaleString('zh-Hant-TW');
 function nowTS(){
   const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth()+1).padStart(2,'0');
-  const day = String(d.getDate()).padStart(2,'0');
-  const hh = String(d.getHours()).padStart(2,'0');
-  const mm = String(d.getMinutes()).padStart(2,'0');
+  const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0');
+  const hh=String(d.getHours()).padStart(2,'0'), mm=String(d.getMinutes()).padStart(2,'0');
   return `${y}/${m}/${day} ${hh}:${mm}`;
 }
 
-/* ---------- 產 UI ---------- */
+/* ---------- 產出 UI（品項卡） ---------- */
 function renderItems(list,wrapId,offset){
   const wrap=document.getElementById(wrapId);
   list.forEach((item,i)=>{
@@ -183,27 +238,18 @@ renderItems(items2500,'cat-2500',0);
 renderItems(items1050,'cat-1050',items2500.length);
 renderItems(items330,'cat-330',items2500.length+items1050.length);
 
-/* ---------- 計算 ---------- */
-const sub2500=document.getElementById('sub-2500');
-const sub1050=document.getElementById('sub-1050');
-const sub330=document.getElementById('sub-330');
-const grand=document.getElementById('grand-total');
-const buyerInput=document.getElementById('buyer');
-const buyerName=document.getElementById('buyer-name');
-const tsSpan=document.getElementById('ts');
-const wrapBox=document.getElementById('wrap');
-const summaryBox=document.getElementById('summary');
+/* ---------- 計算（頁面） ---------- */
+const sub2500=$('#sub-2500'), sub1050=$('#sub-1050'), sub330=$('#sub-330'), grand=$('#grand-total');
+const buyerInput=$('#buyer'), buyerName=$('#buyer-name'), tsSpan=$('#ts'), wrapBox=$('#wrap'), summaryBox=$('#summary');
 
 buyerInput.addEventListener('input',()=>buyerName.textContent=buyerInput.value);
-
 function updateTS(){ tsSpan.textContent = nowTS(); }
 
 function recalc(){
   let t2500=0,t1050=0,t330=0;
-  document.querySelectorAll('.item').forEach(card=>{
+  $$('.item').forEach(card=>{
     const idx=+card.dataset.index;
-    const input=card.querySelector('input[type="number"]');
-    const qty=Math.max(0,parseInt(input.value||'0',10));
+    const qty=Math.max(0,parseInt(card.querySelector('input').value||'0',10));
     const subtotal=qty*items[idx].price;
     card.querySelector('.subtotal-num').textContent=fmt(subtotal);
     card.classList.toggle('highlight',qty>0);
@@ -225,105 +271,250 @@ document.body.addEventListener('input',e=>{
 document.body.addEventListener('click',e=>{
   if(e.target.matches('.step')){
     const input=e.target.parentElement.querySelector('input');
-    const step=+e.target.dataset.step;
-    input.value=Math.max(0,(+input.value||0)+step);
+    input.value=Math.max(0,(+input.value||0)+(+e.target.dataset.step));
     recalc();
   }
 });
-
-/* 清空 */
-document.getElementById('btn-clear').addEventListener('click',()=>{
-  document.querySelectorAll('.item input[type="number"]').forEach(i=>i.value=0);
+$('#btn-clear-inputs').addEventListener('click',()=>{
+  $$('.item input[type="number"]').forEach(i=>i.value=0);
   recalc();
 });
-
-/* 檢視模式（卡片隱藏空品項） */
-document.getElementById('btn-toggle').addEventListener('click',()=>{
-  wrapBox.classList.toggle('hide-empty');
-});
+$('#btn-toggle').addEventListener('click',()=>wrapBox.classList.toggle('hide-empty'));
 
 /* ---------- 小計模式（精簡清單） ---------- */
 let prevCollapsed = {};
-const bottomBtn = document.getElementById('btn-bottom-mode');
-bottomBtn.addEventListener('click',()=>{
-  if (wrapBox.classList.contains('summary-mode')) {
-    exitSummaryMode();
-  } else {
-    enterSummaryMode();
-  }
+$('#btn-bottom-mode').addEventListener('click',()=>{
+  if (wrapBox.classList.contains('summary-mode')) exitSummaryMode();
+  else enterSummaryMode();
 });
-
 function enterSummaryMode(){
   ['cat-2500','cat-1050','cat-330'].forEach(id=>{
-    const el=document.getElementById(id);
-    prevCollapsed[id]=el.classList.contains('collapsed');
-    el.classList.remove('collapsed');
+    const el=document.getElementById(id); prevCollapsed[id]=el.classList.contains('collapsed'); el.classList.remove('collapsed');
+    // 同步按鈕文案
+    const btn = document.querySelector(`.btn-toggle-cat[data-target="${id}"]`);
+    if (btn){ btn.textContent='收合'; btn.setAttribute('aria-expanded','true'); }
   });
-  wrapBox.classList.add('summary-mode');
-  buildSummary();
-  updateTS();
+  wrapBox.classList.add('summary-mode'); buildSummary(); updateTS();
 }
 function exitSummaryMode(){
   wrapBox.classList.remove('summary-mode');
   Object.entries(prevCollapsed).forEach(([id,flag])=>{
     document.getElementById(id).classList.toggle('collapsed',!!flag);
+    const btn = document.querySelector(`.btn-toggle-cat[data-target="${id}"]`);
+    if (btn){
+      btn.textContent = flag ? '展開' : '收合';
+      btn.setAttribute('aria-expanded', flag ? 'false' : 'true');
+    }
   });
   updateTS();
 }
 function buildSummary(){
-  const cats = [
-    {id:'2500', title:'2500cc 袋裝'},
-    {id:'1050', title:'1050cc 口栓袋'},
-    {id:'330',  title:'330cc 杯裝'}
-  ];
-  summaryBox.innerHTML = '';
+  const cats=[{id:'2500',title:'2500cc 袋裝'},{id:'1050',title:'1050cc 口栓袋'},{id:'330',title:'330cc 杯裝'}];
+  summaryBox.innerHTML='';
   cats.forEach(c=>{
-    const list = []; let catSum = 0;
-    document.querySelectorAll('.item').forEach(card=>{
-      const idx=+card.dataset.index;
-      const qty=parseInt(card.querySelector('input').value||'0',10);
-      if (items[idx].cat!==c.id || qty<=0) return;
-      const price=items[idx].price;
-      const money = qty*price;
-      catSum += money;
+    const list=[]; let catSum=0;
+    $$('.item').forEach(card=>{
+      const idx=+card.dataset.index, qty=parseInt(card.querySelector('input').value||'0',10);
+      if(items[idx].cat!==c.id || qty<=0) return;
+      const price=items[idx].price, money=qty*price; catSum+=money;
       list.push({name:items[idx].name, price, qty, money});
     });
-    if (list.length===0) return;
-    const sec = document.createElement('div');
-    sec.className='sec';
-    sec.innerHTML = `<div class="sec-title">${c.title}</div>`;
-    list.forEach(row=>{
-      const div = document.createElement('div');
-      div.className='row';
-      div.innerHTML = `
+    if(!list.length) return;
+    const sec=document.createElement('div'); sec.className='sec';
+    sec.innerHTML=`<div class="sec-title">${c.title}</div>`;
+    list.forEach(r=>{
+      const row=document.createElement('div'); row.className='row';
+      row.innerHTML=`
         <div class="left">
-          <span class="name">${row.name}</span>
-          <span class="badge">單價 $${fmt(row.price)}</span>
-          <span class="qty-badge">數量 ${row.qty}</span>
+          <span class="name">${r.name}</span>
+          <span class="badge">單價 $${fmt(r.price)}</span>
+          <span class="qty-badge">數量 ${r.qty}</span>
         </div>
-        <div class="money">$${fmt(row.money)}</div>`;
-      sec.appendChild(div);
+        <div class="money">$${fmt(r.money)}</div>`;
+      sec.appendChild(row);
     });
-    const sub = document.createElement('div');
-    sub.className='sec-sub';
-    sub.textContent = `小計 $${fmt(catSum)}`;
-    sec.appendChild(sub);
+    const sub=document.createElement('div'); sub.className='sec-sub'; sub.textContent=`小計 $${fmt(catSum)}`; sec.appendChild(sub);
     summaryBox.appendChild(sec);
   });
 }
 
-/* 展開/收合 */
-document.querySelectorAll('.btn-toggle-cat').forEach(btn=>{
+/* ---------- 展開/收合（修正版） ---------- */
+function setCollapsed(targetId, collapsed){
+  const panel = document.getElementById(targetId);
+  if (!panel) return;
+  panel.classList.toggle('collapsed', !!collapsed);
+  const btn = document.querySelector(`.btn-toggle-cat[data-target="${targetId}"]`);
+  if (btn){
+    btn.textContent = collapsed ? '展開' : '收合';
+    btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+  }
+}
+$$('.btn-toggle-cat').forEach(btn=>{
   btn.addEventListener('click',()=>{
-    const target=document.getElementById(btn.dataset.target);
+    // 若在小計模式，先退出，避免看不到卡片
     if (wrapBox.classList.contains('summary-mode')) exitSummaryMode();
-    target.classList.toggle('collapsed');
+    const id = btn.dataset.target;
+    const willCollapse = !document.getElementById(id).classList.contains('collapsed');
+    setCollapsed(id, willCollapse);
   });
 });
 
+/* ---------- 團購清單（localStorage） ---------- */
+const STORE_KEY='groupOrderRecords';
+function getRecords(){ return JSON.parse(localStorage.getItem(STORE_KEY)||'[]'); }
+function setRecords(arr){ localStorage.setItem(STORE_KEY, JSON.stringify(arr)); }
+
+function getQuantities(){
+  const q=[]; $$('.item').forEach(card=>q.push(parseInt(card.querySelector('input[type="number"]').value||'0',10)||0));
+  return q;
+}
+function buildRecord(){
+  const quantities=getQuantities();
+  const ts = nowTS();
+  const buyer = ($('#buyer')?.value.trim()) || '（未填姓名）';
+  const itemsPicked=[];
+  let sum2500=0,sum1050=0,sum330=0, grand=0;
+
+  quantities.forEach((qty,idx)=>{
+    if(qty<=0) return;
+    const it=items[idx];
+    const money=qty*it.price;
+    itemsPicked.push({idx, name:it.name, cat:it.cat, price:it.price, qty, money});
+    if(it.cat==='2500') sum2500+=money;
+    else if(it.cat==='1050') sum1050+=money;
+    else sum330+=money;
+    grand+=money;
+  });
+
+  return { buyer, ts, items:itemsPicked, sum:{'2500':sum2500,'1050':sum1050,'330':sum330, grand} };
+}
+
+/* 渲染使用者紀錄清單 */
+function renderRecords(){
+  const listEl=$('#records-list'); if(!listEl) return;
+  listEl.innerHTML='';
+  const records=getRecords();
+  if(!records.length){ listEl.innerHTML='<div class="muted">尚無紀錄，請先在上方輸入並按「加入本次填寫到清單」。</div>'; renderAggregate(); return; }
+
+  records.forEach((rec,ri)=>{
+    const card=document.createElement('div'); card.className='record';
+    card.innerHTML=`
+      <div class="hdr">
+        <div>${rec.buyer} <span class="meta">（${rec.ts}）</span></div>
+        <div>總金額 $${fmt(rec.sum.grand)}</div>
+      </div>
+      <div class="muted">2500小計 $${fmt(rec.sum['2500'])} ｜ 1050小計 $${fmt(rec.sum['1050'])} ｜ 330小計 $${fmt(rec.sum['330'])}</div>
+      <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn btn-toggle-detail">明細</button>
+        <button class="btn bad btn-del-record">刪除此筆</button>
+      </div>
+      <div class="details">
+        <table>
+          <thead><tr><th>品項</th><th>單價</th><th>數量</th><th>小計</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>`;
+    const tbody=card.querySelector('tbody');
+    rec.items.forEach(it=>{
+      const tr=document.createElement('tr');
+      tr.innerHTML=`<td style="text-align:left">${it.name}</td><td>$${fmt(it.price)}</td><td>${fmt(it.qty)}</td><td>$${fmt(it.money)}</td>`;
+      tbody.appendChild(tr);
+    });
+    card.querySelector('.btn-toggle-detail').addEventListener('click',()=>card.classList.toggle('open'));
+    card.querySelector('.btn-del-record').addEventListener('click',()=>{
+      if(!confirm(`確定刪除「${rec.buyer}（${rec.ts}）」這筆紀錄？`)) return;
+      const arr=getRecords(); arr.splice(ri,1); setRecords(arr); renderRecords(); renderAggregate();
+    });
+    listEl.appendChild(card);
+  });
+
+  renderAggregate();
+}
+
+/* 彙總所有紀錄（★分大分類輸出） */
+function renderAggregate(){
+  const tbody = document.getElementById('agg-body'); if(!tbody) return;
+  tbody.innerHTML='';
+
+  const qByItem = Array(items.length).fill(0);
+  const sumByCat = {'2500':0,'1050':0,'330':0};
+  let qtyAll=0,sumAll=0;
+
+  getRecords().forEach(rec=>{
+    rec.items.forEach(it=>{
+      qByItem[it.idx]+=it.qty;
+      sumByCat[it.cat]+=it.money;
+      qtyAll+=it.qty; sumAll+=it.money;
+    });
+  });
+
+  // 依分類輸出群組
+  const catDefs = [
+    {id:'2500', title:'2500cc 袋裝', range:[0, items2500.length]},
+    {id:'1050', title:'1050cc 口栓袋', range:[items2500.length, items2500.length+items1050.length]},
+    {id:'330',  title:'330cc 杯裝',   range:[items2500.length+items1050.length, items.length]}
+  ];
+
+  catDefs.forEach(def=>{
+    // 組分類標題列
+    const th = document.createElement('tr');
+    th.className='group';
+    th.innerHTML = `<td colspan="4">${def.title}</td>`;
+    tbody.appendChild(th);
+
+    // 該分類的品項逐一列出（只顯示 qty>0）
+    let hasAny=false;
+    for(let i=def.range[0]; i<def.range[1]; i++){
+      const qty=qByItem[i]; if(qty<=0) continue;
+      hasAny=true;
+      const money=qty*items[i].price;
+      const tr=document.createElement('tr');
+      tr.innerHTML=`<td>${items[i].name}</td><td>$${fmt(items[i].price)}</td><td>${fmt(qty)}</td><td>$${fmt(money)}</td>`;
+      tbody.appendChild(tr);
+    }
+    if(!hasAny){
+      const tr=document.createElement('tr');
+      tr.innerHTML=`<td colspan="4" class="muted">（此分類目前無數量）</td>`;
+      tbody.appendChild(tr);
+    }
+  });
+
+  // 類別小計 & 總金額
+  document.getElementById('agg-q-2500').textContent = ''; // 數量欄留白（不同單價時統計意義不大）
+  document.getElementById('agg-q-1050').textContent = '';
+  document.getElementById('agg-q-330').textContent  = '';
+  document.getElementById('agg-s-2500').textContent = `$${fmt(sumByCat['2500'])}`;
+  document.getElementById('agg-s-1050').textContent = `$${fmt(sumByCat['1050'])}`;
+  document.getElementById('agg-s-330').textContent  = `$${fmt(sumByCat['330'])}`;
+  document.getElementById('agg-q-all').textContent  = fmt(qtyAll);
+  document.getElementById('agg-s-all').textContent  = `$${fmt(sumAll)}`;
+}
+
+/* 加入本次填寫到清單 */
+document.getElementById('btn-add-record').addEventListener('click',()=>{
+  const rec=buildRecord();
+  if(!rec.items.length){ alert('目前沒有填寫任何數量。'); return; }
+  const arr=getRecords(); arr.push(rec); setRecords(arr);
+  renderRecords();
+  alert('已加入團購清單！');
+});
+
+/* 清空所有紀錄（防呆：需輸入「清空」） */
+document.getElementById('btn-clear-all').addEventListener('click',()=>{
+  const word = prompt('此動作會刪除所有「團購清單」紀錄與頁面數量。\n請輸入「清空」以確認：');
+  if(word!=='清空'){ alert('已取消。'); return; }
+  localStorage.removeItem('groupOrderRecords');
+  document.querySelectorAll('.item input[type="number"]').forEach(i=>i.value=0);
+  recalc();
+  renderRecords();
+  alert('已清空所有紀錄與數量。');
+});
+
+/* 初始：事件與渲染 */
 buyerName.textContent = buyerInput.value || '';
-updateTS();
+document.getElementById('ts').textContent = nowTS();
 recalc();
+renderRecords();
 </script>
 </body>
 </html>
