@@ -1,0 +1,500 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>簡易報名測試網頁</title>
+<style>
+  :root { --gap:14px; --radius:12px; --font: system-ui, -apple-system, "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif; }
+  body { font-family: var(--font); margin:0; background:#fafafa; color:#222; }
+  .wrap { max-width:720px; margin:0 auto; padding:16px; }
+  h1 { font-size:22px; margin:12px 0 8px; }
+  h2 { font-size:20px; margin:20px 0 8px; }
+  label { display:block; font-size:16px; margin:8px 0 6px; }
+  input, select, button, .btn {
+    font-size:18px; padding:14px 16px; width:100%; box-sizing:border-box; border-radius: var(--radius);
+    border:1px solid #ddd; background:#fff;
+  }
+  select.time { width:auto; min-width:85px; }
+  .time-row { align-items: center; }
+  .time-sep { text-align:center; font-weight:700; }
+  button, .btn { border:none; background:#1a73e8; color:#fff; font-weight:700; }
+  .btn-ghost { background:#fff; color:#1a73e8; border:1px solid #1a73e8; }
+  .btn-danger { background:#e53935; }
+  .row { display:flex; gap: var(--gap); }
+  .row > * { flex:1; }
+  .card {
+    background:#fff; border:1px solid #eee; border-radius: var(--radius); padding:14px; margin:10px 0;
+    box-shadow:0 1px 0 rgba(0,0,0,.03);
+  }
+  .card-green { background:#e8f5e9; border-color:#c8e6c9; }
+  .muted { color:#666; font-size:14px; }
+  .section { margin:20px 0; }
+  .hidden { display:none; }
+  .divider { height:1px; background:#eee; margin:16px 0; }
+  .list { list-style:none; padding:0; margin:8px 0 0; }
+  .list li { padding:8px 0; border-bottom:1px dashed #eee; }
+  .spacer-top { margin-top:22px !important; }
+
+  /* 大字確認畫面 */
+  .overlay { position: fixed; inset:0; background: rgba(0,0,0,.55); display:none; align-items:center; justify-content:center; padding:16px; z-index:999; }
+  .overlay .panel { background:#fff; border-radius:16px; padding:24px; max-width:640px; width:100%; text-align:center; }
+  .ok-title { font-size:28px; font-weight:900; margin:6px 0 12px; }
+  .ok-info { font-size:20px; line-height:1.6; }
+  .ok-sub { color:#666; font-size:16px; margin-top:8px; }
+
+  /* 刪除確認 */
+  .modal { position: fixed; inset:0; background: rgba(0,0,0,.5); display:none; align-items:center; justify-content:center; padding:16px; z-index:1000; }
+  .modal .panel { background:#fff; border-radius:16px; padding:20px; max-width:560px; width:100%; }
+  .danger-title { color:#e53935; font-size:22px; font-weight:900; margin:0 0 8px; }
+  .danger-text { color:#b71c1c; font-size:16px; margin:6px 0 14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>簡易報名測試網頁</h1>
+  <div class="row">
+    <button id="btnSignup">我要報名</button>
+    <button id="btnManage" class="btn-ghost">管理場次（維護）</button>
+  </div>
+
+  <!-- 維護區（綠底卡片） -->
+  <div id="adminPanel" class="section hidden">
+    <div class="card card-green">
+      <h2>新增場次</h2>
+      <label>場次類型</label>
+      <select id="sessionType">
+        <option value="助念">助念</option>
+        <option value="追思祝福">追思祝福</option>
+      </select>
+
+      <label>場次地點</label>
+      <input id="sessionPlace" type="text" placeholder="例如：○○里活動中心（1F禮堂）" />
+
+      <label>日期</label>
+      <input id="sessionDate" type="date" />
+
+      <label>時間時段（同日最多 4 個；5 分鐘一格；顯示為第一班、第二班…）</label>
+      <div id="timeSlots"></div>
+      <div class="row" style="margin-top:8px;">
+        <button id="btnAddTime">＋ 新增時段</button>
+        <button id="btnClearTimes" class="btn-ghost">清除全部時段</button>
+      </div>
+
+      <label class="spacer-top">備註文字（最多 50 字）</label>
+      <input id="sessionNote" type="text" maxlength="50" placeholder="例如：請提前 10 分鐘到場；請穿著整齊等。" />
+
+      <div class="row spacer-top">
+        <button id="btnCreateSession">新增場次</button>
+        <button id="btnResetForm" class="btn-ghost">清空表單</button>
+      </div>
+      <p class="muted">提示：選擇「起」與「迄」時間（分鐘為 00/05/10/…/55），且迄需晚於起。</p>
+    </div>
+
+    <div class="card">
+      <h2>已建立的場次</h2>
+      <div id="sessionList"></div>
+      <p class="muted">刪除場次會一併移除該場次下的所有報名。</p>
+    </div>
+  </div>
+
+  <!-- 報名區 -->
+  <div id="signupPanel" class="section hidden card">
+    <h2>我要報名</h2>
+    <label>姓名</label>
+    <input id="regName" type="text" placeholder="請輸入您的姓名" />
+    <label>選擇要報名的場次</label>
+    <select id="regSession"></select>
+    <div class="row" style="margin-top:12px;">
+      <button id="btnSubmitReg">送出報名</button>
+      <button id="btnCancelReg" class="btn-ghost">取消</button>
+    </div>
+  </div>
+
+  <!-- 報名狀況 -->
+  <div class="section card">
+    <h2>目前報名狀況</h2>
+    <div id="statusArea"></div>
+  </div>
+</div>
+
+<!-- 報名成功大字確認畫面 -->
+<div id="okOverlay" class="overlay">
+  <div class="panel">
+    <div class="ok-title">✅ 報名成功！</div>
+    <div id="okInfo" class="ok-info"></div>
+    <div class="ok-sub">已為您記錄。若需更改，請洽維護人員。</div>
+    <div style="margin-top:16px;">
+      <button id="btnOkClose">好</button>
+    </div>
+  </div>
+</div>
+
+<!-- 刪除確認 Modal -->
+<div id="delModal" class="modal">
+  <div class="panel">
+    <div class="danger-title">⚠ 確定要刪除此場次？</div>
+    <div id="delTarget" style="font-weight:700; margin-bottom:6px;"></div>
+    <div class="danger-text">此操作無法還原，且會一併刪除該場次所有報名資料！</div>
+    <div class="row" style="margin-top:10px;">
+      <button id="btnDelYes" class="btn-danger">我了解，仍要刪除</button>
+      <button id="btnDelNo" class="btn-ghost">取消</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/** 資料結構（localStorage）
+ * sessions: [{id, type, place, date, note, times:[{start, end}]}]
+ * registrations: [{id, sessionId, slotKey, name}]
+ */
+const LS_KEYS = { sessions: 'awds_sessions', regs: 'awds_regs' };
+const ADMIN_PWD = '12345678';
+
+const $ = sel => document.querySelector(sel);
+const el = (tag, cls, text) => { const x = document.createElement(tag); if (cls) x.className = cls; if (text!==undefined) x.textContent=text; return x; };
+function toast(msg){ alert(msg); }
+
+function loadSessions(){ try { return JSON.parse(localStorage.getItem(LS_KEYS.sessions))||[] } catch(e){ return [] } }
+function saveSessions(list){ localStorage.setItem(LS_KEYS.sessions, JSON.stringify(list)); }
+function loadRegs(){ try { return JSON.parse(localStorage.getItem(LS_KEYS.regs))||[] } catch(e){ return [] } }
+function saveRegs(list){ localStorage.setItem(LS_KEYS.regs, JSON.stringify(list)); }
+function uid(){ return 's'+Math.random().toString(36).slice(2,10); }
+function show(id, on=true){ const n=$(id); if(!n) return; on ? n.classList.remove('hidden') : n.classList.add('hidden'); }
+
+const weekMap = ['日','一','二','三','四','五','六'];
+function fmtDateWithWeek(isoDate){
+  if(!isoDate) return '';
+  const d = new Date(isoDate + 'T00:00:00');
+  const y = d.getFullYear(), m = d.getMonth()+1, dd = d.getDate();
+  const w = weekMap[d.getDay()];
+  return `${y}/${m}/${dd}(${w})`;
+}
+function pad2(n){ return (''+n).padStart(2,'0'); }
+function timeToMin(t){ // 'HH:MM' -> minutes from 00:00
+  const [h,m]=t.split(':').map(Number); return h*60+m;
+}
+function fmtSlot(s){ return s.start + (s.end ? '～' + s.end : ''); }
+function slotKeyOf(s){ return s.start + '-' + (s.end||''); }
+const classNames = ['第一班','第二班','第三班','第四班'];
+
+function normalizeTimes(times){
+  return (times||[]).map(t => typeof t === 'string' ? ({start:t, end:''}) : t);
+}
+function normalizeSession(s){
+  const times = normalizeTimes(s.times).slice().sort((a,b)=> a.start.localeCompare(b.start));
+  return {
+    id: s.id,
+    type: s.type,
+    place: s.place || s.name || '',
+    date: s.date,
+    note: s.note || '',
+    times
+  };
+}
+
+// ====== DOM 參照 ======
+const btnSignup = $('#btnSignup'), btnManage = $('#btnManage');
+const adminPanel = $('#adminPanel');
+
+const sessionType=$('#sessionType'), sessionPlace=$('#sessionPlace'), sessionDate=$('#sessionDate');
+const timeSlots=$('#timeSlots'), btnAddTime=$('#btnAddTime'), btnClearTimes=$('#btnClearTimes');
+const sessionNote=$('#sessionNote');
+const btnCreateSession=$('#btnCreateSession'), btnResetForm=$('#btnResetForm'), sessionList=$('#sessionList');
+
+const signupPanel=$('#signupPanel'), regName=$('#regName'), regSession=$('#regSession');
+const btnSubmitReg=$('#btnSubmitReg'), btnCancelReg=$('#btnCancelReg');
+
+const statusArea=$('#statusArea');
+
+const okOverlay = $('#okOverlay'), okInfo = $('#okInfo'), btnOkClose = $('#btnOkClose');
+
+const delModal = $('#delModal'), delTarget = $('#delTarget'),
+      btnDelYes = $('#btnDelYes'), btnDelNo = $('#btnDelNo');
+let pendingDeleteSessionId = null;
+
+// ===== UI 行為 =====
+btnManage.onclick=()=>{
+  const input = prompt('請輸入維護密碼');
+  if (input === ADMIN_PWD) {
+    show('#signupPanel', false);
+    show('#adminPanel', true);
+  } else if (input !== null) {
+    toast('密碼錯誤');
+  }
+};
+btnSignup.onclick=()=>{
+  show('#adminPanel', false);
+  show('#signupPanel', true);
+  renderRegSelect();
+};
+
+// ==== 建立「5 分鐘一格」下拉 ====
+function buildHourSelect(defaultVal=''){
+  const sel = document.createElement('select');
+  sel.className = 'time';
+  for (let h=0; h<24; h++){
+    const op = document.createElement('option');
+    op.value = pad2(h);
+    op.textContent = pad2(h) + ' 時';
+    sel.appendChild(op);
+  }
+  if (defaultVal) sel.value = defaultVal;
+  return sel;
+}
+function buildMinuteSelect(defaultVal=''){
+  const sel = document.createElement('select');
+  sel.className = 'time';
+  const mins = [0,5,10,15,20,25,30,35,40,45,50,55];
+  mins.forEach(m=>{
+    const op = document.createElement('option');
+    op.value = pad2(m);
+    op.textContent = pad2(m) + ' 分';
+    sel.appendChild(op);
+  });
+  if (defaultVal) sel.value = defaultVal;
+  return sel;
+}
+
+function resetTimeSlots(){ timeSlots.innerHTML=''; }
+
+function addTimeSlot(valStart='', valEnd=''){
+  const count = timeSlots.querySelectorAll('.slot-row').length;
+  if (count >= 4) { toast('同一日期最多 4 個時段'); return; }
+
+  // 預設值（若有傳入）
+  let sh='09', sm='00', eh='10', em='00';
+  if (valStart){ [sh,sm]=valStart.split(':'); }
+  if (valEnd){ [eh,em]=valEnd.split(':'); }
+
+  const row = el('div','row time-row slot-row');
+
+  const shSel = buildHourSelect(sh);
+  const smSel = buildMinuteSelect(sm);
+  const sep1 = el('div','time-sep','起');
+  sep1.style.minWidth='36px';
+
+  const ehSel = buildHourSelect(eh);
+  const emSel = buildMinuteSelect(em);
+  const sep2 = el('div','time-sep','迄');
+  sep2.style.minWidth='36px';
+
+  const del = el('button','btn-danger','刪除此時段');
+  del.onclick=()=> row.remove();
+
+  row.appendChild(sep1); row.appendChild(shSel); row.appendChild(smSel);
+  row.appendChild(sep2); row.appendChild(ehSel); row.appendChild(emSel);
+  row.appendChild(del);
+  timeSlots.appendChild(row);
+}
+btnAddTime.onclick=()=> addTimeSlot();
+btnClearTimes.onclick=()=> resetTimeSlots();
+
+btnResetForm.onclick=()=>{ sessionType.value='助念'; sessionPlace.value=''; sessionDate.value=''; sessionNote.value=''; resetTimeSlots(); };
+
+// ==== 新增場次 ====
+btnCreateSession.onclick=()=>{
+  const type = (sessionType.value||'').trim();
+  const place = (sessionPlace.value||'').trim();
+  const date = sessionDate.value;
+  const note = (sessionNote.value||'').trim();
+  const rows = Array.from(timeSlots.querySelectorAll('.slot-row'));
+  if(!type || !place || !date) return toast('請完整填寫：類型、地點、日期');
+  if(note.length > 50) return toast('備註文字最多 50 字');
+
+  const times = [];
+  for (const row of rows){
+    const sels = row.querySelectorAll('select.time');
+    const [sh, sm, eh, em] = Array.from(sels).map(s=>s.value);
+    const start = `${sh}:${sm}`;
+    const end   = `${eh}:${em}`;
+    if(end <= start) return toast('每個時段的「迄」需晚於「起」');
+    // 確保為 5 分鐘刻度（保險檢查）
+    if (![0,5,10,15,20,25,30,35,40,45,50,55].includes(Number(sm)) ||
+        ![0,5,10,15,20,25,30,35,40,45,50,55].includes(Number(em))) {
+      return toast('分鐘需為 00、05、10、15、20、25、30、35、40、45、50、55');
+    }
+    times.push({start, end});
+  }
+  if(times.length===0) return toast('請至少新增 1 個時段');
+  if(times.length>4) return toast('同一日期最多 4 個時段');
+
+  times.sort((a,b)=> a.start.localeCompare(b.start));
+
+  const list = loadSessions();
+  const id = uid();
+  list.push({ id, type, place, date, note, times });
+  saveSessions(list);
+
+  sessionPlace.value=''; sessionDate.value=''; sessionNote.value=''; resetTimeSlots();
+  renderSessions(); renderRegSelect(); renderStatus();
+  toast('已新增場次');
+};
+
+// ==== 列出場次（含班次與備註） ====
+function renderSessions(){
+  const list = loadSessions().map(normalizeSession)
+    .sort((a,b)=> (a.date||'').localeCompare(b.date||'') || (a.place||'').localeCompare(b.place||''));
+  sessionList.innerHTML='';
+  if(list.length===0){ sessionList.appendChild(el('p','muted','目前尚無場次')); return; }
+  list.forEach(s=>{
+    const card = el('div','card');
+    const title = el('div',null,`${fmtDateWithWeek(s.date)}｜${s.type}｜${s.place}`); title.style.fontWeight='700';
+
+    const timesText = s.times.map((t,idx)=> `${classNames[idx]||(`第${idx+1}班`)}${fmtSlot(t)}`).join('、');
+    const sub = el('div','muted',`時段：${timesText}`);
+    card.appendChild(title); card.appendChild(sub);
+
+    if (s.note) {
+      const note = el('div','muted',`備註：${s.note}`);
+      note.style.marginTop = '6px';
+      card.appendChild(note);
+    }
+
+    const delBtn = el('button','btn-danger'); delBtn.textContent='刪除此場次';
+    delBtn.onclick=()=> openDeleteConfirm(s);
+
+    card.appendChild(el('div','divider'));
+    card.appendChild(delBtn);
+    sessionList.appendChild(card);
+  });
+}
+
+// ==== 刪除（醒目紅字 + 二次確認） ====
+function openDeleteConfirm(s){
+  delTarget.textContent = `${fmtDateWithWeek(s.date)}｜${s.type}｜${s.place}`;
+  pendingDeleteSessionId = s.id;
+  delModal.style.display = 'flex';
+}
+btnDelNo.onclick=()=>{ delModal.style.display='none'; pendingDeleteSessionId=null; };
+btnDelYes.onclick=()=>{
+  if(!confirm('再次確認：確定要刪除此場次與其所有報名？')) return;
+  if(!pendingDeleteSessionId) return;
+  const id = pendingDeleteSessionId;
+  delModal.style.display='none';
+  pendingDeleteSessionId=null;
+
+  const sessions = loadSessions().filter(x=>x.id!==id);
+  const regs = loadRegs().filter(r=>r.sessionId!==id);
+  saveSessions(sessions); saveRegs(regs);
+  renderSessions(); renderRegSelect(); renderStatus();
+  toast('已刪除');
+};
+
+// ==== 報名下拉（帶入星期） ====
+function renderRegSelect(){
+  const sessions = loadSessions().map(normalizeSession);
+  regSession.innerHTML='';
+  const options = [];
+  sessions.forEach(s=>{
+    s.times.forEach((slot, idx)=>{
+      const val = { sessionId: s.id, slotKey: slotKeyOf(slot) };
+      const label = `${fmtDateWithWeek(s.date)} ${classNames[idx]||(`第${idx+1}班`)}${fmtSlot(slot)}｜${s.type}｜${s.place}` + (s.note ? `｜備註：${s.note}` : '');
+      const opt = document.createElement('option');
+      opt.value = JSON.stringify(val);
+      opt.textContent = label;
+      options.push(opt);
+    });
+  });
+  if(options.length===0){
+    const opt = document.createElement('option');
+    opt.textContent='目前沒有可報名的場次';
+    opt.value='';
+    regSession.appendChild(opt);
+  } else {
+    options.sort((a,b)=> a.textContent.localeCompare(b.textContent));
+    options.forEach(o=> regSession.appendChild(o));
+  }
+}
+
+// ==== 送出報名（含大字確認） ====
+btnSubmitReg.onclick=()=>{
+  const name = (regName.value||'').trim();
+  const val = regSession.value;
+  if(!name) return toast('請輸入姓名');
+  if(!val) return toast('目前沒有可報名場次');
+
+  let sel; try { sel = JSON.parse(val); } catch(e){}
+  if(!sel || !sel.sessionId || !sel.slotKey) return toast('請選擇場次');
+
+  const regs = loadRegs();
+  regs.push({ id: uid(), sessionId: sel.sessionId, slotKey: sel.slotKey, name });
+  saveRegs(regs);
+
+  const s = loadSessions().map(normalizeSession).find(x=>x.id===sel.sessionId);
+  let display = '';
+  if (s){
+    const idx = s.times.findIndex(t=> slotKeyOf(t)===sel.slotKey);
+    const slot = s.times[idx];
+    const cls = classNames[idx] || `第${idx+1}班`;
+    display = `${fmtDateWithWeek(s.date)} ${cls}${fmtSlot(slot)}｜${s.type}｜${s.place}` + (s.note ? `<br><span class="muted">備註：${s.note}</span>` : '');
+  }
+
+  okInfo.innerHTML = `<div><b>${name}</b></div><div>${display}</div>`;
+
+  regName.value='';
+  renderStatus();
+
+  okOverlay.style.display = 'flex';
+};
+btnOkClose.onclick=()=>{ okOverlay.style.display='none'; };
+btnCancelReg.onclick=()=> show('#signupPanel', false);
+
+// ==== 報名狀況（帶入星期 + 備註） ====
+function renderStatus(){
+  const sessions = loadSessions().map(normalizeSession);
+  const regs = loadRegs();
+
+  const bySession = {};
+  sessions.forEach(s=>{
+    bySession[s.id] = { meta:s, times:{} };
+    s.times.forEach(t=> bySession[s.id].times[slotKeyOf(t)] = []);
+  });
+  regs.forEach(r=>{
+    if(bySession[r.sessionId] && bySession[r.sessionId].times[r.slotKey]){
+      bySession[r.sessionId].times[r.slotKey].push(r.name);
+    }
+  });
+
+  const order = sessions.sort((a,b)=> (a.date||'').localeCompare(b.date||'') || (a.place||'').localeCompare(b.place||''));
+  statusArea.innerHTML='';
+  if(order.length===0){ statusArea.appendChild(el('p','muted','目前尚無任何場次')); return; }
+
+  let currentDate = '';
+  order.forEach(s=>{
+    if(s.date !== currentDate){
+      currentDate = s.date;
+      const h = el('h3', null, fmtDateWithWeek(currentDate)); h.style.marginTop='16px';
+      statusArea.appendChild(h);
+    }
+    const block = el('div','card');
+    const head = el('div', null, `${s.type}｜${s.place}`); head.style.fontWeight='700';
+    block.appendChild(head);
+
+    if (s.note){
+      const note = el('div','muted', `備註：${s.note}`);
+      note.style.margin = '6px 0 4px';
+      block.appendChild(note);
+    }
+
+    const ul = el('ul','list');
+    s.times.forEach((t, idx)=>{
+      const key = slotKeyOf(t);
+      const names = (bySession[s.id].times[key]||[]);
+      const listNames = names.join('、') || '（尚無報名）';
+      const label = `${classNames[idx]||(`第${idx+1}班`)}${fmtSlot(t)}　已報名：${names.length} 人　${listNames}`;
+      const li = el('li', null, label);
+      ul.appendChild(li);
+    });
+    block.appendChild(ul);
+    statusArea.appendChild(block);
+  });
+}
+
+// ===== 初次渲染 =====
+renderSessions();
+renderRegSelect();
+renderStatus();
+</script>
+</body>
+</html>
