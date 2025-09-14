@@ -15,9 +15,6 @@
     font-size:18px; padding:14px 16px; width:100%; box-sizing:border-box; border-radius: var(--radius);
     border:1px solid #ddd; background:#fff;
   }
-  select.time { width:auto; min-width:85px; }
-  .time-row { align-items: center; }
-  .time-sep { text-align:center; font-weight:700; }
   button, .btn { border:none; background:#1a73e8; color:#fff; font-weight:700; }
   .btn-ghost { background:#fff; color:#1a73e8; border:1px solid #1a73e8; }
   .btn-danger { background:#e53935; }
@@ -35,6 +32,45 @@
   .list { list-style:none; padding:0; margin:8px 0 0; }
   .list li { padding:8px 0; border-bottom:1px dashed #eee; }
   .spacer-top { margin-top:22px !important; }
+
+  /* ========= 時段行：改用 Grid，自動換成上下列 ========= */
+  .time-row {
+    display:grid;
+    grid-template-columns: auto 1fr 1fr auto 1fr 1fr auto; /* 起 標籤 | 起時 | 起分 | 迄 標籤 | 迄時 | 迄分 | 刪除 */
+    column-gap: 8px;
+    row-gap: 8px;
+    align-items:center;
+  }
+  .lab { font-weight:700; padding:0 6px; }
+  .lab-start { grid-column: 1 / 2; }
+  .start-hour { grid-column: 2 / 3; }
+  .start-min  { grid-column: 3 / 4; }
+  .lab-end   { grid-column: 4 / 5; }
+  .end-hour  { grid-column: 5 / 6; }
+  .end-min   { grid-column: 6 / 7; }
+  .btn-del   { grid-column: 7 / 8; white-space:nowrap; }
+
+  select.time { width:100%; min-width:0; } /* 讓小螢幕不會撐破 */
+
+  /* 手機（≤480px）：上下列呈現，刪除鍵獨佔一列 */
+  @media (max-width: 480px) {
+    .time-row {
+      grid-template-columns: 1fr 1fr;     /* 兩欄：時、分 */
+      grid-template-areas:
+        "labStart labStart"
+        "startH startM"
+        "labEnd labEnd"
+        "endH endM"
+        "del del";
+    }
+    .lab-start { grid-area: labStart; }
+    .lab-end   { grid-area: labEnd; }
+    .start-hour{ grid-area: startH; }
+    .start-min { grid-area: startM; }
+    .end-hour  { grid-area: endH; }
+    .end-min   { grid-area: endM; }
+    .btn-del   { grid-area: del; justify-self: end; }
+  }
 
   /* 大字確認畫面 */
   .overlay { position: fixed; inset:0; background: rgba(0,0,0,.55); display:none; align-items:center; justify-content:center; padding:16px; z-index:999; }
@@ -171,9 +207,6 @@ function fmtDateWithWeek(isoDate){
   return `${y}/${m}/${dd}(${w})`;
 }
 function pad2(n){ return (''+n).padStart(2,'0'); }
-function timeToMin(t){ // 'HH:MM' -> minutes from 00:00
-  const [h,m]=t.split(':').map(Number); return h*60+m;
-}
 function fmtSlot(s){ return s.start + (s.end ? '～' + s.end : ''); }
 function slotKeyOf(s){ return s.start + '-' + (s.end||''); }
 const classNames = ['第一班','第二班','第三班','第四班'];
@@ -262,28 +295,25 @@ function addTimeSlot(valStart='', valEnd=''){
   const count = timeSlots.querySelectorAll('.slot-row').length;
   if (count >= 4) { toast('同一日期最多 4 個時段'); return; }
 
-  // 預設值（若有傳入）
   let sh='09', sm='00', eh='10', em='00';
   if (valStart){ [sh,sm]=valStart.split(':'); }
   if (valEnd){ [eh,em]=valEnd.split(':'); }
 
-  const row = el('div','row time-row slot-row');
+  const row = el('div','time-row slot-row');
 
-  const shSel = buildHourSelect(sh);
-  const smSel = buildMinuteSelect(sm);
-  const sep1 = el('div','time-sep','起');
-  sep1.style.minWidth='36px';
+  const labS = el('div','lab lab-start','起');
+  const shSel = buildHourSelect(sh);   shSel.classList.add('start-hour');
+  const smSel = buildMinuteSelect(sm); smSel.classList.add('start-min');
 
-  const ehSel = buildHourSelect(eh);
-  const emSel = buildMinuteSelect(em);
-  const sep2 = el('div','time-sep','迄');
-  sep2.style.minWidth='36px';
+  const labE = el('div','lab lab-end','迄');
+  const ehSel = buildHourSelect(eh);   ehSel.classList.add('end-hour');
+  const emSel = buildMinuteSelect(em); emSel.classList.add('end-min');
 
-  const del = el('button','btn-danger','刪除此時段');
+  const del = el('button','btn-danger btn-del','刪除此時段');
   del.onclick=()=> row.remove();
 
-  row.appendChild(sep1); row.appendChild(shSel); row.appendChild(smSel);
-  row.appendChild(sep2); row.appendChild(ehSel); row.appendChild(emSel);
+  row.appendChild(labS); row.appendChild(shSel); row.appendChild(smSel);
+  row.appendChild(labE); row.appendChild(ehSel); row.appendChild(emSel);
   row.appendChild(del);
   timeSlots.appendChild(row);
 }
@@ -304,16 +334,13 @@ btnCreateSession.onclick=()=>{
 
   const times = [];
   for (const row of rows){
-    const sels = row.querySelectorAll('select.time');
-    const [sh, sm, eh, em] = Array.from(sels).map(s=>s.value);
+    const sh = row.querySelector('.start-hour').value;
+    const sm = row.querySelector('.start-min').value;
+    const eh = row.querySelector('.end-hour').value;
+    const em = row.querySelector('.end-min').value;
     const start = `${sh}:${sm}`;
     const end   = `${eh}:${em}`;
     if(end <= start) return toast('每個時段的「迄」需晚於「起」');
-    // 確保為 5 分鐘刻度（保險檢查）
-    if (![0,5,10,15,20,25,30,35,40,45,50,55].includes(Number(sm)) ||
-        ![0,5,10,15,20,25,30,35,40,45,50,55].includes(Number(em))) {
-      return toast('分鐘需為 00、05、10、15、20、25、30、35、40、45、50、55');
-    }
     times.push({start, end});
   }
   if(times.length===0) return toast('請至少新增 1 個時段');
@@ -332,7 +359,9 @@ btnCreateSession.onclick=()=>{
 };
 
 // ==== 列出場次（含班次與備註） ====
+function fmtSlot(s){ return s.start + (s.end ? '～' + s.end : ''); }
 function renderSessions(){
+  const classNames = ['第一班','第二班','第三班','第四班'];
   const list = loadSessions().map(normalizeSession)
     .sort((a,b)=> (a.date||'').localeCompare(b.date||'') || (a.place||'').localeCompare(b.place||''));
   sessionList.innerHTML='';
@@ -383,6 +412,7 @@ btnDelYes.onclick=()=>{
 
 // ==== 報名下拉（帶入星期） ====
 function renderRegSelect(){
+  const classNames = ['第一班','第二班','第三班','第四班'];
   const sessions = loadSessions().map(normalizeSession);
   regSession.innerHTML='';
   const options = [];
@@ -421,6 +451,7 @@ btnSubmitReg.onclick=()=>{
   regs.push({ id: uid(), sessionId: sel.sessionId, slotKey: sel.slotKey, name });
   saveRegs(regs);
 
+  const classNames = ['第一班','第二班','第三班','第四班'];
   const s = loadSessions().map(normalizeSession).find(x=>x.id===sel.sessionId);
   let display = '';
   if (s){
@@ -442,6 +473,7 @@ btnCancelReg.onclick=()=> show('#signupPanel', false);
 
 // ==== 報名狀況（帶入星期 + 備註） ====
 function renderStatus(){
+  const classNames = ['第一班','第二班','第三班','第四班'];
   const sessions = loadSessions().map(normalizeSession);
   const regs = loadRegs();
 
