@@ -75,7 +75,6 @@
   .overlay .panel { background:#fff; border-radius:16px; padding:24px; max-width:640px; width:100%; text-align:center; }
   .ok-title { font-size:28px; font-weight:900; margin:6px 0 12px; }
   .ok-info { font-size:20px; line-height:1.6; }
-  .ok-sub { color:#666; font-size:16px; margin-top:8px; }
 
   /* 刪除確認 */
   .modal { position: fixed; inset:0; background: rgba(0,0,0,.5); display:none; align-items:center; justify-content:center; padding:16px; z-index:1000; }
@@ -157,12 +156,11 @@
   </div>
 </div>
 
-<!-- 報名成功大字確認畫面 -->
+<!-- 報名成功大字確認畫面（標題會帶入姓名） -->
 <div id="okOverlay" class="overlay">
   <div class="panel">
-    <div class="ok-title">✅ 報名成功！</div>
+    <div id="okTitle" class="ok-title">✅ 報名完成！</div>
     <div id="okInfo" class="ok-info"></div>
-    <div class="ok-sub">已為您記錄。若需更改，請洽維護人員。</div>
     <div style="margin-top:16px;">
       <button id="btnOkClose">好</button>
     </div>
@@ -237,7 +235,7 @@ const btnSubmitReg=$('#btnSubmitReg'), btnCancelReg=$('#btnCancelReg');
 
 const statusArea=$('#statusArea');
 
-const okOverlay = $('#okOverlay'), okInfo = $('#okInfo'), btnOkClose = $('#btnOkClose');
+const okOverlay = $('#okOverlay'), okTitle=$('#okTitle'), okInfo = $('#okInfo'), btnOkClose = $('#btnOkClose');
 
 const delModal = $('#delModal'), delTarget = $('#delTarget'),
       btnDelYes = $('#btnDelYes'), btnDelNo = $('#btnDelNo');
@@ -346,7 +344,6 @@ function renderRegSelect(){
       const opt = document.createElement('option'); opt.textContent=`目前沒有可報名的${type}場次`; opt.value=''; sel.appendChild(opt);
     }else{
       options.sort((a,b)=> a.textContent.localeCompare(b.textContent)); options.forEach(o=> sel.appendChild(o));
-      // 加上第一個空白提示項
       const hint = document.createElement('option'); hint.textContent='— 請選擇 —'; hint.value=''; hint.selected=true; sel.insertBefore(hint, sel.firstChild);
     }
   }
@@ -354,7 +351,7 @@ function renderRegSelect(){
   fillSelect(regSessionZs,'追思祝福');
 }
 
-// ==== 送出報名（只允許選一個下拉） ====
+// ==== 送出報名（只允許選一個下拉；成功視窗標題含姓名） ====
 btnSubmitReg.onclick=()=>{
   const name = (regName.value||'').trim();
   const vJn = regSessionJn.value, vZs = regSessionZs.value;
@@ -377,7 +374,8 @@ btnSubmitReg.onclick=()=>{
     const slot = s.times[idx];
     display = `${fmtDateWithWeek(s.date)} ${classLabel(idx,s.times.length)}${fmtSlot(slot)}｜${s.type}｜${s.place}` + (s.note ? `<br><span class="muted">備註：${s.note}</span>` : '');
   }
-  okInfo.innerHTML = `<div><b>${name}</b></div><div>${display}</div>`;
+  okTitle.textContent = `✅ 報名完成！感恩${name}菩薩護持！`;
+  okInfo.innerHTML = `<div>${display}</div>`;
 
   regName.value=''; renderStatus(); okOverlay.style.display = 'flex';
 };
@@ -391,6 +389,7 @@ function renderStatus(){
 
   const bySession = {};
   sessions.forEach(s=>{ bySession[s.id] = { meta:s, times:{} }; s.times.forEach(t=> bySession[s.id].times[slotKeyOf(t)] = []); });
+  regs.forEach(r=>{ if(bySession[r.sessionId] && bySession[r.slotKey]){} });
   regs.forEach(r=>{ if(bySession[r.sessionId] && bySession[r.sessionId].times[r.slotKey]) bySession[r.sessionId].times[r.slotKey].push(r.name); });
 
   const order = sessions.sort((a,b)=> (a.date||'').localeCompare(b.date||'') || (a.place||'').localeCompare(b.place||''));
