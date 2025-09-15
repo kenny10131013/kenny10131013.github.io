@@ -8,40 +8,50 @@
 <!-- html2canvas -->
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 
-<!-- Web Font（匯出副本強制使用，避免字寬差異） -->
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
-
 <style>
+  /* === 原有字體與主題變數（原樣保留） ===================== */
   @font-face{
     font-family: "Microsoft JhengHei";
     src: local("Microsoft JhengHei"), local("微軟正黑體");
-    font-weight: 400; font-style: normal;
+    font-weight: 400;
+    font-style: normal;
   }
   :root{
-    --accent:#b40000; --muted:#666; --panel:#fff;
-    --highlight:#fff4e6; --strong-note-bg:#fff1f0;
+    --accent:#b40000;
+    --muted:#666;
+    --panel:#ffffff;
+    --highlight:#fff4e6;
+    --strong-note-bg:#fff1f0;
+    /* NEW: Modal/遮罩顏色 */
+    --backdrop: rgba(0,0,0,.45);
   }
   *{box-sizing:border-box}
   body{font-family:"Microsoft JhengHei","Noto Sans TC","PingFang TC",Arial,sans-serif;background:#f2f4f7;margin:18px;color:#111}
   .wrap{max-width:1180px;margin:0 auto}
   h1{font-size:20px;margin:0 0 12px 0}
   .container{display:grid;grid-template-columns:420px 1fr;gap:18px}
-  .card{background:var(--panel);border-radius:8px;padding:14px;border:1px solid #e6e6e6;box-shadow:0 6px 18px rgba(0,0,0,.03)}
+  .card{background:var(--panel);border-radius:8px;padding:14px;border:1px solid #e6e6e6;box-shadow:0 6px 18px rgba(0,0,0,0.03)}
   label{display:block;margin:6px 0 6px;color:var(--muted);font-size:13px}
-  input[type="text"],input[type="date"],select,textarea{width:100%;padding:8px;border:1px solid #d0d0d0;border-radius:6px;font-size:14px;font-family:inherit}
+  input[type="text"], input[type="date"], select, textarea {width:100%;padding:8px;border:1px solid #d0d0d0;border-radius:6px;font-size:14px;font-family:inherit}
   textarea{resize:vertical}
   button{padding:8px 12px;border-radius:6px;border:1px solid #bbb;background:#fff;cursor:pointer;font-family:inherit}
-  button.primary{background:var(--accent);color:#fff;border-color:rgba(0,0,0,.06)}
+  button.primary{background:var(--accent);color:#fff;border-color:rgba(0,0,0,0.06)}
   .small{font-size:13px;color:var(--muted)}
   .controls{display:flex;flex-direction:column;gap:12px}
   .row{display:flex;gap:8px}
   .row> *{flex:1}
   .btn-row{display:flex;gap:8px;justify-content:space-between;align-items:center}
 
-  /* 預覽/匯出畫布（操作時可 RWD；匯出時用離屏固定 880px 副本） */
+  /* 預覽 / 匯出區（原樣保留） */
   #exportArea{width:880px;background:var(--highlight);border:3px solid #d8c9a3;padding:18px;box-sizing:border-box;color:#222}
   .headerRow{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
-  #dynamicTitle{font-size:34px;font-weight:700;line-height:1.05;margin-bottom:6px;text-align:center}
+  #dynamicTitle{
+    font-size:34px;
+    font-weight:700;
+    line-height:1.05;
+    margin-bottom:6px;
+    text-align:center;
+  }
   #dynamicTitle .datePart{color:var(--accent);margin-right:6px}
   #dynamicTitle .titlePhrase{color:#000}
 
@@ -56,6 +66,7 @@
   td.totalCell{font-weight:700;color:var(--accent);background:#fff6f6}
   .roleSuffix{font-size:12px;color:#444;margin-left:6px}
   .fullNote{margin-top:12px;padding:10px;background:var(--strong-note-bg);border-left:6px solid #f5c0c0;font-weight:700;color:#990000;text-align:center}
+  .instruction{margin-top:8px;font-size:13px;color:var(--muted)}
   .registration-list{max-height:260px;overflow:auto;border:1px dashed #e0e0e0;padding:8px;border-radius:6px;background:#fafafa}
   .reg-item{display:flex;justify-content:space-between;padding:6px 4px;border-bottom:1px solid #eee;font-size:14px}
   .reg-item:last-child{border-bottom:none}
@@ -63,53 +74,149 @@
   .checkbox-row{display:flex;align-items:center;gap:8px}
   .role-fixed{background:#fffef7;padding:6px;border-radius:6px;margin-bottom:6px;font-size:14px}
 
-  #fullStaffWrap{display:flex;align-items:center;gap:8px;padding:10px 12px;border:2px solid #e5e5e5;border-radius:8px;background:#fff;transition:all .15s ease-in-out}
-  #fullStaffWrap label{font-size:16px;font-weight:700;color:#222;margin:0}
-  #fullStaffWrap.checked{background:#fff6f6;border-color:#f0bcbc;box-shadow:0 0 0 3px rgba(240,188,188,.25) inset}
+  /* 人力已圓滿色塊（原樣保留） */
+  #fullStaffWrap{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:10px 12px;
+    border:2px solid #e5e5e5;
+    border-radius:8px;
+    background:#fff;
+    transition:all .15s ease-in-out;
+  }
+  #fullStaffWrap label{
+    font-size:16px;
+    font-weight:700;
+    color:#222;
+    margin:0;
+  }
+  #fullStaffWrap.checked{
+    background:#fff6f6;
+    border-color:#f0bcbc;
+    box-shadow:0 0 0 3px rgba(240,188,188,0.25) inset;
+  }
 
-  .version-tag{position:fixed;right:12px;bottom:10px;font-size:12px;color:#888;user-select:none;pointer-events:none}
+  /* 右下角版本標註（原樣保留） */
+  .version-tag{
+    position:fixed;
+    right:12px;
+    bottom:10px;
+    font-size:12px;
+    color:#888;
+    user-select:none;
+    pointer-events:none;
+  }
 
-  /* RWD：操作時仍可響應 */
+  /* RWD（原樣保留） */
   @media (max-width:1000px){
     .container{grid-template-columns:1fr; padding:8px}
     #exportArea{width:100%}
     #dynamicTitle{font-size:26px}
   }
 
-  /* In-App Browser 提示條 */
-  #inAppBanner{display:none;padding:8px 10px;margin:0 0 10px 0;border-radius:6px;background:#fffbe6;border:1px solid #ffe58f;color:#7a5e00;font-size:13px}
-  #inAppBanner.show{display:block}
-
-  /* 匯出預覽 Modal（App 內：長按存圖 / 分享 / 複製） */
-  #imgModalMask{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);align-items:center;justify-content:center;z-index:9999}
-  #imgModalMask.show{display:flex}
-  #imgModal{background:#fff;border-radius:10px;max-width:92vw;max-height:88vh;padding:12px;box-shadow:0 12px 40px rgba(0,0,0,.28);display:flex;flex-direction:column;gap:10px}
-  #imgPreview{max-width:86vw;max-height:60vh;object-fit:contain;border:1px solid #eee}
-  .modal-actions{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}
-  .btn-ghost{background:#f5f5f5;border:1px solid #ddd;border-radius:6px;padding:6px 10px;font-size:13px;cursor:pointer}
-  .modal-tip{font-size:12px;color:#666}
-
-  /* 匯出專用：離屏舞台 & 捕捉模式（固定 880px） */
-  .capture-mode #exportAreaCapture{
-    width:880px !important;background:var(--highlight);border:3px solid #d8c9a3;padding:18px;box-sizing:border-box;color:#222;
-    font-family:'Noto Sans TC','Microsoft JhengHei','PingFang TC',Arial,sans-serif;
+  /* === NEW: 匯出「離屏舞台」與捕捉模式 ===================== */
+  /* 說明：匯出時會複製 #exportArea 到一個畫面外的舞台，再以固定 880px 排版供 html2canvas 掃描。 */
+  .capture-stage{
+    position:fixed;
+    left:-100000px; /* 完全離屏 */
+    top:0;
+    width:1px;
+    height:1px;
+    overflow:hidden;
+    pointer-events:none;
+    z-index:-1;
   }
-  .capture-mode #exportAreaCapture #dynamicTitle{font-size:34px !important}
-  .capture-stage{position:fixed;left:-99999px;top:0;width:880px;z-index:-1}
+  /* 離屏副本的根容器：統一版面寬度，避免 RWD 造成尺寸漂移 */
+  .capture-root{
+    width:880px;       /* 固定畫布寬 */
+    margin:0;
+  }
+  /* 可選：在離屏副本內，強制字體與行高以穩定排版（不影響主畫面） */
+  .capture-root, .capture-root *{
+    font-family:"Microsoft JhengHei","Noto Sans TC","PingFang TC",Arial,sans-serif;
+    line-height:1.2;
+  }
+  /* 若日後採用 capture-mode（鎖主畫面），這裡預留： */
+  body.capture-mode #exportArea{
+    width:880px !important;
+  }
+
+  /* === NEW: UA 提示條（LINE/FB/IG 內建瀏覽器） ================= */
+  #uaNotice{
+    display:none; /* 預設隱藏，命中 UA 後以 JS 顯示 */
+    position:sticky;
+    top:0;
+    z-index:1000;
+    background:#fff8e1;
+    color:#7a3e00;
+    border:1px solid #f0c070;
+    border-radius:8px;
+    padding:10px 12px;
+    margin:0 0 12px 0;
+  }
+  #uaNotice .actions{
+    display:flex;gap:8px;flex-wrap:wrap;margin-top:6px
+  }
+  #uaNotice button{
+    border-color:#e0b056;
+  }
+
+  /* === NEW: 匯出預覽 Modal（長按存圖 / 分享 / 複製） ============ */
+  .modal-backdrop{
+    position:fixed;inset:0;background:var(--backdrop);
+    display:none; /* 以 .open 切換 */
+    align-items:center;justify-content:center;
+    z-index:2000;
+    padding:16px;
+  }
+  .modal-backdrop.open{display:flex}
+  .modal{
+    background:#fff;border-radius:12px;border:1px solid #e5e5e5;
+    max-width:min(100%,960px);width:100%;
+    max-height:90vh;overflow:auto;padding:14px;
+    box-shadow:0 10px 30px rgba(0,0,0,.15);
+  }
+  .modal header{
+    display:flex;align-items:center;justify-content:space-between;margin-bottom:8px
+  }
+  .modal header .title{font-weight:700}
+  .modal .preview{
+    display:flex;justify-content:center;align-items:center;margin:10px 0
+  }
+  .modal .preview img{
+    max-width:100%;height:auto;display:block;border:1px solid #eee;border-radius:8px;background:#fff
+  }
+  .modal .tips{
+    font-size:13px;color:#666;margin:8px 0 12px
+  }
+  .modal .actions{
+    display:flex;gap:8px;flex-wrap:wrap
+  }
+
+  /* NEW: 無障礙隱藏文字 */
+  .sr-only{
+    position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;
+  }
 </style>
 </head>
 <body>
+<!-- NEW: UA 提示條（僅在 LINE/FB/IG 內建瀏覽器由 JS 顯示） -->
+<div id="uaNotice" role="region" aria-label="環境提示">
+  <div style="font-weight:700">提示：此環境可能限制直接下載圖片</div>
+  <div class="small">建議改以外部瀏覽器開啟（Safari / Chrome），或匯出後以「長按圖片存圖」方式保存。</div>
+  <div class="actions" aria-label="操作">
+    <button id="uaOpenExternBtn" type="button">嘗試在外部開啟</button>
+    <button id="uaDismissBtn" type="button">知道了</button>
+  </div>
+</div>
+
 <div class="wrap">
-  <!-- In-App 提示（LINE/FB/IG 內建瀏覽器） -->
-  <div id="inAppBanner">偵測到您在 App 內建瀏覽器（如 LINE）。此環境可能無法直接下載圖片。建議：點右上角「⋯」→ 以 Safari/Chrome 開啟；或先按「匯出」後<strong>長按圖片儲存</strong>。</div>
-
   <h1>場次匯出 PNG（6×6 固定表格 + 固定名單）</h1>
-
   <div class="container">
-    <!-- 左側：控制面板 -->
+    <!-- 控制面板（原樣） -->
     <div class="card">
       <div class="controls">
-        <!-- 建立 / 編輯場次 -->
         <div>
           <div style="font-weight:700;margin-bottom:8px">建立 / 編輯場次</div>
           <label>日期</label>
@@ -124,6 +231,7 @@
               <select id="evMin"></select>
             </div>
           </div>
+
           <label style="margin-top:8px">集合地點</label>
           <select id="evLocationSelect"></select>
           <input id="evLocationOther" placeholder="若選「其他」，請輸入地點" style="display:none;margin-top:6px"/>
@@ -134,36 +242,38 @@
             <button id="deleteEventBtn" style="color:#b00">刪除場次</button>
           </div>
           <div class="small" style="margin-top:6px">建立後會加入下方場次清單（本測試為本機暫存）</div>
-
-          <!-- （可選）一鍵清空本機資料 -->
-          <div class="small" style="margin-top:6px;display:flex;gap:8px;align-items:center">
-            <span>若載入舊人名，可按此清空：</span>
-            <button id="resetLocalBtn" class="btn-ghost">清空本機資料</button>
-          </div>
         </div>
 
         <hr style="border:none;border-top:1px dashed #e6e6e6"/>
 
-        <!-- 固定名單 -->
         <div>
           <div style="font-weight:700;margin-bottom:8px">維護：固定名單（會隨場次儲存）</div>
-          <div class="small">顯示順序：維挪 → 木魚 → 代說法 → 場控1..5</div>
+          <div class="small">填好一次會儲存在該場次，顯示順序：維挪 → 木魚 → 代說法 → 場控1..5</div>
+
           <label style="margin-top:8px">維挪姓名</label>
-          <input id="role_weina" placeholder="維挪姓名" />
+          <input id="role_weina" placeholder="維挪姓名 (例如 王大明)" />
+
           <label style="margin-top:8px">木魚姓名</label>
           <input id="role_muyu" placeholder="木魚姓名" />
+
           <label style="margin-top:8px">代說法姓名</label>
           <input id="role_speaker" placeholder="代說法姓名" />
+
           <label style="margin-top:8px">場控姓名（1）</label>
           <input id="role_stage1" placeholder="場控1" />
+
           <label style="margin-top:8px">場控姓名（2）</label>
           <input id="role_stage2" placeholder="場控2" />
+
           <label style="margin-top:8px">場控姓名（3）</label>
           <input id="role_stage3" placeholder="場控3" />
+
           <label style="margin-top:8px">場控姓名（4）</label>
           <input id="role_stage4" placeholder="場控4" />
+
           <label style="margin-top:8px">場控姓名（5）</label>
           <input id="role_stage5" placeholder="場控5" />
+
           <div style="margin-top:10px" class="btn-row">
             <button id="saveRolesBtn">儲存固定名單到場次</button>
             <button id="clearRolesBtn">清除固定名單</button>
@@ -172,7 +282,6 @@
 
         <hr style="border:none;border-top:1px dashed #e6e6e6"/>
 
-        <!-- 場次 / 報名管理 -->
         <div>
           <div style="font-weight:700;margin-bottom:8px">選取場次 / 報名管理</div>
           <label>場次列表</label>
@@ -195,7 +304,6 @@
 
         <hr style="border:none;border-top:1px dashed #e6e6e6"/>
 
-        <!-- 匯出設定 -->
         <div>
           <div style="font-weight:700;margin-bottom:8px">匯出設定</div>
           <div id="fullStaffWrap" class="checkbox-row">
@@ -205,7 +313,7 @@
 
           <div style="margin-top:8px">
             <label>輸出檔名</label>
-            <input id="outputName" placeholder="event-YYYY-MM-DD" />
+            <input id="outputName" placeholder="event-2025-09-02" />
           </div>
           <div style="margin-top:10px;display:flex;gap:8px">
             <button id="exportBtn" class="primary">匯出 PNG</button>
@@ -216,7 +324,7 @@
       </div>
     </div>
 
-    <!-- 右側：預覽 / 匯出畫布 -->
+    <!-- 預覽 / 匯出區（原樣） -->
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
         <div style="font-weight:700">匯出預覽（將轉成 PNG）</div>
@@ -224,10 +332,10 @@
       </div>
 
       <div id="exportArea" aria-label="匯出預覽">
-        <!-- 中置大標題 -->
-        <div class="headerRow"><div id="dynamicTitle" aria-hidden="true"></div></div>
+        <div class="headerRow">
+          <div id="dynamicTitle" aria-hidden="true"></div>
+        </div>
 
-        <!-- metaBox 左對齊兩行 -->
         <div class="metaBox" style="margin-top:12px;display:flex;align-items:flex-start;justify-content:space-between">
           <div class="meta-left">
             <div class="time-line">集合時間：<span id="metaTime" style="font-weight:700">10:30</span></div>
@@ -236,13 +344,12 @@
           <div style="width:220px"></div>
         </div>
 
-        <!-- 6x6 固定表格 -->
-        <table class="regTable" aria-label="報名表格"><tbody id="regBody"></tbody></table>
+        <table class="regTable" aria-label="報名表格">
+          <tbody id="regBody"></tbody>
+        </table>
 
-        <!-- 人力已圓滿 -->
         <div id="fullNote" class="fullNote" style="display:none">人力已圓滿，感恩護持！</div>
 
-        <!-- 注意事項 -->
         <div style="margin-top:12px;padding:10px;background:#fff7e6;border-left:6px solid #f0c070;font-weight:700;color:#7a3e00;text-align:center">
           請穿著義工服、黑襪、黑鞋、戴口罩，帶海青。
         </div>
@@ -251,19 +358,24 @@
   </div>
 </div>
 
-<!-- 右下角版本標註 -->
+<!-- 右下角版本標註（原樣） -->
 <div class="version-tag">三寶弟子114/9/15製作</div>
 
-<!-- 匯出圖片預覽 Modal -->
-<div id="imgModalMask" role="dialog" aria-modal="true" aria-label="匯出圖片預覽">
-  <div id="imgModal">
-    <img id="imgPreview" alt="匯出圖片預覽"/>
-    <div class="modal-tip">提示：在 LINE/FB 等 App 內瀏覽器，請<strong>長按圖片</strong>後選「儲存圖片」。</div>
-    <div class="modal-actions">
-      <button id="btnOpenNewTab" class="btn-ghost">在新分頁預覽</button>
-      <button id="btnShare" class="btn-ghost" style="display:none">分享圖片</button>
-      <button id="btnCopy" class="btn-ghost" style="display:none">複製到剪貼簿</button>
-      <button id="btnCloseModal" class="btn-ghost">關閉</button>
+<!-- NEW: 匯出預覽 Modal（不影響主畫面；僅在需要時由 JS 打開） -->
+<div id="exportModal" class="modal-backdrop" aria-hidden="true" aria-label="匯出預覽圖片">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="exportModalTitle">
+    <header>
+      <div id="exportModalTitle" class="title">圖片預覽（長按儲存）</div>
+      <button id="exportModalClose" type="button" aria-label="關閉">關閉</button>
+    </header>
+    <div class="preview">
+      <img id="exportImg" alt="匯出圖片預覽" />
+    </div>
+    <div class="tips">在部分 App 內建瀏覽器（如 LINE/FB/IG），可能無法直接下載。請長按上方圖片進行儲存；或改用外部瀏覽器開啟本頁。</div>
+    <div class="actions">
+      <button id="shareImageBtn" type="button" style="display:none">分享圖片</button>
+      <button id="copyImageBtn" type="button" style="display:none">複製到剪貼簿</button>
+      <button id="openDataUrlBtn" type="button">在新分頁開啟圖片</button>
     </div>
   </div>
 </div>
@@ -308,7 +420,7 @@ const fullNote = document.getElementById('fullNote');
 const dynamicTitle = document.getElementById('dynamicTitle');
 const fixedRolesArea = document.getElementById('fixedRolesArea');
 
-/* 固定名單輸入 */
+/* role inputs */
 const role_weina = document.getElementById('role_weina');
 const role_muyu = document.getElementById('role_muyu');
 const role_speaker = document.getElementById('role_speaker');
@@ -320,58 +432,55 @@ const role_stage5 = document.getElementById('role_stage5');
 const saveRolesBtn = document.getElementById('saveRolesBtn');
 const clearRolesBtn = document.getElementById('clearRolesBtn');
 
+/* ---------- NEW: Modal / UA DOM refs ---------- */
+const uaNotice = document.getElementById('uaNotice');
+const uaOpenExternBtn = document.getElementById('uaOpenExternBtn');
+const uaDismissBtn = document.getElementById('uaDismissBtn');
+const exportModal = document.getElementById('exportModal');
+const exportModalClose = document.getElementById('exportModalClose');
+const exportImg = document.getElementById('exportImg');
+const shareImageBtn = document.getElementById('shareImageBtn');
+const copyImageBtn = document.getElementById('copyImageBtn');
+const openDataUrlBtn = document.getElementById('openDataUrlBtn');
+
 /* ---------- 本地儲存（暫存/自動保存） ---------- */
 const LS_KEY = 'event_png_tool_v1';
 function saveToStorage(){
-  try { localStorage.setItem(LS_KEY, JSON.stringify(events)); status.textContent = '已自動儲存（本機）'; }
-  catch(e){ console.warn('localStorage 失敗', e); }
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify(events));
+    status.textContent = '已自動儲存（本機）';
+  } catch(e){
+    console.warn('localStorage 失敗', e);
+  }
 }
 function loadFromStorage(){
-  try{
+  try {
     const raw = localStorage.getItem(LS_KEY);
     if(!raw) return null;
     const parsed = JSON.parse(raw);
     if(Array.isArray(parsed)) return parsed;
-  }catch(e){ console.warn('localStorage 讀取失敗', e); }
+  } catch(e){
+    console.warn('localStorage 讀取失敗', e);
+  }
   return null;
 }
 
-/* 事件暫存（預設為空；若本機曾存過會自動載入） */
+/* ---------- 事件本地暫存 ---------- */
 let events = loadFromStorage() || [];
 
-/* ---------- helpers ---------- */
+/* ---------- helpers: split input ---------- */
 function splitNamesInput(text){
   if(!text) return [];
   const unified = text.replace(/、/g, ',').replace(/;/g, ',').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-  return unified.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
-}
-function escapeHtml(str){
-  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-function renderEmptyGrid(){
-  regBody.innerHTML = '';
-  for(let r=0;r<6;r++){
-    const tr = document.createElement('tr');
-    for(let c=0;c<6;c++){
-      const td = document.createElement('td');
-      if(r===5 && c===5){ td.className='totalCell'; td.textContent='合計0位'; }
-      else { td.className='empty'; td.textContent=''; }
-      tr.appendChild(td);
-    }
-    regBody.appendChild(tr);
-  }
+  const parts = unified.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+  return parts;
 }
 
-/* ---------- In-App / 平台偵測 ---------- */
-function isIOS(){ return /iP(hone|ad|od)/.test(navigator.userAgent); }
-function isInAppBrowser(){ const ua = navigator.userAgent || ''; return /(Line\/|FBAN|FBAV|Instagram|FB_IAB)/i.test(ua); }
-
-/* ---------- UI helpers ---------- */
+/* ---------- UI helper functions ---------- */
 function refreshEventSelect(){
   eventSelect.innerHTML = '';
   events.forEach((ev, idx) => {
-    const o = document.createElement('option');
-    o.value = idx; o.text = `${ev.date} ${ev.time} — ${ev.location}`;
+    const o = document.createElement('option'); o.value = idx; o.text = `${ev.date} ${ev.time} — ${ev.location}`;
     eventSelect.appendChild(o);
   });
   if(events.length>0){
@@ -379,17 +488,20 @@ function refreshEventSelect(){
     loadEventToForm(0);
     updatePreview(0);
   } else {
-    // 清空表單與預覽
-    evDate.value = ''; evHour.value = ''; evMin.value = '';
-    evLocationSelect.value = ''; evLocationOther.value = ''; evLocationOther.style.display = 'none';
+    evDate.value = '';
+    evHour.value = '';
+    evMin.value = '';
+    evLocationSelect.value = '';
+    evLocationOther.value = '';
+    evLocationOther.style.display = 'none';
     metaTime.textContent = ''; metaLocation.textContent = '';
-    fixedRolesArea.innerHTML = '<span class="small">（尚無固定名單）</span>';
     renderEmptyGrid();
   }
 }
 
 function loadEventToForm(index){
-  const ev = events[index]; if(!ev) return;
+  const ev = events[index];
+  if(!ev) return;
   evDate.value = ev.date || '';
   const [hh,mm] = (ev.time || ':').split(':');
   evHour.value = (hh || '').toString().padStart(2,'0');
@@ -398,12 +510,15 @@ function loadEventToForm(index){
   const found = LOCATION_LIST.includes(ev.location);
   if(found){
     evLocationSelect.value = ev.location;
-    evLocationOther.style.display = 'none'; evLocationOther.value = '';
+    evLocationOther.style.display = 'none';
+    evLocationOther.value = '';
   } else {
     evLocationSelect.value = '其他';
-    evLocationOther.style.display = 'block'; evLocationOther.value = ev.location || '';
+    evLocationOther.style.display = 'block';
+    evLocationOther.value = ev.location || '';
   }
 
+  // load fixed roles to inputs
   const roles = ev.roles || {};
   role_weina.value = roles.weina || '';
   role_muyu.value = roles.muyu || '';
@@ -420,8 +535,6 @@ function loadEventToForm(index){
 function renderRegistrationList(index){
   const ev = events[index] || {roles:{}, registrants:[]};
   registrationList.innerHTML = '';
-
-  // 固定名單顯示
   const roles = ev.roles || {};
   const roleOrder = [
     {key:'weina', label:'維挪'},
@@ -442,7 +555,6 @@ function renderRegistrationList(index){
   });
   fixedRolesArea.innerHTML = fixedHtml || '<span class="small">（尚無固定名單）</span>';
 
-  // 報名名單
   (ev.registrants || []).forEach((name, i) => {
     const div = document.createElement('div'); div.className='reg-item';
     const left = document.createElement('div'); left.textContent = name;
@@ -464,7 +576,7 @@ function renderRegistrationList(index){
   updatePreview(index);
 }
 
-/* 儲存 / 清除固定名單 */
+/* save fixed roles */
 saveRolesBtn.addEventListener('click', ()=>{
   const idx = Number(eventSelect.value);
   if(isNaN(idx)) return alert('請先選取場次');
@@ -496,7 +608,7 @@ clearRolesBtn.addEventListener('click', ()=>{
   saveToStorage();
 });
 
-/* 建立 / 更新 / 刪除場次 */
+/* create/update/delete events */
 createEventBtn.addEventListener('click', ()=>{
   const d = evDate.value; if(!d){ alert('請選日期'); return; }
   const hh = evHour.value; const mm = evMin.value;
@@ -514,7 +626,7 @@ updateEventBtn.addEventListener('click', ()=>{
   const idx = Number(eventSelect.value); if(isNaN(idx)) return alert('請先選場次');
   const d = evDate.value; if(!d){ alert('請選日期'); return; }
   const hh = evHour.value; const mm = evMin.value;
-  if(!hh || !mm){ alert('請選時間（時/分）'); return; }  /* ← 修正原本少引號的錯誤 */
+  if(!hh || !mm){ alert('請選時間（時/分）'); return; }
   const time = `${hh}:${mm}`;
   const loc = evLocationSelect.value === '其他' ? (evLocationOther.value || '其他') : evLocationSelect.value;
   if(!loc){ alert('請選集合地點'); return; }
@@ -533,7 +645,7 @@ deleteEventBtn.addEventListener('click', ()=>{
   saveToStorage();
 });
 
-/* 報名管理 */
+/* registrations management */
 addNamesBtn.addEventListener('click', ()=>{
   const idx = Number(eventSelect.value); if(isNaN(idx)) return alert('請先選場次');
   const text = namesInput.value.trim(); if(!text) return alert('請輸入姓名（逗號、頓號或換行分隔）');
@@ -565,13 +677,14 @@ removeSelectedBtn.addEventListener('click', ()=>{
   status.textContent = '已刪除勾選名單（已自動保存）';
   saveToStorage();
 });
-
-/* 預覽內容（固定名單→報名者；6x6 填入；最後一格顯示合計） */
+</script>
+<script>
+/* ---------- 預覽：建立 6×6（最後一格統計） ---------- */
 function updatePreview(index){
   const ev = events[index];
   if(!ev) { renderEmptyGrid(); return; }
 
-  // ROC 年 + 動態標題
+  // ROC 年 + 置中標題
   const dateObj = new Date(ev.date + 'T00:00:00');
   const gYear = dateObj.getFullYear();
   const roc = gYear - 1911;
@@ -584,7 +697,7 @@ function updatePreview(index){
   metaTime.textContent = ev.time || '';
   metaLocation.textContent = ev.location || '';
 
-  // 建立順序：固定名單 → 報名者
+  // 固定名單先、再一般報名
   const roleOrder = [
     {key:'weina', label:'維挪'},
     {key:'muyu', label:'木魚'},
@@ -599,7 +712,9 @@ function updatePreview(index){
   const roles = ev.roles || {};
   roleOrder.forEach(r=>{
     const name = roles[r.key];
-    if(name && name.trim()){ combined.push({ name: name.trim(), role: r.label }); }
+    if(name && name.trim()){
+      combined.push({ name: name.trim(), role: r.label });
+    }
   });
   (ev.registrants || []).forEach(n => combined.push({ name: n, role: '' }));
 
@@ -632,10 +747,9 @@ function updatePreview(index){
     regBody.appendChild(tr);
   }
   fullNote.style.display = fullStaffCheckbox.checked ? 'block' : 'none';
-  renderFixedRolesPreview(ev); // 左側固定名單區也同步
+  renderFixedRolesPreview(ev);
 }
 
-/* 左側固定名單區的預覽同步（保險） */
 function renderFixedRolesPreview(ev){
   const roles = ev.roles || {};
   const roleOrder = [
@@ -658,38 +772,223 @@ function renderFixedRolesPreview(ev){
   fixedRolesArea.innerHTML = fixedHtml || '<span class="small">（尚無固定名單）</span>';
 }
 
-/* ---------- 匯出（離屏副本 + 等字型 + 三層保險） ---------- */
-async function waitFontsReady(){ if(document.fonts && document.fonts.ready){ try{ await document.fonts.ready; }catch(e){} } }
-function dataURLtoBlob(dataUrl){
-  const arr = dataUrl.split(','), mime = arr[0].match(/:(.*?);/)[1];
-  const bstr = atob(arr[1]); let n = bstr.length; const u8 = new Uint8Array(n);
-  while(n--){ u8[n] = bstr.charCodeAt(n); }
-  return new Blob([u8], {type:mime});
+/* ---------- 小工具 ---------- */
+function escapeHtml(str){
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
-function triggerDownload(dataUrl, filename){
-  const a = document.createElement('a'); a.href = dataUrl; a.download = filename;
-  document.body.appendChild(a); a.click(); a.remove();
+function renderEmptyGrid(){
+  regBody.innerHTML = '';
+  for(let r=0;r<6;r++){
+    const tr = document.createElement('tr');
+    for(let c=0;c<6;c++){
+      const td = document.createElement('td');
+      if(r===5 && c===5){ td.className='totalCell'; td.textContent='合計0位'; }
+      else { td.className='empty'; td.textContent=''; }
+      tr.appendChild(td);
+    }
+    regBody.appendChild(tr);
+  }
 }
 
+/* ---------- 事件：切換場次與人力勾選 ---------- */
+eventSelect.addEventListener('change', ()=> {
+  const idx = Number(eventSelect.value);
+  if(isNaN(idx)) return;
+  loadEventToForm(idx);
+  updatePreview(idx);
+});
+fullStaffCheckbox.addEventListener('change', ()=> {
+  const idx = Number(eventSelect.value);
+  if(!isNaN(idx)) updatePreview(idx);
+  fullStaffWrap.classList.toggle('checked', fullStaffCheckbox.checked);
+});
+
+/* =========================================================================
+   NEW: UA 偵測、離屏副本匯出（固定 880px、scale:2），下載策略分流
+   ========================================================================= */
+function isInAppBrowser(){
+  const ua = navigator.userAgent || '';
+  return /Line\/|FBAN|FBAV|Instagram|Twitter/i.test(ua);
+}
+function showUaNoticeIfNeeded(){
+  if(isInAppBrowser()){
+    uaNotice.style.display = 'block';
+  }
+}
+uaDismissBtn?.addEventListener('click', ()=> uaNotice.style.display = 'none');
+uaOpenExternBtn?.addEventListener('click', ()=>{
+  // 嘗試開新分頁（多數 App WebView 仍會攔截；此處作為友善嘗試）
+  try { window.open(location.href, '_blank'); } catch(e){}
+  alert('若未成功，請使用右上角「⋯」→ 以 Safari/Chrome 開啟本頁。');
+});
+
+/* ---------- 匯出核心：建立離屏副本並固定 880px 進行擷取 ---------- */
 async function exportPNG(){
   const idx = Number(eventSelect.value);
-  if(isNaN(idx)) return alert('請先選取場次');
-  status.textContent = '正在生成 PNG…（固定寬度 880px，2× 解析度）';
+  if(isNaN(idx)) { alert('請先選取場次'); return; }
+  status.textContent = '正在生成 PNG…（固定 880px，解析度 2×）';
 
-  const original = document.getElementById('exportArea');
+  const node = document.getElementById('exportArea');
+  // 1) 等待字型（若支援）
+  try { if (document.fonts && document.fonts.ready) await document.fonts.ready; } catch(e){}
 
-  // 1) 等字型載入完成
-  await waitFontsReady();
-
-  // 2) 建立離屏舞台與副本（固定 880px）
-  document.documentElement.classList.add('capture-mode');
+  // 2) 建立離屏舞台 + 副本
   const stage = document.createElement('div');
   stage.className = 'capture-stage';
-  const clone = original.cloneNode(true);
-  clone.id = 'exportAreaCapture';
-  stage.appendChild(clone);
+  const root = document.createElement('div');
+  root.className = 'capture-root';
+  const clone = node.cloneNode(true);
+  // 確保克隆區的 exportArea 僅用固定寬（避免媒體查詢 100%）
+  clone.style.width = '880px';
+  root.appendChild(clone);
+  stage.appendChild(root);
   document.body.appendChild(stage);
 
-  // 讓瀏覽器完成 layout
-  await new Promise(r => requestAnimation
-frame(()=>r()));
+  // 3) 呼叫 html2canvas（固定 scale:2）
+  let dataUrl = '';
+  try {
+    const canvas = await html2canvas(clone, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: null
+    });
+    dataUrl = canvas.toDataURL('image/png');
+  } catch(err){
+    console.error(err);
+    status.textContent = '匯出失敗（查看 console）';
+    alert('匯出 PNG 發生錯誤，請查看瀏覽器 console');
+  } finally {
+    // 4) 清理離屏舞台
+    stage.remove();
+  }
+
+  if(!dataUrl){ return; }
+
+  // 5) 分流：外部瀏覽器 → 直接下載；App 內 → Modal 長按存圖
+  const filename = (outputName.value || `event-${events[idx].date}`).replace(/\s+/g,'_') + '.png';
+  if(!isInAppBrowser() && supportsAnchorDownload()){
+    triggerDownload(dataUrl, filename);
+    status.textContent = '匯出完成，已下載 PNG';
+  } else {
+    // 顯示 Modal，讓使用者長按 / 分享 / 複製
+    openExportModalWith(dataUrl, filename);
+    status.textContent = '已生成圖片，請長按上方預覽進行儲存（或使用分享/複製功能）';
+  }
+}
+
+/* ---------- 能力偵測 ---------- */
+function supportsAnchorDownload(){
+  const a = document.createElement('a');
+  return 'download' in a;
+}
+
+/* ---------- 下載、分享、複製、開新分頁 ---------- */
+function triggerDownload(dataUrl, filename){
+  const a = document.createElement('a');
+  a.href = dataUrl;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+function dataUrlToBlob(dataUrl){
+  const arr = dataUrl.split(',');
+  const mime = arr[0].match(/:(.*?);/)[1];
+  const bstr = atob(arr[1]);
+  let n = bstr.length;
+  const u8arr = new Uint8Array(n);
+  while(n--){ u8arr[n] = bstr.charCodeAt(n); }
+  return new Blob([u8arr], {type:mime});
+}
+
+/* ---------- 匯出 Modal 控制 ---------- */
+function openExportModalWith(dataUrl, filename){
+  exportImg.src = dataUrl;
+  exportImg.dataset.filename = filename;
+
+  // 分享按鈕：條件顯示
+  const blob = dataUrlToBlob(dataUrl);
+  const file = new File([blob], filename, { type: 'image/png' });
+
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    shareImageBtn.style.display = '';
+    shareImageBtn.onclick = async () => {
+      try {
+        await navigator.share({
+          files: [file],
+          title: filename,
+          text: '報名匯出圖片'
+        });
+      } catch(e){}
+    };
+  } else {
+    shareImageBtn.style.display = 'none';
+  }
+
+  if (navigator.clipboard && 'write' in navigator.clipboard && window.ClipboardItem) {
+    copyImageBtn.style.display = '';
+    copyImageBtn.onclick = async () => {
+      try {
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+        alert('已複製圖片到剪貼簿');
+      } catch(e){
+        alert('複製失敗：' + (e?.message || e));
+      }
+    };
+  } else {
+    copyImageBtn.style.display = 'none';
+  }
+
+  openDataUrlBtn.onclick = ()=> {
+    try { window.open(dataUrl, '_blank'); } catch(e){}
+  };
+
+  exportModal.classList.add('open');
+  exportModal.setAttribute('aria-hidden','false');
+}
+function closeExportModal(){
+  exportModal.classList.remove('open');
+  exportModal.setAttribute('aria-hidden','true');
+  exportImg.removeAttribute('src');
+  exportImg.removeAttribute('data-filename');
+}
+exportModalClose?.addEventListener('click', closeExportModal);
+exportModal?.addEventListener('click', (e)=>{
+  if(e.target === exportModal) closeExportModal();
+});
+
+/* ---------- 綁定匯出按鈕 ---------- */
+downloadPreviewBtn.addEventListener('click', exportPNG);
+exportBtn.addEventListener('click', exportPNG);
+
+/* ---------- 初始化：灌入選單、RWD 外觀、載入暫存 ---------- */
+function init(){
+  // 時、分（10 分刻度）
+  for(let h=0;h<24;h++){
+    const o = document.createElement('option'); o.value = String(h).padStart(2,'0'); o.text = String(h).padStart(2,'0');
+    evHour.appendChild(o);
+  }
+  ['00','10','20','30','40','50'].forEach(m=>{
+    const o = document.createElement('option'); o.value = m; o.text = m;
+    evMin.appendChild(o);
+  });
+  // 地點清單（只灌一次）
+  LOCATION_LIST.forEach(loc=>{
+    const o = document.createElement('option'); o.value = loc; o.text = loc;
+    evLocationSelect.appendChild(o);
+  });
+  evLocationSelect.addEventListener('change', ()=> {
+    evLocationOther.style.display = evLocationSelect.value === '其他' ? 'block' : 'none';
+  });
+
+  refreshEventSelect();
+  fullStaffWrap.classList.toggle('checked', fullStaffCheckbox.checked);
+
+  // 顯示 UA 提示（如在 LINE/FB/IG）
+  showUaNoticeIfNeeded();
+}
+init();
+</script>
+
+</body>
+</html>
