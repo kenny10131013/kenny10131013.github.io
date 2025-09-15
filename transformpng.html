@@ -72,7 +72,7 @@
   .checkbox-row{display:flex;align-items:center;gap:8px}
   .role-fixed{background:#fffef7;padding:6px;border-radius:6px;margin-bottom:6px;font-size:14px}
 
-  /* 調整：人力已圓滿的獨立色塊與大字體 */
+  /* 人力已圓滿：獨立色塊與大字體 */
   #fullStaffWrap{
     display:flex;
     align-items:center;
@@ -84,15 +84,26 @@
     transition:all .15s ease-in-out;
   }
   #fullStaffWrap label{
-    font-size:16px;           /* 字體加大 */
-    font-weight:700;          /* 加粗以利識別 */
+    font-size:16px;
+    font-weight:700;
     color:#222;
-    margin:0;                 /* 覆蓋通用 label margin */
+    margin:0;
   }
   #fullStaffWrap.checked{
-    background:#fff6f6;       /* 顯眼色塊（與總計色相呼應） */
+    background:#fff6f6;
     border-color:#f0bcbc;
     box-shadow:0 0 0 3px rgba(240,188,188,0.25) inset;
+  }
+
+  /* 右下角版本標註 */
+  .version-tag{
+    position:fixed;
+    right:12px;
+    bottom:10px;
+    font-size:12px;
+    color:#888;
+    user-select:none;
+    pointer-events:none;
   }
 
   @media (max-width:1000px){
@@ -128,9 +139,11 @@
           <select id="evLocationSelect"></select>
           <input id="evLocationOther" placeholder="若選「其他」，請輸入地點" style="display:none;margin-top:6px"/>
 
+          <!-- 調整：把刪除場次移到這一列 -->
           <div style="margin-top:10px" class="btn-row">
             <button id="createEventBtn" class="primary">建立場次</button>
             <button id="updateEventBtn">更新場次</button>
+            <button id="deleteEventBtn" style="color:#b00">刪除場次</button>
           </div>
           <div class="small" style="margin-top:6px">建立後會加入下方場次清單（本測試為本機暫存）</div>
         </div>
@@ -183,7 +196,7 @@
           <div style="display:flex;gap:8px;margin-top:8px">
             <button id="addNamesBtn">加入名單</button>
             <button id="clearNamesBtn">清空名單</button>
-            <button id="removeSelectedBtn">刪除勾選</button>
+            <button id="removeSelectedBtn">刪除勾選名單</button>
           </div>
 
           <div style="margin-top:10px">
@@ -197,7 +210,6 @@
 
         <div>
           <div style="font-weight:700;margin-bottom:8px">匯出設定</div>
-          <!-- 調整：加上包裹色塊，勾選時醒目顯示 -->
           <div id="fullStaffWrap" class="checkbox-row">
             <input type="checkbox" id="fullStaffCheckbox">
             <label for="fullStaffCheckbox">勾選：人力已圓滿</label>
@@ -210,7 +222,6 @@
           <div style="margin-top:10px;display:flex;gap:8px">
             <button id="exportBtn" class="primary">匯出 PNG</button>
             <button id="downloadPreviewBtn">下載目前預覽</button>
-            <button id="deleteEventBtn" style="color:#b00">刪除場次</button>
           </div>
           <div id="status" class="small" style="margin-top:8px"></div>
         </div>
@@ -256,6 +267,9 @@
   </div>
 </div>
 
+<!-- 右下角版本標註 -->
+<div class="version-tag">三寶弟子114/9/15製作</div>
+
 <script>
 /* ---------- 地點下拉清單 ---------- */
 const LOCATION_LIST = [
@@ -277,6 +291,7 @@ const evLocationSelect = document.getElementById('evLocationSelect');
 const evLocationOther = document.getElementById('evLocationOther');
 const createEventBtn = document.getElementById('createEventBtn');
 const updateEventBtn = document.getElementById('updateEventBtn');
+const deleteEventBtn = document.getElementById('deleteEventBtn');
 const eventSelect = document.getElementById('eventSelect');
 const registrationList = document.getElementById('registrationList');
 const namesInput = document.getElementById('namesInput');
@@ -285,7 +300,6 @@ const clearNamesBtn = document.getElementById('clearNamesBtn');
 const removeSelectedBtn = document.getElementById('removeSelectedBtn');
 const exportBtn = document.getElementById('exportBtn');
 const downloadPreviewBtn = document.getElementById('downloadPreviewBtn');
-const deleteEventBtn = document.getElementById('deleteEventBtn');
 const metaTime = document.getElementById('metaTime');
 const metaLocation = document.getElementById('metaLocation');
 const regBody = document.getElementById('regBody');
@@ -332,16 +346,8 @@ function loadFromStorage(){
 }
 
 /* ---------- 事件本地暫存（每個 event 包含 roles 與 registrants）---------- */
-let events = loadFromStorage() || [
-  {
-    id: '2025-09-02_1030',
-    date: '2025-09-02',
-    time: '10:30',
-    location: '懷愛館景行樓3F至仁1廳',
-    roles: { weina:'謝錦菊', muyu:'林惠玲', speaker:'', stage1:'黃月碧', stage2:'李庭寬', stage3:'張素娥', stage4:'賴月蓉', stage5:'' },
-    registrants: ['張育嘉','高利忠','林立心','蔡貴香','高玉鳳','蔣宗志','石乃元','鄭功賢','陳如秋','莊玉雪','李秋蓮','高玉慧','廖瑞鴻','張玉盈','楊進成','吳金燕']
-  }
-];
+/* 調整：移除測試資料，預設為空陣列（仍會讀取 localStorage） */
+let events = loadFromStorage() || [];
 
 /* ---------- helpers: split input by comma,頓號, newline, semicolon, spaces ---------- */
 function splitNamesInput(text){
@@ -363,6 +369,12 @@ function refreshEventSelect(){
     loadEventToForm(0);
     updatePreview(0);
   } else {
+    evDate.value = '';
+    evHour.value = '';
+    evMin.value = '';
+    evLocationSelect.value = '';
+    evLocationOther.value = '';
+    evLocationOther.style.display = 'none';
     metaTime.textContent = ''; metaLocation.textContent = '';
     renderEmptyGrid();
   }
@@ -371,10 +383,10 @@ function refreshEventSelect(){
 function loadEventToForm(index){
   const ev = events[index];
   if(!ev) return;
-  evDate.value = ev.date;
-  const [hh,mm] = ev.time.split(':');
-  evHour.value = (hh || '10').padStart(2,'0');
-  evMin.value = (mm || '30').padStart(2,'0');
+  evDate.value = ev.date || '';
+  const [hh,mm] = (ev.time || ':').split(':');
+  evHour.value = (hh || '').toString().padStart(2,'0');
+  evMin.value = (mm || '').toString().padStart(2,'0');
 
   const found = LOCATION_LIST.includes(ev.location);
   if(found){
@@ -397,13 +409,13 @@ function loadEventToForm(index){
   role_stage3.value = roles.stage3 || '';
   role_stage4.value = roles.stage4 || '';
   role_stage5.value = roles.stage5 || '';
-  outputName.value = `event-${ev.date}`;
+  outputName.value = ev.date ? `event-${ev.date}` : '';
   renderRegistrationList(index);
 }
 
 /* render fixed roles and registrants in left panel */
 function renderRegistrationList(index){
-  const ev = events[index];
+  const ev = events[index] || {roles:{}, registrants:[]};
   registrationList.innerHTML = '';
   // show fixed roles area
   const roles = ev.roles || {};
@@ -484,9 +496,12 @@ clearRolesBtn.addEventListener('click', ()=>{
 /* create/update/delete events */
 createEventBtn.addEventListener('click', ()=>{
   const d = evDate.value; if(!d){ alert('請選日期'); return; }
-  const time = `${evHour.value}:${evMin.value}`;
+  const hh = evHour.value; const mm = evMin.value;
+  if(!hh || !mm){ alert('請選時間（時/分）'); return; }
+  const time = `${hh}:${mm}`;
   const loc = evLocationSelect.value === '其他' ? (evLocationOther.value || '其他') : evLocationSelect.value;
-  const id = `${d}_${evHour.value+evMin.value}`;
+  if(!loc){ alert('請選集合地點'); return; }
+  const id = `${d}_${hh+mm}`;
   events.push({ id, date:d, time, location:loc, roles: {}, registrants: [] });
   refreshEventSelect();
   status.textContent = '場次已建立（本機暫存）';
@@ -495,9 +510,12 @@ createEventBtn.addEventListener('click', ()=>{
 updateEventBtn.addEventListener('click', ()=>{
   const idx = Number(eventSelect.value); if(isNaN(idx)) return alert('請先選場次');
   const d = evDate.value; if(!d){ alert('請選日期'); return; }
-  const time = `${evHour.value}:${evMin.value}`;
+  const hh = evHour.value; const mm = evMin.value;
+  if(!hh || !mm){ alert('請選時間（時/分）'); return; }
+  const time = `${hh}:${mm}`;
   const loc = evLocationSelect.value === '其他' ? (evLocationOther.value || '其他') : evLocationSelect.value;
-  const id = `${d}_${evHour.value+evMin.value}`;
+  if(!loc){ alert('請選集合地點'); return; }
+  const id = `${d}_${hh+mm}`;
   events[idx].date = d; events[idx].time = time; events[idx].location = loc; events[idx].id = id;
   refreshEventSelect();
   status.textContent = '場次已更新';
@@ -541,7 +559,7 @@ removeSelectedBtn.addEventListener('click', ()=>{
   toRemove.sort((a,b)=>b-a).forEach(i => events[idx].registrants.splice(i,1));
   renderRegistrationList(idx);
   updatePreview(idx);
-  status.textContent = '已刪除勾選項目（已自動保存）';
+  status.textContent = '已刪除勾選名單（已自動保存）';
   saveToStorage();
 });
 
@@ -672,7 +690,7 @@ eventSelect.addEventListener('change', ()=> {
 fullStaffCheckbox.addEventListener('change', ()=> {
   const idx = Number(eventSelect.value);
   if(!isNaN(idx)) updatePreview(idx);
-  // 調整：勾選時讓整個色塊外觀切換
+  // 勾選時讓整個色塊外觀切換
   fullStaffWrap.classList.toggle('checked', fullStaffCheckbox.checked);
 });
 
@@ -720,21 +738,9 @@ function init(){
     evLocationOther.style.display = evLocationSelect.value === '其他' ? 'block' : 'none';
   });
 
-  // 若 localStorage 無資料，確保至少一筆
-  if(!events || events.length===0){
-    const today = new Date().toISOString().slice(0,10);
-    events = [{ id: today+'_1030', date: today, time:'10:30', location: LOCATION_LIST[0], roles:{}, registrants:[] }];
-  }
-
   refreshEventSelect();
 
-  const idx = Number(eventSelect.value || 0);
-  if(!isNaN(idx)) loadEventToForm(idx);
-  renderRegistrationList(idx);
-  updatePreview(idx);
-  saveToStorage(); // 初始狀態也落盤一次
-
-  // 初始化：依勾選狀態套用色塊外觀
+  // 初始狀態：依勾選狀態套用色塊外觀
   fullStaffWrap.classList.toggle('checked', fullStaffCheckbox.checked);
 }
 init();
