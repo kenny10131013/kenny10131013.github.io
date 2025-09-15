@@ -108,14 +108,158 @@
 <div class="wrap">
   <div id="inAppBanner">偵測到您在 App 內建瀏覽器（如 LINE）。此環境可能無法直接下載圖片。建議：點右上角「⋯」→ 以 Safari/Chrome 開啟；或先按「匯出」後<strong>長按圖片儲存</strong>。</div>
 
-  <h1>場次匯出 PNG（6×6 固定表格 + 固定名單）</h1>
+<h1>場次匯出 PNG（6×6 固定表格 + 固定名單）</h1>
   <div class="container">
     <!-- 控制面板 -->
-    <!-- ...（此處與你原始版本相同，略，已包含固定名單、場次管理、報名管理、匯出設定）... -->
+    <div class="card">
+      <div class="controls">
+        <div>
+          <div style="font-weight:700;margin-bottom:8px">建立 / 編輯場次</div>
+          <label>日期</label>
+          <input type="date" id="evDate" />
+          <div class="row" style="margin-top:6px">
+            <div>
+              <label>時</label>
+              <select id="evHour"></select>
+            </div>
+            <div>
+              <label>分 (10 分刻度)</label>
+              <select id="evMin"></select>
+            </div>
+          </div>
+
+          <label style="margin-top:8px">集合地點</label>
+          <select id="evLocationSelect"></select>
+          <input id="evLocationOther" placeholder="若選「其他」，請輸入地點" style="display:none;margin-top:6px"/>
+
+          <!-- 調整：把刪除場次移到這一列 -->
+          <div style="margin-top:10px" class="btn-row">
+            <button id="createEventBtn" class="primary">建立場次</button>
+            <button id="updateEventBtn">更新場次</button>
+            <button id="deleteEventBtn" style="color:#b00">刪除場次</button>
+          </div>
+          <div class="small" style="margin-top:6px">建立後會加入下方場次清單（本測試為本機暫存）</div>
+        </div>
+
+        <hr style="border:none;border-top:1px dashed #e6e6e6"/>
+
+        <div>
+          <div style="font-weight:700;margin-bottom:8px">維護：固定名單（會隨場次儲存）</div>
+          <div class="small">填好一次會儲存在該場次，顯示順序：維挪 → 木魚 → 代說法 → 場控1..5</div>
+
+          <label style="margin-top:8px">維挪姓名</label>
+          <input id="role_weina" placeholder="維挪姓名 (例如 王大明)" />
+
+          <label style="margin-top:8px">木魚姓名</label>
+          <input id="role_muyu" placeholder="木魚姓名" />
+
+          <label style="margin-top:8px">代說法姓名</label>
+          <input id="role_speaker" placeholder="代說法姓名" />
+
+          <label style="margin-top:8px">場控姓名（1）</label>
+          <input id="role_stage1" placeholder="場控1" />
+
+          <label style="margin-top:8px">場控姓名（2）</label>
+          <input id="role_stage2" placeholder="場控2" />
+
+          <label style="margin-top:8px">場控姓名（3）</label>
+          <input id="role_stage3" placeholder="場控3" />
+
+          <label style="margin-top:8px">場控姓名（4）</label>
+          <input id="role_stage4" placeholder="場控4" />
+
+          <label style="margin-top:8px">場控姓名（5）</label>
+          <input id="role_stage5" placeholder="場控5" />
+
+          <div style="margin-top:10px" class="btn-row">
+            <button id="saveRolesBtn">儲存固定名單到場次</button>
+            <button id="clearRolesBtn">清除固定名單</button>
+          </div>
+        </div>
+
+        <hr style="border:none;border-top:1px dashed #e6e6e6"/>
+
+        <div>
+          <div style="font-weight:700;margin-bottom:8px">選取場次 / 報名管理</div>
+          <label>場次列表</label>
+          <select id="eventSelect"></select>
+
+          <label style="margin-top:8px">加入報名者（逗號、頓號、換行皆視為分隔）</label>
+          <textarea id="namesInput" placeholder="張三, 李四、王五 或每行一個" style="height:80px"></textarea>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button id="addNamesBtn">加入名單</button>
+            <button id="clearNamesBtn">清空名單</button>
+            <button id="removeSelectedBtn">刪除勾選名單</button>
+          </div>
+
+          <div style="margin-top:10px">
+            <label class="small">目前報名（固定名單會顯示於上方）</label>
+            <div id="fixedRolesArea" class="role-fixed"></div>
+            <div class="registration-list" id="registrationList"></div>
+          </div>
+        </div>
+
+        <hr style="border:none;border-top:1px dashed #e6e6e6"/>
+
+        <div>
+          <div style="font-weight:700;margin-bottom:8px">匯出設定</div>
+          <div id="fullStaffWrap" class="checkbox-row">
+            <input type="checkbox" id="fullStaffCheckbox">
+            <label for="fullStaffCheckbox">勾選：人力已圓滿</label>
+          </div>
+
+          <div style="margin-top:8px">
+            <label>輸出檔名</label>
+            <input id="outputName" placeholder="event-2025-09-02" />
+          </div>
+          <div style="margin-top:10px;display:flex;gap:8px">
+            <button id="exportBtn" class="primary">匯出 PNG</button>
+            <button id="downloadPreviewBtn">下載目前預覽</button>
+          </div>
+          <div id="status" class="small" style="margin-top:8px"></div>
+        </div>
+      </div>
+    </div>
+
     <!-- 預覽 / 匯出區 -->
-    <!-- ... 同上 ... -->
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-weight:700">匯出預覽（將轉成 PNG）</div>
+        <div class="small">輸出為 PNG • 解析度 2×（固定）</div>
+      </div>
+
+      <div id="exportArea" aria-label="匯出預覽">
+        <!-- 中置大標題 -->
+        <div class="headerRow">
+          <div id="dynamicTitle" aria-hidden="true"></div>
+        </div>
+
+        <!-- metaBox left aligned two lines -->
+        <div class="metaBox" style="margin-top:12px;display:flex;align-items:flex-start;justify-content:space-between">
+          <div class="meta-left">
+            <div class="time-line">集合時間：<span id="metaTime" style="font-weight:700">10:30</span></div>
+            <div class="loc-line">集合地點：<span id="metaLocation" style="font-weight:700">懷愛館景行樓3F至仁1廳</span></div>
+          </div>
+          <div style="width:220px"></div>
+        </div>
+
+        <!-- 6x6 固定表格 -->
+        <table class="regTable" aria-label="報名表格">
+          <tbody id="regBody"></tbody>
+        </table>
+
+        <!-- 若勾選顯示人力已圓滿 -->
+        <div id="fullNote" class="fullNote" style="display:none">人力已圓滿，感恩護持！</div>
+
+        <!-- 顯著注意事項 -->
+        <div style="margin-top:12px;padding:10px;background:#fff7e6;border-left:6px solid #f0c070;font-weight:700;color:#7a3e00;text-align:center">
+          請穿著義工服、黑襪、黑鞋、戴口罩，帶海青。
+        </div>
+      </div>
+    </div>
   </div>
 </div>
+
 
 <div class="version-tag">三寶弟子114/9/15製作</div>
 
