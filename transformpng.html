@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>追思祝福名單匯出 PNG（6×6 固定表格 + 固定名單）</title>
+<title>追思祝福場次匯出 PNG</title>
 
 <!-- html2canvas -->
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 
 <style>
-  /* === 原有字體與主題變數（原樣保留） ===================== */
+  /* === 字體與主題變數 ===================== */
   @font-face{
     font-family: "Microsoft JhengHei";
     src: local("Microsoft JhengHei"), local("微軟正黑體");
@@ -22,7 +22,6 @@
     --panel:#ffffff;
     --highlight:#fff4e6;
     --strong-note-bg:#fff1f0;
-    /* NEW: Modal/遮罩顏色 */
     --backdrop: rgba(0,0,0,.45);
   }
   *{box-sizing:border-box}
@@ -42,7 +41,7 @@
   .row> *{flex:1}
   .btn-row{display:flex;gap:8px;justify-content:space-between;align-items:center}
 
-  /* 預覽 / 匯出區（原樣保留） */
+  /* 預覽 / 匯出區 */
   #exportArea{width:880px;background:var(--highlight);border:3px solid #d8c9a3;padding:18px;box-sizing:border-box;color:#222}
   .headerRow{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
   #dynamicTitle{
@@ -60,8 +59,24 @@
   .meta-left .time-line{font-size:20px;font-weight:400}
   .meta-left .loc-line{font-size:18px;color:#222}
 
-  table.regTable{width:100%;border-collapse:collapse;margin-top:12px}
-  table.regTable td{border:1px solid #9a8f7a;padding:10px;font-size:16px;height:48px;vertical-align:middle;text-align:center}
+  /* ✅ 固定欄寬的關鍵：table-layout: fixed，讓六欄平均 */
+  table.regTable{
+    width:100%;
+    border-collapse:collapse;
+    margin-top:12px;
+    table-layout: fixed;           /* 固定欄寬、平均分配 */
+  }
+  table.regTable td{
+    border:1px solid #9a8f7a;
+    padding:10px;
+    font-size:16px;
+    height:48px;
+    vertical-align:middle;
+    text-align:center;
+    white-space: nowrap;           /* 不換行，避免撐高 */
+    overflow: hidden;              /* 超出隱藏 */
+    text-overflow: ellipsis;       /* 超出顯示省略號 */
+  }
   table.regTable td.empty{color:#bbb}
   td.totalCell{font-weight:700;color:var(--accent);background:#fff6f6}
   .roleSuffix{font-size:12px;color:#444;margin-left:6px}
@@ -74,7 +89,7 @@
   .checkbox-row{display:flex;align-items:center;gap:8px}
   .role-fixed{background:#fffef7;padding:6px;border-radius:6px;margin-bottom:6px;font-size:14px}
 
-  /* 人力已圓滿色塊（原樣保留） */
+  /* 人力已圓滿色塊 */
   #fullStaffWrap{
     display:flex;
     align-items:center;
@@ -97,7 +112,7 @@
     box-shadow:0 0 0 3px rgba(240,188,188,0.25) inset;
   }
 
-  /* 右下角版本標註（原樣保留） */
+  /* 右下角版本標註 */
   .version-tag{
     position:fixed;
     right:12px;
@@ -108,18 +123,17 @@
     pointer-events:none;
   }
 
-  /* RWD（原樣保留） */
+  /* RWD */
   @media (max-width:1000px){
     .container{grid-template-columns:1fr; padding:8px}
     #exportArea{width:100%}
     #dynamicTitle{font-size:26px}
   }
 
-  /* === NEW: 匯出「離屏舞台」與捕捉模式 ===================== */
-  /* 說明：匯出時會複製 #exportArea 到一個畫面外的舞台，再以固定 880px 排版供 html2canvas 掃描。 */
+  /* === 匯出「離屏舞台」與捕捉模式 ===================== */
   .capture-stage{
     position:fixed;
-    left:-100000px; /* 完全離屏 */
+    left:-100000px;
     top:0;
     width:1px;
     height:1px;
@@ -127,24 +141,21 @@
     pointer-events:none;
     z-index:-1;
   }
-  /* 離屏副本的根容器：統一版面寬度，避免 RWD 造成尺寸漂移 */
   .capture-root{
-    width:880px;       /* 固定畫布寬 */
+    width:880px;
     margin:0;
   }
-  /* 可選：在離屏副本內，強制字體與行高以穩定排版（不影響主畫面） */
   .capture-root, .capture-root *{
     font-family:"Microsoft JhengHei","Noto Sans TC","PingFang TC",Arial,sans-serif;
     line-height:1.2;
   }
-  /* 若日後採用 capture-mode（鎖主畫面），這裡預留： */
   body.capture-mode #exportArea{
     width:880px !important;
   }
 
-  /* === NEW: UA 提示條（LINE/FB/IG 內建瀏覽器） ================= */
+  /* === UA 提示條（LINE/FB/IG 內建瀏覽器） ================= */
   #uaNotice{
-    display:none; /* 預設隱藏，命中 UA 後以 JS 顯示 */
+    display:none;
     position:sticky;
     top:0;
     z-index:1000;
@@ -162,10 +173,10 @@
     border-color:#e0b056;
   }
 
-  /* === NEW: 匯出預覽 Modal（長按存圖 / 分享 / 複製） ============ */
+  /* === 匯出預覽 Modal（長按存圖 / 分享 / 複製） ============ */
   .modal-backdrop{
     position:fixed;inset:0;background:var(--backdrop);
-    display:none; /* 以 .open 切換 */
+    display:none;
     align-items:center;justify-content:center;
     z-index:2000;
     padding:16px;
@@ -194,14 +205,13 @@
     display:flex;gap:8px;flex-wrap:wrap
   }
 
-  /* NEW: 無障礙隱藏文字 */
   .sr-only{
     position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;
   }
 </style>
 </head>
 <body>
-<!-- NEW: UA 提示條（僅在 LINE/FB/IG 內建瀏覽器由 JS 顯示） -->
+<!-- UA 提示條（僅在 LINE/FB/IG 內建瀏覽器由 JS 顯示） -->
 <div id="uaNotice" role="region" aria-label="環境提示">
   <div style="font-weight:700">提示：此環境可能限制直接下載圖片</div>
   <div class="small">建議改以外部瀏覽器開啟（Safari / Chrome），或匯出後以「長按圖片存圖」方式保存。</div>
@@ -214,7 +224,7 @@
 <div class="wrap">
   <h1>追思祝福名單匯出 PNG（請以桌機電腦、手機的Chrome或是Safari瀏覽器開啟，若使用LINE的瀏覽器開啟，將會無法產生圖片）</h1>
   <div class="container">
-    <!-- 控制面板（原樣） -->
+    <!-- 控制面板 -->
     <div class="card">
       <div class="controls">
         <div>
@@ -324,7 +334,7 @@
       </div>
     </div>
 
-    <!-- 預覽 / 匯出區（原樣） -->
+    <!-- 預覽 / 匯出區 -->
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
         <div style="font-weight:700">匯出預覽（將轉成 PNG）</div>
@@ -358,10 +368,10 @@
   </div>
 </div>
 
-<!-- 右下角版本標註（原樣） -->
+<!-- 右下角版本標註 -->
 <div class="version-tag">三寶弟子114/9/15製作</div>
 
-<!-- NEW: 匯出預覽 Modal（不影響主畫面；僅在需要時由 JS 打開） -->
+<!-- 匯出預覽 Modal -->
 <div id="exportModal" class="modal-backdrop" aria-hidden="true" aria-label="匯出預覽圖片">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="exportModalTitle">
     <header>
@@ -432,7 +442,7 @@ const role_stage5 = document.getElementById('role_stage5');
 const saveRolesBtn = document.getElementById('saveRolesBtn');
 const clearRolesBtn = document.getElementById('clearRolesBtn');
 
-/* ---------- NEW: Modal / UA DOM refs ---------- */
+/* ---------- UA / Modal refs ---------- */
 const uaNotice = document.getElementById('uaNotice');
 const uaOpenExternBtn = document.getElementById('uaOpenExternBtn');
 const uaDismissBtn = document.getElementById('uaDismissBtn');
@@ -518,7 +528,6 @@ function loadEventToForm(index){
     evLocationOther.value = ev.location || '';
   }
 
-  // load fixed roles to inputs
   const roles = ev.roles || {};
   role_weina.value = roles.weina || '';
   role_muyu.value = roles.muyu || '';
@@ -679,8 +688,23 @@ removeSelectedBtn.addEventListener('click', ()=>{
 });
 </script>
 <script>
+/* ---------- 固定六欄：確保 <colgroup> 存在，平均欄寬 ---------- */
+function ensureRegTableColgroup(){
+  const table = document.querySelector('table.regTable');
+  if(!table) return;
+  if(!table.querySelector('colgroup')){
+    const cg = document.createElement('colgroup');
+    for(let i=0;i<6;i++){ cg.appendChild(document.createElement('col')); }
+    table.insertBefore(cg, table.firstChild);
+  }
+}
+function beforeRenderGridFix(){
+  ensureRegTableColgroup();
+}
+
 /* ---------- 預覽：建立 6×6（最後一格統計） ---------- */
 function updatePreview(index){
+  beforeRenderGridFix(); // 保障固定六欄
   const ev = events[index];
   if(!ev) { renderEmptyGrid(); return; }
 
@@ -777,6 +801,7 @@ function escapeHtml(str){
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 function renderEmptyGrid(){
+  beforeRenderGridFix(); // 同樣保障 colgroup 存在
   regBody.innerHTML = '';
   for(let r=0;r<6;r++){
     const tr = document.createElement('tr');
@@ -804,7 +829,7 @@ fullStaffCheckbox.addEventListener('change', ()=> {
 });
 
 /* =========================================================================
-   NEW: UA 偵測、離屏副本匯出（固定 880px、scale:2），下載策略分流
+   UA 偵測、離屏副本匯出（固定 880px、scale:2），下載策略分流
    ========================================================================= */
 function isInAppBrowser(){
   const ua = navigator.userAgent || '';
@@ -817,9 +842,9 @@ function showUaNoticeIfNeeded(){
 }
 uaDismissBtn?.addEventListener('click', ()=> uaNotice.style.display = 'none');
 uaOpenExternBtn?.addEventListener('click', ()=>{
-  // 嘗試開新分頁（多數 App WebView 仍會攔截；此處作為友善嘗試）
   try { window.open(location.href, '_blank'); } catch(e){}
-  alert('若未成功，請使用右上角「⋯」→ 以 Safari/Chrome 開啟本頁。');
+  // 文案依你要求改為「右上或右下」
+  alert('若未成功，請使用右上或右下的「⋯」→ 以 Safari/Chrome 開啟本頁。');
 });
 
 /* ---------- 匯出核心：建立離屏副本並固定 880px 進行擷取 ---------- */
@@ -829,6 +854,7 @@ async function exportPNG(){
   status.textContent = '正在生成 PNG…（固定 880px，解析度 2×）';
 
   const node = document.getElementById('exportArea');
+
   // 1) 等待字型（若支援）
   try { if (document.fonts && document.fonts.ready) await document.fonts.ready; } catch(e){}
 
@@ -838,8 +864,16 @@ async function exportPNG(){
   const root = document.createElement('div');
   root.className = 'capture-root';
   const clone = node.cloneNode(true);
-  // 確保克隆區的 exportArea 僅用固定寬（避免媒體查詢 100%）
-  clone.style.width = '880px';
+
+  // 保障表格在副本裡也有 colgroup（六欄平均）
+  const cloneTable = clone.querySelector('table.regTable');
+  if(cloneTable && !cloneTable.querySelector('colgroup')){
+    const cg = document.createElement('colgroup');
+    for(let i=0;i<6;i++){ cg.appendChild(document.createElement('col')); }
+    cloneTable.insertBefore(cg, cloneTable.firstChild);
+  }
+
+  clone.style.width = '880px'; // 固定畫布寬度
   root.appendChild(clone);
   stage.appendChild(root);
   document.body.appendChild(stage);
@@ -870,7 +904,6 @@ async function exportPNG(){
     triggerDownload(dataUrl, filename);
     status.textContent = '匯出完成，已下載 PNG';
   } else {
-    // 顯示 Modal，讓使用者長按 / 分享 / 複製
     openExportModalWith(dataUrl, filename);
     status.textContent = '已生成圖片，請長按上方預覽進行儲存（或使用分享/複製功能）';
   }
@@ -906,7 +939,6 @@ function openExportModalWith(dataUrl, filename){
   exportImg.src = dataUrl;
   exportImg.dataset.filename = filename;
 
-  // 分享按鈕：條件顯示
   const blob = dataUrlToBlob(dataUrl);
   const file = new File([blob], filename, { type: 'image/png' });
 
@@ -961,7 +993,7 @@ exportModal?.addEventListener('click', (e)=>{
 downloadPreviewBtn.addEventListener('click', exportPNG);
 exportBtn.addEventListener('click', exportPNG);
 
-/* ---------- 初始化：灌入選單、RWD 外觀、載入暫存 ---------- */
+/* ---------- 初始化：灌入選單、載入暫存、固定六欄、UA 提示 ---------- */
 function init(){
   // 時、分（10 分刻度）
   for(let h=0;h<24;h++){
@@ -972,7 +1004,7 @@ function init(){
     const o = document.createElement('option'); o.value = m; o.text = m;
     evMin.appendChild(o);
   });
-  // 地點清單（只灌一次）
+  // 地點清單
   LOCATION_LIST.forEach(loc=>{
     const o = document.createElement('option'); o.value = loc; o.text = loc;
     evLocationSelect.appendChild(o);
@@ -981,6 +1013,8 @@ function init(){
     evLocationOther.style.display = evLocationSelect.value === '其他' ? 'block' : 'none';
   });
 
+  // 首次載入：固定六欄、刷新畫面
+  beforeRenderGridFix();
   refreshEventSelect();
   fullStaffWrap.classList.toggle('checked', fullStaffCheckbox.checked);
 
