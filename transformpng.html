@@ -225,6 +225,35 @@
 
   /* 地點下拉項目視覺（第15點） */
   #evLocationSelect option{padding:4px 6px;letter-spacing:.02em}
+  #role_weina,
+  #role_muyu,
+  #role_speaker,
+  #role_stage1,
+  #role_stage2,
+  #role_stage3,
+  #role_stage4,
+  #role_stage5{
+    font-size:16px;
+    padding:12px;
+    min-height:44px;
+}
+
+details.usage summary{
+  cursor: pointer;
+  position: relative;
+  padding-left: 1.4em;
+}
+details.usage summary::before{
+  content: "▶";       /* 未展開時箭頭 */
+  position: absolute;
+  left: 0;
+}
+details.usage[open] summary::before{
+  content: "▼";       /* 展開時箭頭 */
+}
+
+
+
 </style>
 </head>
 <body>
@@ -244,7 +273,7 @@
 
   <!-- 使用說明（第11–12點：預設收合，手機友善） -->
   <div class="usage-wrap">
-    <details class="usage">
+    <details class="usage" open>
       <summary>使用說明：</summary>
       <div class="content">
         匯出圖片功能為單機版功能，無法多人共同編輯、更新場次資料。若要從上次維護的資料中繼續作業，則須使用同一支手機（平板）或電腦才能繼續編輯或更新。
