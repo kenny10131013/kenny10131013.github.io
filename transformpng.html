@@ -16,6 +16,7 @@
     font-weight: 400;
     font-style: normal;
   }
+
   :root{
     --accent:#b40000;
     --muted:#666;
@@ -23,17 +24,37 @@
     --highlight:#fff4e6;
     --strong-note-bg:#fff1f0;
     --backdrop: rgba(0,0,0,.45);
+
+    /* ★ 修改：新增可調字級（預覽用） */
+    --reg-name-size: 20px;
+    --reg-role-suffix-size: 12px;
+    --footer-tip-size: 20px;
+    --full-note-size: 22px;
+    --deficit-note-size: 22px;
+    --deficit-number-size: 32px;
+
+    /* ★ 修改：新增匯出（圖片）字級 */
+    --cap-reg-name-size: 23px;
+    --cap-reg-role-suffix-size: 9px;
+    --cap-footer-tip-size: 30px;
+    --cap-full-note-size: 30px;
+    --cap-deficit-note-size: 30px;
+    --cap-deficit-number-size: 40px;
+
+    /* ★ 修改：統一預覽/匯出底色 */
+    --export-bg: #fff4e6;
   }
+
   *{box-sizing:border-box}
   body{font-family:"Microsoft JhengHei","Noto Sans TC","PingFang TC",Arial,sans-serif;background:#f2f4f7;margin:18px;color:#111}
   .wrap{max-width:1180px;margin:0 auto}
-  h1{font-size:20px;margin:0 0 12px 0}
+  h1{font-size:20px;margin:0 0 12px 0; /* ★ 修改（手機溢出保護）*/ overflow-wrap:anywhere; word-break:break-word;}
   .container{display:grid;grid-template-columns:420px 1fr;gap:18px}
-  .card{background:var(--panel);border-radius:8px;padding:14px;border:1px solid #e6e6e6;box-shadow:0 6px 18px rgba(0,0,0,0.03)}
+  .card{background:var(--panel);border-radius:8px;padding:14px;border:1px solid #e6e6e6;box-shadow:0 6px 18px rgba(0,0,0,0.03); /* ★ 修改 */ min-width:0;}
   label{display:block;margin:6px 0 6px;color:var(--muted);font-size:16px}
-  input[type="text"], input[type="date"], select, textarea {width:100%;padding:8px;border:1px solid #d0d0d0;border-radius:6px;font-size:14px;font-family:inherit}
+  input[type="text"], input[type="date"], select, textarea {width:100%;padding:8px;border:1px solid #d0d0d0;border-radius:6px;font-size:14px;font-family:inherit; /* ★ 修改 */ max-width:100%;}
   textarea{resize:vertical}
-  button{padding:8px 12px;border-radius:6px;border:1px solid #bbb;background:#fff;cursor:pointer;font-family:inherit}
+  button{padding:8px 12px;border-radius:6px;border:1px solid #bbb;background:#fff;cursor:pointer;font-family:inherit; /* ★ 修改 */ max-width:100%;}
   button.primary{background:var(--accent);color:#fff;border-color:rgba(0,0,0,0.06)}
   .small{font-size:13px;color:var(--muted)}
   .controls{display:flex;flex-direction:column;gap:12px}
@@ -42,7 +63,7 @@
   .btn-row{display:flex;gap:8px;justify-content:space-between;align-items:center}
 
   /* 預覽 / 匯出區 */
-  #exportArea{width:880px;background:var(--highlight);border:3px solid #d8c9a3;padding:18px;box-sizing:border-box;color:#222;position:relative}
+  #exportArea{width:880px;background:var(--export-bg);border:3px solid #d8c9a3;padding:18px;box-sizing:border-box;color:#222;position:relative}
   .headerRow{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;position:relative}
   #dynamicTitle{
     font-size:34px;
@@ -73,8 +94,8 @@
   .metaBox{border:2px solid #dcd0b8;padding:10px;background:#fff;margin-top:12px}
   .meta-left{display:flex;flex-direction:column;gap:6px;align-items:flex-start}
   .meta-left .time-line,
-  .meta-left .loc-line{font-size:20px;font-weight:700} /* 標籤字級一致（第7點） */
-  .metaValue{color:#b40000;font-size:150%;font-weight:900;margin-left:4px} /* 值：紅+1.5x（第8點） */
+  .meta-left .loc-line{font-size:20px;font-weight:700}
+  .metaValue{color:#b40000;font-size:150%;font-weight:900;margin-left:4px}
 
   /* ✅ 固定欄寬的關鍵：table-layout: fixed，讓六欄平均 */
   table.regTable{
@@ -86,7 +107,7 @@
   table.regTable td{
     border:1px solid #9a8f7a;
     padding:10px;
-    font-size:20px;
+    font-size: var(--reg-name-size); /* ★ 修改：表格姓名字級（預覽） */
     height:48px;
     vertical-align:middle;
     text-align:center;
@@ -96,11 +117,42 @@
   }
   table.regTable td.empty{color:#bbb}
   td.totalCell{font-weight:700;color:var(--accent);background:#fff6f6}
-  .roleSuffix{font-size:12px;color:#444;margin-left:6px}
-  .fullNote{margin-top:12px;padding:10px;background:var(--strong-note-bg);border-left:6px solid #f5c0c0;font-weight:700;color:#990000;text-align:center}
-  /* 缺額訊息（第2–3點） */
-  #deficitNote{display:none;margin-top:12px;padding:10px;background:#fff7f7;border-left:6px solid #f0a0a0;font-weight:700;color:#b40000;text-align:center}
-  #deficitNote .num{font-size:150%;color:#b40000;font-weight:900}
+  .roleSuffix{font-size: var(--reg-role-suffix-size); color:#444;margin-left:6px}
+
+  .fullNote{
+    margin-top:12px;
+    padding:10px;
+    background:var(--strong-note-bg);
+    border-left:6px solid #f5c0c0;
+    font-weight:700;
+    color:#000;                 /* ★ 修改：整段黑色 */
+    text-align:center;
+    font-size: var(--full-note-size); /* ★ 修改：可調字級（預覽） */
+  }
+  .fullNote .highlight-total{
+    font-size: calc(var(--full-note-size) * 1.3); /* ★ 修改：數字放大（預覽） */
+    color: var(--accent);
+    font-weight:900;
+  }
+
+  /* 缺額訊息（第2–4點） */
+  #deficitNote{
+    display:none;
+    margin-top:12px;
+    padding:10px;
+    background:#fff7f7;
+    border-left:6px solid #f0a0a0;
+    font-weight:700;
+    color:#000; /* ★ 修改：整段黑色 */
+    text-align:center;
+    font-size: var(--deficit-note-size); /* ★ 修改：可調字級（預覽） */
+  }
+  #deficitNote .num, /* 舊結構相容 */
+  #deficitNote .deficit-num{
+    font-size: var(--deficit-number-size); /* ★ 修改：數字放大（預覽） */
+    color: var(--accent);                   /* ★ 修改：數字紅色 */
+    font-weight:900;
+  }
 
   .instruction{margin-top:8px;font-size:13px;color:var(--muted)}
   .registration-list{max-height:260px;overflow:auto;border:1px dashed #e0e0e0;padding:8px;border-radius:6px;background:#fafafa}
@@ -125,12 +177,23 @@
     pointer-events:none;
   }
 
+  /* ★ 修改：底部橘色提醒（可調字級；預覽） */
+  #exportArea > div:last-child{
+    font-size: var(--footer-tip-size);
+  }
+
   /* RWD */
   @media (max-width:1000px){
     .container{grid-template-columns:1fr; padding:8px}
     #exportArea{width:100%}
     #dynamicTitle{font-size:26px}
     #reminderBadge{transform:none}
+  }
+
+  /* ★ 修改：手機更緊湊的溢出/布局保護 */
+  @media (max-width:480px){
+    .wrap{padding:0 12px;}
+    .metaBox > div:last-child{display:none;} /* 隱藏右側 220px 占位，避免橫向捲動 */
   }
 
   /* === 匯出「離屏舞台」與捕捉模式 ===================== */
@@ -158,7 +221,16 @@
     width:880px !important;
   }
 
-
+  /* ★ 修改：匯出圖片的字級覆蓋（統一用變數） */
+  .capture-root td { font-size: var(--cap-reg-name-size) !important; }
+  .capture-root td .roleSuffix { font-size: var(--cap-reg-role-suffix-size) !important; }
+  .capture-root #exportArea { background-color: var(--export-bg) !important; }
+  .capture-root .fullNote { font-size: var(--cap-full-note-size) !important; color:#000 !important; text-align:center; }
+  .capture-root .fullNote .highlight-total { font-size: var(--cap-full-note-size); color: var(--accent); font-weight:900; }
+  .capture-root #deficitNote { font-size: var(--cap-deficit-note-size) !important; color:#000 !important; }
+  .capture-root #deficitNote .num,
+  .capture-root #deficitNote .deficit-num { font-size: var(--cap-deficit-number-size) !important; color: var(--accent) !important; font-weight:900 !important; }
+  .capture-root #exportArea > div:last-child { font-size: var(--cap-footer-tip-size) !important; }
 
   /* === UA 提示條（LINE/FB/IG 內建瀏覽器） ================= */
   #uaNotice{
@@ -215,9 +287,9 @@
   /* 使用說明（第11–12點，摺疊樣式） */
   .usage-wrap{margin:8px 0 10px}
   details.usage{background:#fff;border:1px dashed #e5e5e5;border-radius:8px;padding:10px}
-  details.usage summary{cursor:pointer;font-weight:700;list-style:none}
+  details.usage summary{cursor:pointer;font-weight:700;list-style:none; /* ★ 修改（手機溢出保護）*/ overflow-wrap:anywhere; word-break:break-word;}
   details.usage summary::-webkit-details-marker{display:none}
-  .usage .content{font-size:13px;line-height:1.6;color:#333;margin-top:6px}
+  .usage .content{font-size:13px;line-height:1.6;color:#333;margin-top:6px; /* ★ 修改 */ overflow-wrap:anywhere; word-break:break-word;}
 
   .sr-only{
     position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;
@@ -236,24 +308,21 @@
     font-size:16px;
     padding:12px;
     min-height:44px;
-}
+  }
 
-details.usage summary{
-  cursor: pointer;
-  position: relative;
-  padding-left: 1.4em;
-}
-details.usage summary::before{
-  content: "▶";       /* 未展開時箭頭 */
-  position: absolute;
-  left: 0;
-}
-details.usage[open] summary::before{
-  content: "▼";       /* 展開時箭頭 */
-}
-
-
-
+  details.usage summary{
+    cursor: pointer;
+    position: relative;
+    padding-left: 1.4em;
+  }
+  details.usage summary::before{
+    content: "▶";
+    position: absolute;
+    left: 0;
+  }
+  details.usage[open] summary::before{
+    content: "▼";
+  }
 </style>
 </head>
 <body>
@@ -268,10 +337,10 @@ details.usage[open] summary::before{
 </div>
 
 <div class="wrap">
-  <!-- H1 文案（第10點） -->
+  <!-- H1 文案 -->
   <h1>「追思祝福」護持菩薩報名名單匯出為圖片檔（請以桌機電腦、手機的 Chrome 或 Safari 瀏覽器開啟，若直接以 LINE 中的瀏覽功能開啟，將無法正常產生圖片）</h1>
 
-  <!-- 使用說明（第11–12點：預設收合，手機友善） -->
+  <!-- 使用說明（預設收合，手機友善） -->
   <div class="usage-wrap">
     <details class="usage" open>
       <summary>使用說明：</summary>
@@ -304,7 +373,7 @@ details.usage[open] summary::before{
           <select id="evLocationSelect"></select>
           <input id="evLocationOther" placeholder="若選「其他」，請輸入地點" style="display:none;margin-top:6px"/>
 
-          <!-- 新增：需求總人數（第1點） -->
+          <!-- 需求總人數（★ 修改：邏輯在 JS 將上限改為 36） -->
           <label style="margin-top:8px">需求總人數</label>
           <select id="evRequiredTotal"></select>
 
@@ -322,7 +391,6 @@ details.usage[open] summary::before{
           <div style="font-weight:700;margin-bottom:8px">維護：固定名單（會隨場次儲存）</div>
           <div class="small">填好一次會儲存在該場次，顯示順序：維那 → 木魚 → 代說法 → 場控1..5</div>
 
-          <!-- 標籤改字：維挪→維那（第5點；ID 不變） -->
           <label style="margin-top:8px">維那姓名</label>
           <input id="role_weina" placeholder="維那姓名 (例如 王大明)" />
 
@@ -380,14 +448,13 @@ details.usage[open] summary::before{
         <div>
           <div style="font-weight:700;margin-bottom:8px">匯出設定</div>
 
-          <!-- 改為單選群組：不顯示 / 人力已圓滿 / 顯示缺額（第2點） -->
+          <!-- 單選群組：不顯示 / 人力已圓滿 / 顯示缺額 -->
           <div class="status-row" role="radiogroup" aria-label="人力狀態">
             <label class="option"><input type="radio" name="statusMode" value="none" checked> 不顯示人力狀態</label>
             <label class="option"><input type="radio" name="statusMode" value="full"> 勾選：人力已圓滿</label>
             <label class="option"><input type="radio" name="statusMode" value="deficit"> 勾選：顯示本場次護持人數缺額</label>
           </div>
 
-          <!-- 新增：溫馨提醒（第4點） -->
           <div class="checkbox-row" style="margin-top:8px">
             <input type="checkbox" id="reminderCheckbox">
             <label for="reminderCheckbox">勾選：溫馨提醒（匯出圖左上角顯示「溫馨提醒」圖示）</label>
@@ -415,7 +482,7 @@ details.usage[open] summary::before{
 
       <div id="exportArea" aria-label="匯出預覽">
         <div class="headerRow">
-          <!-- 溫馨提醒徽章（第4點，JS 控制顯示/隱藏） -->
+          <!-- 溫馨提醒徽章 -->
           <div id="reminderBadge">溫馨提醒</div>
 
           <div id="dynamicTitle" aria-hidden="true"></div>
@@ -433,14 +500,11 @@ details.usage[open] summary::before{
           <tbody id="regBody"></tbody>
         </table>
 
-        <!-- 人力狀態訊息（與 statusMode 互斥顯示） -->
-        <div id="fullNote" class="fullNote" style="display:none;
-            font-size:20px;">人力已圓滿，感恩護持！</div>
-        <div id="deficitNote" style="display:none;
-            font-size:20px;">尚須<span class="num">0</span>位菩薩護持，感恩！</div>
+        <!-- 人力狀態訊息（與 statusMode 互斥顯示；★ 修改：字級與合計移出由 JS 控制） -->
+        <div id="fullNote" class="fullNote" style="display:none;">人力已圓滿，感恩護持！</div>
+        <div id="deficitNote" style="display:none;" class="fullNote">尚須<span class="num">0</span>位菩薩護持，感恩！</div>
 
-        <div style="margin-top:12px;padding:10px;background:#fff7e6;border-left:6px solid #f0c070;font-weight:700;color:#7a3e00;text-align:center;
-            font-size:20px;">
+        <div style="margin-top:12px;padding:10px;background:#fff7e6;border-left:6px solid #f0c070;font-weight:700;color:#7a3e00;text-align:center;">
           請穿著義工服、黑襪、黑鞋、戴口罩，帶海青。
         </div>
       </div>
@@ -449,9 +513,9 @@ details.usage[open] summary::before{
 </div>
 
 <!-- 右下角版本標註 -->
-<div class="version-tag">三寶弟子 | 製作日期：2025/09/15 | 版本：V2.0（更新於 2025/09/16）</div>
+<div class="version-tag">三寶弟子2025/09/15製作| 版本：V3.0（2025/09/17更新）</div>
 <script>
-/* ---------- 地點下拉清單（原樣保留；實際顯示時做格式化） ---------- */
+/* ---------- 地點下拉清單（保留原值；顯示時再格式化） ---------- */
 const LOCATION_LIST = [
 "懷愛館景仰樓1F至真1廳","懷愛館景仰樓1F至真2廳","懷愛館景仰樓1F至真3廳",
 "懷愛館景仰樓2F至善1廳","懷愛館景仰樓2F至善2廳","懷愛館景仰樓2F至善3廳","懷愛館景仰樓2F至善4廳",
@@ -463,13 +527,13 @@ const LOCATION_LIST = [
 "其他"
 ];
 
-/* ---------- DOM refs（新增必要元素） ---------- */
+/* ---------- DOM refs（沿用） ---------- */
 const evDate = document.getElementById('evDate');
 const evHour = document.getElementById('evHour');
 const evMin = document.getElementById('evMin');
 const evLocationSelect = document.getElementById('evLocationSelect');
 const evLocationOther = document.getElementById('evLocationOther');
-const evRequiredTotal = document.getElementById('evRequiredTotal'); // 新增：需求總人數
+const evRequiredTotal = document.getElementById('evRequiredTotal');
 
 const createEventBtn = document.getElementById('createEventBtn');
 const updateEventBtn = document.getElementById('updateEventBtn');
@@ -488,18 +552,18 @@ const regBody = document.getElementById('regBody');
 const outputName = document.getElementById('outputName');
 const status = document.getElementById('status');
 
-/* 單選狀態（取代原 checkbox 防呆） */
-const statusModeRadios = document.querySelectorAll('input[name="statusMode"]'); // none/full/deficit
-const reminderCheckbox = document.getElementById('reminderCheckbox'); // 溫馨提醒
+/* 單選狀態 */
+const statusModeRadios = document.querySelectorAll('input[name="statusMode"]');
+const reminderCheckbox = document.getElementById('reminderCheckbox');
 
-/* 預覽區新增元素 */
+/* 預覽區元素 */
 const fullNote = document.getElementById('fullNote');
 const deficitNote = document.getElementById('deficitNote');
 const dynamicTitle = document.getElementById('dynamicTitle');
 const fixedRolesArea = document.getElementById('fixedRolesArea');
 const reminderBadge = document.getElementById('reminderBadge');
 
-/* role inputs（維那 label 已改字，ID 保持，以免影響既有程式） */
+/* role inputs */
 const role_weina = document.getElementById('role_weina');
 const role_muyu = document.getElementById('role_muyu');
 const role_speaker = document.getElementById('role_speaker');
@@ -511,7 +575,7 @@ const role_stage5 = document.getElementById('role_stage5');
 const saveRolesBtn = document.getElementById('saveRolesBtn');
 const clearRolesBtn = document.getElementById('clearRolesBtn');
 
-/* ---------- UA / Modal refs ---------- */
+/* ---------- UA / Modal refs（沿用） ---------- */
 const uaNotice = document.getElementById('uaNotice');
 const uaOpenExternBtn = document.getElementById('uaOpenExternBtn');
 const uaDismissBtn = document.getElementById('uaDismissBtn');
@@ -522,15 +586,13 @@ const shareImageBtn = document.getElementById('shareImageBtn');
 const copyImageBtn = document.getElementById('copyImageBtn');
 const openDataUrlBtn = document.getElementById('openDataUrlBtn');
 
-/* ---------- 本地儲存（沿用；不改函式簽名） ---------- */
+/* ---------- 本地儲存（沿用） ---------- */
 const LS_KEY = 'event_png_tool_v1';
 function saveToStorage(){
   try {
     localStorage.setItem(LS_KEY, JSON.stringify(events));
     status.textContent = '已自動儲存（本機）';
-  } catch(e){
-    console.warn('localStorage 失敗', e);
-  }
+  } catch(e){ console.warn('localStorage 失敗', e); }
 }
 function loadFromStorage(){
   try {
@@ -538,22 +600,22 @@ function loadFromStorage(){
     if(!raw) return null;
     const parsed = JSON.parse(raw);
     if(Array.isArray(parsed)) return parsed;
-  } catch(e){
-    console.warn('localStorage 讀取失敗', e);
-  }
+  } catch(e){ console.warn('localStorage 讀取失敗', e); }
   return null;
 }
 
-/* ---------- 事件本地暫存：擴充欄位 ---------- */
+/* ---------- 事件本地暫存（★ 修改：新增 locationIsOther） ---------- */
 let events = loadFromStorage() || [];
-/* 每筆 event 會包含：
+/*
 {
-  id, date, time, location,
+  id, date, time,
+  location,               // 顯示字串來源：若 locationIsOther=true，直接用使用者輸入；否則是清單值（顯示時再格式化）
+  locationIsOther: false,  // ★ 新增
   roles: {...},
   registrants: [],
-  requiredTotal: number|null,   // 新增
-  statusMode: 'none'|'full'|'deficit', // 新增
-  showReminder: boolean         // 新增
+  requiredTotal: number|null,
+  statusMode: 'none'|'full'|'deficit',
+  showReminder: boolean
 }
 */
 
@@ -561,48 +623,52 @@ let events = loadFromStorage() || [];
 function splitNamesInput(text){
   if(!text) return [];
   const unified = text.replace(/、/g, ',').replace(/;/g, ',').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-  const parts = unified.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
-  return parts;
+  return unified.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
 }
 
-/* 地點格式化：F→樓、加入「・」分隔（第14–15點） */
+/* ★ 修改：阿拉伯數字轉國字（1..99 簡化足夠本專案） */
+function numToCJK(n){
+  const map=['零','一','二','三','四','五','六','七','八','九'];
+  if(n<=9) return map[n];
+  if(n<20) return '十' + (n%10?map[n%10]:'');
+  if(n%10===0) return map[Math.floor(n/10)] + '十';
+  return map[Math.floor(n/10)] + '十' + map[n%10];
+}
+
+/* ★ 修改：顯示層格式化（僅針對清單來源；其他不轉換） */
 function formatLocationForDisplay(str){
-  if(!str || str === '其他') return str || '';
+  if(!str || str==='其他') return str||'';
   let s = String(str);
 
-  // F -> 樓
-  s = s.replace(/(\d)\s*F/gi, '$1樓');
+  // 插入「・」與空白整理
+  s = s.replace('懷愛館景','懷愛館・景').replace('樓至','樓・至').replace('樓景','樓・景').replace(/\s+/g,'');
 
-  // 在「懷愛館」與後面的樓棟名稱間加入「・」
-  s = s.replace('懷愛館景', '懷愛館・景');
+  // 3F → 三樓
+  s = s.replace(/(\d+)\s*F/gi, (_,d)=> numToCJK(parseInt(d,10)) + '樓');
 
-  // 在 樓 與 廳 別前加入「・」：常見「樓至」「樓景」
-  s = s.replace('樓至', '樓・至').replace('樓景', '樓・景');
+  // 至仁1廳 → 至仁一廳；至善12廳 → 至善十二廳
+  s = s.replace(/(至[\u4e00-\u9fa5]{1,3})(\d+)\s*廳/g, (_,p1,d)=> p1 + numToCJK(parseInt(d,10)) + '廳');
 
-  // 若仍未有最後的「・」且含「至」字樣，可保險補一道（避免少數未命中的樣式）
-  if(!/・/.test(s) && /至/.test(s)){
-    s = s.replace('至', '・至');
-  }
+  // 仍有「…樓至…」等補點
+  if(!/・/.test(s) && /至/.test(s)) s = s.replace('至','・至');
 
-  // 去除多餘空白
-  s = s.replace(/\s+/g,'');
   return s;
 }
 
-/* 取得目前單選狀態值 */
+/* 取得單選值 */
 function getStatusMode(){
   let val = 'none';
   statusModeRadios.forEach(r => { if(r.checked) val = r.value; });
   return val;
 }
 
-/* ---------- UI helper functions ---------- */
+/* ---------- UI helpers ---------- */
 function refreshEventSelect(){
   eventSelect.innerHTML = '';
   events.forEach((ev, idx) => {
     const o = document.createElement('option');
     o.value = idx;
-    o.text = `${ev.date} ${ev.time} — ${ev.location}`; // location 已存格式化後字串
+    o.text = `${ev.date} ${ev.time} — ${ev.locationIsOther ? ev.location : formatLocationForDisplay(ev.location)}`;
     eventSelect.appendChild(o);
   });
   if(events.length>0){
@@ -610,9 +676,7 @@ function refreshEventSelect(){
     loadEventToForm(0);
     updatePreview(0);
   } else {
-    evDate.value = '';
-    evHour.value = '';
-    evMin.value = '';
+    evDate.value = evHour.value = evMin.value = '';
     evLocationSelect.value = '';
     evLocationOther.value = '';
     evLocationOther.style.display = 'none';
@@ -628,23 +692,26 @@ function loadEventToForm(index){
   if(!ev) return;
   evDate.value = ev.date || '';
   const [hh,mm] = (ev.time || ':').split(':');
-  evHour.value = (hh || '').toString().padStart(2,'0');
-  evMin.value = (mm || '').toString().padStart(2,'0');
+  evHour.value = (hh||'').toString().padStart(2,'0');
+  evMin.value = (mm||'').toString().padStart(2,'0');
 
-  // 地點：將「已格式化字串」反查是否在清單（不強求完全相同，以 '其他' 顯示並帶入文字）
-  const rawMatch = LOCATION_LIST.find(src => formatLocationForDisplay(src) === ev.location);
-  if(rawMatch){
-    evLocationSelect.value = rawMatch;
-    evLocationOther.style.display = 'none';
-    evLocationOther.value = '';
-  } else if(ev.location === '其他'){
-    evLocationSelect.value = '其他';
-    evLocationOther.style.display = 'block';
-    evLocationOther.value = '';
-  } else {
+  // ★ 邏輯：若為其他，顯示 Other 輸入；否則回填選單（以原值比對）
+  if(ev.locationIsOther){
     evLocationSelect.value = '其他';
     evLocationOther.style.display = 'block';
     evLocationOther.value = ev.location || '';
+  } else {
+    // 嘗試用原始清單值找到對應；找不到則仍當其他顯示原樣
+    const rawMatch = LOCATION_LIST.find(src => src === ev.location);
+    if(rawMatch){
+      evLocationSelect.value = rawMatch;
+      evLocationOther.style.display = 'none';
+      evLocationOther.value = '';
+    } else {
+      evLocationSelect.value = '其他';
+      evLocationOther.style.display = 'block';
+      evLocationOther.value = ev.location || '';
+    }
   }
 
   // 需求總人數
@@ -716,7 +783,7 @@ function renderRegistrationList(index){
   updatePreview(index);
 }
 
-/* 儲存固定名單（原樣保留） */
+/* 儲存固定名單 */
 saveRolesBtn.addEventListener('click', ()=>{
   const idx = Number(eventSelect.value);
   if(isNaN(idx)) return alert('請先選取場次');
@@ -748,29 +815,27 @@ clearRolesBtn.addEventListener('click', ()=>{
   saveToStorage();
 });
 
-/* 建立場次（加入新欄位寫入） */
+/* 建立場次（★ 修改：上限 36；加入 locationIsOther） */
 createEventBtn.addEventListener('click', ()=>{
   const d = evDate.value; if(!d){ alert('請選日期'); return; }
   const hh = evHour.value; const mm = evMin.value;
   if(!hh || !mm){ alert('請選時間（時/分）'); return; }
   const time = `${hh}:${mm}`;
 
-  let loc = (evLocationSelect.value === '其他')
-    ? (evLocationOther.value || '其他')
-    : evLocationSelect.value;
+  let locationIsOther = (evLocationSelect.value === '其他');
+  let loc = locationIsOther ? (evLocationOther.value || '其他') : evLocationSelect.value;
   if(!loc){ alert('請選集合地點'); return; }
-  loc = formatLocationForDisplay(loc); // 存格式化後字串
 
-  // 需求總人數（1~80 或留空）
-  const req = evRequiredTotal.value ? Math.min(80, Math.max(1, Number(evRequiredTotal.value))) : null;
+  const req = evRequiredTotal.value ? Math.min(36, Math.max(1, Number(evRequiredTotal.value))) : null; /* ★ 36 */
 
   const id = `${d}_${hh+mm}`;
-  const mode = getStatusMode();
   const ev = {
-    id, date:d, time, location:loc,
+    id, date:d, time,
+    location: loc,
+    locationIsOther,                 /* ★ 新增 */
     roles: {}, registrants: [],
     requiredTotal: req,
-    statusMode: mode,
+    statusMode: getStatusMode(),
     showReminder: !!reminderCheckbox.checked
   };
   events.push(ev);
@@ -779,7 +844,7 @@ createEventBtn.addEventListener('click', ()=>{
   saveToStorage();
 });
 
-/* 更新場次（同步新欄位） */
+/* 更新場次（★ 同步 36 與 locationIsOther） */
 updateEventBtn.addEventListener('click', ()=>{
   const idx = Number(eventSelect.value); if(isNaN(idx)) return alert('請先選場次');
   const d = evDate.value; if(!d){ alert('請選日期'); return; }
@@ -787,18 +852,17 @@ updateEventBtn.addEventListener('click', ()=>{
   if(!hh || !mm){ alert('請選時間（時/分）'); return; }
   const time = `${hh}:${mm}`;
 
-  let loc = (evLocationSelect.value === '其他')
-    ? (evLocationOther.value || '其他')
-    : evLocationSelect.value;
+  let locationIsOther = (evLocationSelect.value === '其他');
+  let loc = locationIsOther ? (evLocationOther.value || '其他') : evLocationSelect.value;
   if(!loc){ alert('請選集合地點'); return; }
-  loc = formatLocationForDisplay(loc);
 
-  const req = evRequiredTotal.value ? Math.min(80, Math.max(1, Number(evRequiredTotal.value))) : null;
+  const req = evRequiredTotal.value ? Math.min(36, Math.max(1, Number(evRequiredTotal.value))) : null; /* ★ 36 */
 
   const id = `${d}_${hh+mm}`;
   events[idx].date = d;
   events[idx].time = time;
   events[idx].location = loc;
+  events[idx].locationIsOther = locationIsOther; /* ★ 新增 */
   events[idx].id = id;
   events[idx].requiredTotal = req;
   events[idx].statusMode = getStatusMode();
@@ -809,7 +873,7 @@ updateEventBtn.addEventListener('click', ()=>{
   saveToStorage();
 });
 
-/* 刪除場次（原樣保留） */
+/* 刪除場次（沿用） */
 deleteEventBtn.addEventListener('click', ()=>{
   const idx = Number(eventSelect.value); if(isNaN(idx)) return alert('請先選場次');
   if(!confirm('確定刪除此場次？')) return;
@@ -819,7 +883,7 @@ deleteEventBtn.addEventListener('click', ()=>{
   saveToStorage();
 });
 
-/* 報名管理（原樣保留） */
+/* 報名管理（沿用） */
 addNamesBtn.addEventListener('click', ()=>{
   const idx = Number(eventSelect.value); if(isNaN(idx)) return alert('請先選場次');
   const text = namesInput.value.trim(); if(!text) return alert('請輸入姓名（逗號、頓號或換行分隔）');
@@ -852,6 +916,7 @@ removeSelectedBtn.addEventListener('click', ()=>{
   saveToStorage();
 });
 </script>
+
 <script>
 /* ---------- 固定六欄：確保 <colgroup> 存在，平均欄寬 ---------- */
 function ensureRegTableColgroup(){
@@ -863,17 +928,15 @@ function ensureRegTableColgroup(){
     table.insertBefore(cg, table.firstChild);
   }
 }
-function beforeRenderGridFix(){
-  ensureRegTableColgroup();
-}
+function beforeRenderGridFix(){ ensureRegTableColgroup(); }
 
-/* ---------- 預覽：建立 6×6（最後一格統計） + 人力狀態三態 ---------- */
+/* ---------- 預覽渲染（★ 調整：右下角不顯示合計；訊息帶總數/缺額） ---------- */
 function updatePreview(index){
   beforeRenderGridFix();
   const ev = events[index];
   if(!ev) { renderEmptyGrid(); return; }
 
-  // 標題：ROC 年 + 「佛化奠祭誦念」菩薩（第9點）
+  // 標題：ROC 年
   const dateObj = new Date(ev.date + 'T00:00:00');
   const gYear = dateObj.getFullYear();
   const roc = gYear - 1911;
@@ -882,10 +945,9 @@ function updatePreview(index){
   const weekday = ['週日','週一','週二','週三','週四','週五','週六'][dateObj.getDay()];
   dynamicTitle.innerHTML = `<span class="datePart">報名${roc}/${month}/${day}(${weekday})</span><span class="titlePhrase">「佛化奠祭誦念」菩薩</span>`;
 
-  // meta 值（時間 / 地點）
+  // meta 值
   metaTime.textContent = ev.time || '';
-  // location 已存為格式化後字串（帶「・」、「樓」），保險再次格式化
-  metaLocation.textContent = formatLocationForDisplay(ev.location || '');
+  metaLocation.textContent = ev.locationIsOther ? (ev.location||'') : formatLocationForDisplay(ev.location||'');
 
   // 固定名單 + 一般報名
   const roleOrder = [
@@ -902,13 +964,11 @@ function updatePreview(index){
   const roles = ev.roles || {};
   roleOrder.forEach(r=>{
     const name = roles[r.key];
-    if(name && name.trim()){
-      combined.push({ name: name.trim(), role: r.label });
-    }
+    if(name && name.trim()) combined.push({ name: name.trim(), role: r.label });
   });
   (ev.registrants || []).forEach(n => combined.push({ name: n, role: '' }));
 
-  // 6x6 表格渲染
+  // 6x6 表格渲染（★ 最後一格空白）
   const total = combined.length;
   const cols = 6, rows = 6;
   regBody.innerHTML = '';
@@ -918,8 +978,8 @@ function updatePreview(index){
       const idxCell = r*cols + c;
       const td = document.createElement('td');
       if(idxCell === cols*rows - 1){
-        td.className = 'totalCell';
-        td.textContent = `合計${total}位`;
+        td.className = 'empty';
+        td.textContent = '';
       } else {
         const item = combined[idxCell];
         if(item){
@@ -938,10 +998,10 @@ function updatePreview(index){
     regBody.appendChild(tr);
   }
 
-  // 溫馨提醒徽章（第4點）
+  // 溫馨提醒徽章
   reminderBadge.style.display = ev.showReminder ? 'inline-block' : 'none';
 
-  // 人力狀態（第2–3點）互斥：none/full/deficit
+  // 人力狀態三態（★ 合計/缺額帶入訊息）
   const mode = ev.statusMode || 'none';
   const needTotal = Number(ev.requiredTotal || 0);
   const deficit = Math.max(0, needTotal - total);
@@ -949,10 +1009,13 @@ function updatePreview(index){
   if(mode === 'full'){
     fullNote.style.display = 'block';
     deficitNote.style.display = 'none';
+    fullNote.classList.add('fullNote');
+    fullNote.innerHTML = `人力已圓滿，共 <span class="highlight-total">${total}</span> 位菩薩，感恩護持！`;
   } else if(mode === 'deficit'){
     fullNote.style.display = 'none';
     deficitNote.style.display = 'block';
-    const numEl = deficitNote.querySelector('.num');
+    // 以 .num 與 .deficit-num 皆支援
+    const numEl = deficitNote.querySelector('.num') || deficitNote.querySelector('.deficit-num');
     if(numEl) numEl.textContent = String(deficit);
   } else {
     fullNote.style.display = 'none';
@@ -995,7 +1058,7 @@ function renderEmptyGrid(){
     const tr = document.createElement('tr');
     for(let c=0;c<6;c++){
       const td = document.createElement('td');
-      if(r===5 && c===5){ td.className='totalCell'; td.textContent='合計0位'; }
+      if(r===5 && c===5){ td.className='empty'; td.textContent=''; } /* ★ 右下角不顯示合計 */
       else { td.className='empty'; td.textContent=''; }
       tr.appendChild(td);
     }
@@ -1003,14 +1066,14 @@ function renderEmptyGrid(){
   }
 }
 
-/* ---------- 事件：場次切換、單選狀態變更、溫馨提醒切換 ---------- */
-eventSelect.addEventListener('change', ()=> {
+/* ---------- 事件：場次切換、狀態變更、溫馨提醒切換 ---------- */
+eventSelect.addEventListener('change', ()=>{
   const idx = Number(eventSelect.value);
   if(isNaN(idx)) return;
   loadEventToForm(idx);
   updatePreview(idx);
 });
-statusModeRadios.forEach(r => {
+statusModeRadios.forEach(r=>{
   r.addEventListener('change', ()=>{
     const idx = Number(eventSelect.value);
     if(isNaN(idx)) return;
@@ -1028,25 +1091,20 @@ reminderCheckbox.addEventListener('change', ()=>{
 });
 
 /* =========================================================================
-   UA 偵測、離屏副本匯出（固定 880px、scale:2），下載策略分流
+   UA 偵測、離屏副本匯出（880px、scale:2），下載策略分流
    ========================================================================= */
 function isInAppBrowser(){
   const ua = navigator.userAgent || '';
   return /Line\/|FBAN|FBAV|Instagram|Twitter/i.test(ua);
 }
-function showUaNoticeIfNeeded(){
-  if(isInAppBrowser()){
-    uaNotice.style.display = 'block';
-  }
-}
+function showUaNoticeIfNeeded(){ if(isInAppBrowser()) uaNotice.style.display = 'block'; }
 uaDismissBtn?.addEventListener('click', ()=> uaNotice.style.display = 'none');
 uaOpenExternBtn?.addEventListener('click', ()=>{
   try { window.open(location.href, '_blank'); } catch(e){}
-  // 依第13點更新文案
   alert('若未成功，請使用右上或右下的「⋯」→ 以「使用預設瀏覽器開啟」或使用 Safari/Chrome 開啟本頁。');
 });
 
-/* ---------- 匯出核心：建立離屏副本並固定 880px 進行擷取 ---------- */
+/* ---------- 匯出核心：離屏副本（★ 背景用 --export-bg） ---------- */
 async function exportPNG(){
   const idx = Number(eventSelect.value);
   if(isNaN(idx)) { alert('請先選取場次'); return; }
@@ -1054,17 +1112,13 @@ async function exportPNG(){
 
   const node = document.getElementById('exportArea');
 
-  // 等待字型（若支援）
   try { if (document.fonts && document.fonts.ready) await document.fonts.ready; } catch(e){}
 
-  // 建立離屏舞台 + 副本
-  const stage = document.createElement('div');
-  stage.className = 'capture-stage';
-  const root = document.createElement('div');
-  root.className = 'capture-root';
+  const stage = document.createElement('div'); stage.className = 'capture-stage';
+  const root = document.createElement('div'); root.className = 'capture-root';
   const clone = node.cloneNode(true);
 
-  // 保障表格在副本裡也有 colgroup（六欄平均）
+  // colgroup 保底
   const cloneTable = clone.querySelector('table.regTable');
   if(cloneTable && !cloneTable.querySelector('colgroup')){
     const cg = document.createElement('colgroup');
@@ -1072,19 +1126,24 @@ async function exportPNG(){
     cloneTable.insertBefore(cg, cloneTable.firstChild);
   }
 
+  // ★ 匯出時強化數字樣式（可省略；保留一致性）
+  const style = document.createElement('style');
+  style.textContent = `
+    .fullNote { color:#000 !important; text-align:center; }
+  `;
+  clone.prepend(style);
+
   clone.style.width = '880px';
   root.appendChild(clone);
   stage.appendChild(root);
   document.body.appendChild(stage);
 
-  // 呼叫 html2canvas（固定 scale:2）
+  // 取用 CSS 變數的底色
+  const exportBg = getComputedStyle(document.documentElement).getPropertyValue('--export-bg').trim() || '#fff4e6';
+
   let dataUrl = '';
   try {
-    const canvas = await html2canvas(clone, {
-      scale: 2,
-      useCORS: true,
-      backgroundColor: null
-    });
+    const canvas = await html2canvas(clone, { scale: 2, useCORS: true, backgroundColor: exportBg });
     dataUrl = canvas.toDataURL('image/png');
   } catch(err){
     console.error(err);
@@ -1094,9 +1153,8 @@ async function exportPNG(){
     stage.remove();
   }
 
-  if(!dataUrl){ return; }
+  if(!dataUrl) return;
 
-  // 分流：外部瀏覽器 → 直接下載；App 內 → Modal 長按存圖
   const filename = (outputName.value || `event-${events[idx].date}`).replace(/\s+/g,'_') + '.png';
   if(!isInAppBrowser() && supportsAnchorDownload()){
     triggerDownload(dataUrl, filename);
@@ -1107,63 +1165,41 @@ async function exportPNG(){
   }
 }
 
-/* ---------- 能力偵測 / 下載 / 分享 / 複製 / 開新分頁 ---------- */
-function supportsAnchorDownload(){
-  const a = document.createElement('a');
-  return 'download' in a;
-}
+/* 能力偵測 / 下載 / 分享 / 複製 / 新分頁 */
+function supportsAnchorDownload(){ const a = document.createElement('a'); return 'download' in a; }
 function triggerDownload(dataUrl, filename){
-  const a = document.createElement('a');
-  a.href = dataUrl;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
+  const a = document.createElement('a'); a.href = dataUrl; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
 }
 function dataUrlToBlob(dataUrl){
-  const arr = dataUrl.split(',');
-  const mime = arr[0].match(/:(.*?);/)[1];
-  const bstr = atob(arr[1]);
-  let n = bstr.length;
-  const u8arr = new Uint8Array(n);
-  while(n--){ u8arr[n] = bstr.charCodeAt(n); }
-  return new Blob([u8arr], {type:mime});
+  const arr = dataUrl.split(','), mime = arr[0].match(/:(.*?);/)[1];
+  const bstr = atob(arr[1]); let n = bstr.length; const u8 = new Uint8Array(n);
+  while(n--) u8[n] = bstr.charCodeAt(n);
+  return new Blob([u8], {type:mime});
 }
 function openExportModalWith(dataUrl, filename){
-  exportImg.src = dataUrl;
-  exportImg.dataset.filename = filename;
-
+  if(!exportModal) { // 若頁面未包含 Modal 標記，直接另開視窗
+    try { window.open(dataUrl, '_blank'); } catch(e){}
+    return;
+  }
+  exportImg.src = dataUrl; exportImg.dataset.filename = filename;
   const blob = dataUrlToBlob(dataUrl);
   const file = new File([blob], filename, { type: 'image/png' });
 
   if (navigator.canShare && navigator.canShare({ files: [file] })) {
     shareImageBtn.style.display = '';
-    shareImageBtn.onclick = async () => {
-      try {
-        await navigator.share({ files: [file], title: filename, text: '報名匯出圖片' });
-      } catch(e){}
-    };
-  } else {
-    shareImageBtn.style.display = 'none';
-  }
+    shareImageBtn.onclick = async () => { try { await navigator.share({ files: [file], title: filename, text: '報名匯出圖片' }); } catch(e){} };
+  } else shareImageBtn.style.display = 'none';
 
   if (navigator.clipboard && 'write' in navigator.clipboard && window.ClipboardItem) {
     copyImageBtn.style.display = '';
     copyImageBtn.onclick = async () => {
-      try {
-        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-        alert('已複製圖片到剪貼簿');
-      } catch(e){
-        alert('複製失敗：' + (e?.message || e));
-      }
+      try { await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]); alert('已複製圖片到剪貼簿'); }
+      catch(e){ alert('複製失敗：' + (e?.message || e)); }
     };
-  } else {
-    copyImageBtn.style.display = 'none';
-  }
+  } else copyImageBtn.style.display = 'none';
 
-  openDataUrlBtn.onclick = ()=> {
-    try { window.open(dataUrl, '_blank'); } catch(e){}
-  };
+  openDataUrlBtn.onclick = ()=> { try { window.open(dataUrl, '_blank'); } catch(e){} };
 
   exportModal.classList.add('open');
   exportModal.setAttribute('aria-hidden','false');
@@ -1177,11 +1213,11 @@ function closeExportModal(){
 exportModalClose?.addEventListener('click', closeExportModal);
 exportModal?.addEventListener('click', (e)=>{ if(e.target === exportModal) closeExportModal(); });
 
-/* ---------- 綁定匯出按鈕 ---------- */
+/* 綁定匯出按鈕（沿用） */
 downloadPreviewBtn.addEventListener('click', exportPNG);
 exportBtn.addEventListener('click', exportPNG);
 
-/* ---------- 初始化：灌入選單、載入暫存、固定六欄、UA 提示 ---------- */
+/* ---------- 初始化：清單、36 上限、固定六欄、UA 提示 ---------- */
 function init(){
   // 時 / 分（10 分刻度）
   for(let h=0;h<24;h++){
@@ -1189,37 +1225,35 @@ function init(){
     evHour.appendChild(o);
   }
   ['00','10','20','30','40','50'].forEach(m=>{
-    const o = document.createElement('option'); o.value = m; o.text = m;
-    evMin.appendChild(o);
+    const o = document.createElement('option'); o.value = m; o.text = m; evMin.appendChild(o);
   });
 
-  // 地點清單（顯示格式化後文字；值仍為原始字串，方便反查）
+  // 地點清單：值用原字串，text 用國字化顯示；「其他」原樣
   evLocationSelect.innerHTML = '';
   LOCATION_LIST.forEach(loc=>{
     const o = document.createElement('option');
     o.value = loc;
-    o.text = formatLocationForDisplay(loc); // 顯示美化
+    o.text = (loc==='其他') ? '其他' : formatLocationForDisplay(loc);
     evLocationSelect.appendChild(o);
   });
-  evLocationSelect.addEventListener('change', ()=> {
+  evLocationSelect.addEventListener('change', ()=>{
     evLocationOther.style.display = evLocationSelect.value === '其他' ? 'block' : 'none';
   });
 
-  // 需求總人數（允許空白；1~80）
+  // 需求總人數（★ 上限 36；允許空白）
   evRequiredTotal.innerHTML = '';
   const emptyOpt = document.createElement('option'); emptyOpt.value = ''; emptyOpt.text = '（未設定）';
   evRequiredTotal.appendChild(emptyOpt);
-  for(let i=1;i<=80;i++){
+  for(let i=1;i<=36;i++){
     const o = document.createElement('option'); o.value = String(i); o.text = String(i);
     evRequiredTotal.appendChild(o);
   }
 
-  // 首次載入：固定六欄、刷新畫面
   beforeRenderGridFix();
   refreshEventSelect();
-
-  // 顯示 UA 提示（如在 LINE/FB/IG）
   showUaNoticeIfNeeded();
 }
 init();
 </script>
+</body>
+</html>
