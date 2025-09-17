@@ -1405,6 +1405,9 @@ async function exportPNG(){
   stage.appendChild(root);
   document.body.appendChild(stage);
 
+  /* ★ 在這裡加延遲 ★ */
+  await new Promise(r => setTimeout(r, 300));  // 延遲 300ms，可調整
+
   // 取用 CSS 變數的底色
   const exportBg = getComputedStyle(document.documentElement).getPropertyValue('--export-bg').trim() || '#fff4e6';
 
