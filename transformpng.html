@@ -35,7 +35,7 @@
 
     /* ★ 修改：新增匯出（圖片）字級 */
     --cap-reg-name-size: 23px;
-    --cap-reg-role-suffix-size: 9px;
+    --cap-reg-role-suffix-size: 10px;
     --cap-footer-tip-size: 30px;
     --cap-full-note-size: 30px;
     --cap-deficit-note-size: 30px;
@@ -43,6 +43,17 @@
 
     /* ★ 修改：統一預覽/匯出底色 */
     --export-bg: #fff4e6;
+
+      /* === 備註與 Meta 字級（預覽） === */
+    --remark-font-size: 16px;         /* 備註區字級（預覽） */
+    --meta-label-size: 27px;          /* 「集合時間：」「集合地點：」標籤字級（預覽） */
+    --meta-value-size: 26px;          /* 時間與地點的值字級（預覽） */
+
+    /* === 備註與 Meta 字級（匯出圖片） === */
+    --cap-remark-font-size: 22px;     /* 備註區字級（匯出） */
+    --cap-meta-label-size: 27px;      /* 標籤字級（匯出） */
+    --cap-meta-value-size: 30px;      /* 值字級（匯出） */
+
   }
 
   *{box-sizing:border-box}
@@ -65,13 +76,14 @@
   /* 預覽 / 匯出區 */
   #exportArea{width:880px;background:var(--export-bg);border:3px solid #d8c9a3;padding:18px;box-sizing:border-box;color:#222;position:relative}
   .headerRow{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;position:relative}
-  #dynamicTitle{
+ #dynamicTitle{
     font-size:34px;
     font-weight:700;
     line-height:1.05;
-    margin-bottom:6px;
+    margin: 8px 0 6px 0; /* ↑ 在上方留白 */
     text-align:center;
   }
+
   #dynamicTitle .datePart{color:var(--accent);margin-right:6px}
   #dynamicTitle .titlePhrase{color:#000}
 
@@ -84,9 +96,9 @@
     border:1px solid #f2a8ad;
     color:#b40000;
     border-radius:999px;
-    padding:6px 14px;
+    padding:0px 9px;
     font-size:18px;
-    font-weight:700;
+    font-weight:600;
     display:none; /* JS 依勾選顯示 */
     box-shadow:0 2px 6px rgba(0,0,0,.06);
   }
@@ -94,8 +106,15 @@
   .metaBox{border:2px solid #dcd0b8;padding:10px;background:#fff;margin-top:12px}
   .meta-left{display:flex;flex-direction:column;gap:6px;align-items:flex-start}
   .meta-left .time-line,
-  .meta-left .loc-line{font-size:20px;font-weight:700}
-  .metaValue{color:#b40000;font-size:150%;font-weight:900;margin-left:4px}
+  .meta-left .loc-line{font-size:20px;font-weight:700;font-size: var(--meta-label-size);}
+  .metaValue{
+  color:#b40000;
+  font-weight:900;
+  font-size: var(--meta-value-size);
+  margin-left:4px;
+}
+
+
 
   /* ✅ 固定欄寬的關鍵：table-layout: fixed，讓六欄平均 */
   table.regTable{
@@ -153,6 +172,32 @@
     color: var(--accent);                   /* ★ 修改：數字紅色 */
     font-weight:900;
   }
+    /* === 備註區（預覽） ====================================== */
+      #remarkBox{
+        display:none;                   /* 勾選且有內容才顯示（由 JS 控制） */
+        margin-top: 12px;
+        padding: 10px 12px;
+        background: #fff9f0;            /* 與整體配色協調 */
+        border-left: 6px solid #f0c070; /* 與下方橘色提醒一致系 */
+        border: 1px solid #f3e2c2;
+        border-radius: 6px;             /* 與全站圓角一致 */
+        color: #333;
+        line-height: 1.6;
+        font-size: var(--remark-font-size); /* ★ 可調字級（預覽） */
+        word-break: break-word;
+        overflow-wrap: anywhere;        /* 避免英文或長字串撐破 */
+      }
+      #remarkBox .label{
+        display:block;
+        font-weight:700;
+        margin-bottom:6px;
+        color:#7a3e00;
+      }
+      #remarkBox .text{
+        white-space: pre-wrap;          /* 依使用者換行呈現 */
+      }
+
+
 
   .instruction{margin-top:8px;font-size:13px;color:var(--muted)}
   .registration-list{max-height:260px;overflow:auto;border:1px dashed #e0e0e0;padding:8px;border-radius:6px;background:#fafafa}
@@ -231,6 +276,21 @@
   .capture-root #deficitNote .num,
   .capture-root #deficitNote .deficit-num { font-size: var(--cap-deficit-number-size) !important; color: var(--accent) !important; font-weight:900 !important; }
   .capture-root #exportArea > div:last-child { font-size: var(--cap-footer-tip-size) !important; }
+
+    /* === 匯出圖片：Meta 與備註的字級覆蓋 =================== */
+  .capture-root .meta-left .time-line,
+  .capture-root .meta-left .loc-line{
+    font-size: var(--cap-meta-label-size) !important;
+  }
+  .capture-root .meta-left .metaValue{
+    font-size: var(--cap-meta-value-size) !important;
+  }
+  .capture-root #remarkBox{
+    font-size: var(--cap-remark-font-size) !important;
+    
+  }
+
+
 
   /* === UA 提示條（LINE/FB/IG 內建瀏覽器） ================= */
   #uaNotice{
@@ -560,6 +620,20 @@
             <input type="checkbox" id="reminderCheckbox">
             <label for="reminderCheckbox">勾選：溫馨提醒（匯出圖左上角顯示「溫馨提醒」圖示）</label>
           </div>
+                    <!-- 備註（可選） -->
+          <div style="margin-top:10px">
+            <div class="checkbox-row" style="margin-bottom:6px">
+              <input type="checkbox" id="remarkEnableCheckbox" />
+              <label for="remarkEnableCheckbox">勾選：顯示備註</label>
+            </div>
+            <textarea id="remarkTextarea" placeholder="請輸入備註內容（勾選後才會顯示於報名表格下方）" style="height:80px; display:none"></textarea>
+            <div class="small" id="remarkHint" style="display:none; margin-top:4px">
+              備註將顯示於「報名表格」下方。
+            </div>
+          </div>
+
+
+
 
           <div style="margin-top:8px">
             <label>輸出檔名</label>
@@ -601,6 +675,14 @@
           <tbody id="regBody"></tbody>
         </table>
 
+         <!-- 備註區（勾選且有內容才顯示；JS 控制 display） -->
+        <div id="remarkBox" role="note" aria-label="備註">
+          <span class="label">備註</span>
+          <div class="text"></div>
+        </div>
+
+
+
         <!-- 人力狀態訊息（與 statusMode 互斥顯示；★ 修改：字級與合計移出由 JS 控制） -->
         <div id="fullNote" class="fullNote" style="display:none;">人力已圓滿，感恩護持！</div>
         <div id="deficitNote" style="display:none;" class="fullNote">尚須<span class="num">0</span>位菩薩護持，感恩！</div>
@@ -614,7 +696,7 @@
 </div>
 
 <!-- 右下角版本標註 -->
-<div class="version-tag">三寶弟子2025/09/15製作| 版本：V3.0（2025/09/17更新）</div>
+<div class="version-tag">三寶弟子2025/09/15製作| 版本：V3.5（2025/09/17更新）</div>
 <script>
 /* ---------- 地點下拉清單（保留原值；顯示時再格式化） ---------- */
 const LOCATION_LIST = [
@@ -652,6 +734,17 @@ const metaLocation = document.getElementById('metaLocation');
 const regBody = document.getElementById('regBody');
 const outputName = document.getElementById('outputName');
 const status = document.getElementById('status');
+
+
+/* 備註控制（新增） */
+const remarkEnableCheckbox = document.getElementById('remarkEnableCheckbox');
+const remarkTextarea = document.getElementById('remarkTextarea');
+const remarkHint = document.getElementById('remarkHint');
+
+/* 備註預覽區（新增） */
+const remarkBox = document.getElementById('remarkBox');
+const remarkBoxText = remarkBox ? remarkBox.querySelector('.text') : null;
+
 
 /* 單選狀態 */
 const statusModeRadios = document.querySelectorAll('input[name="statusMode"]');
@@ -717,6 +810,9 @@ let events = loadFromStorage() || [];
   requiredTotal: number|null,
   statusMode: 'none'|'full'|'deficit',
   showReminder: boolean
+  remarkEnabled: boolean,      // ★ 新增：是否顯示備註
+  remarkText: string,          // ★ 新增：備註內容
+
 }
 */
 
@@ -840,6 +936,14 @@ function loadEventToForm(index){
   role_stage5.value = roles.stage5 || '';
 
   outputName.value = ev.date ? `event-${ev.date}` : '';
+
+    // ★ 備註設定回填
+  const re = !!ev.remarkEnabled;
+  remarkEnableCheckbox.checked = re;
+  remarkTextarea.style.display = re ? 'block' : 'none';
+  remarkHint.style.display = re ? 'block' : 'none';
+  remarkTextarea.value = ev.remarkText || '';
+
   renderRegistrationList(index);
 }
 
@@ -940,12 +1044,17 @@ createEventBtn.addEventListener('click', ()=>{
     roles: {}, registrants: [],
     requiredTotal: req,
     statusMode: getStatusMode(),
-    showReminder: !!reminderCheckbox.checked
+    showReminder: !!reminderCheckbox.checked,
+    remarkEnabled: !!remarkEnableCheckbox?.checked,   /* ★ 新增 */
+    remarkText: (remarkTextarea?.value || '').trim(), /* ★ 新增 */
   };
   events.push(ev);
   refreshEventSelect();
   status.textContent = '場次已建立（本機暫存）';
   saveToStorage();
+ 
+
+
 });
 
 /* 更新場次（★ 同步 36 與 locationIsOther） */
@@ -971,10 +1080,15 @@ updateEventBtn.addEventListener('click', ()=>{
   events[idx].requiredTotal = req;
   events[idx].statusMode = getStatusMode();
   events[idx].showReminder = !!reminderCheckbox.checked;
+  events[idx].remarkEnabled = !!remarkEnableCheckbox?.checked;  /* ★ 新增 */
+  events[idx].remarkText = (remarkTextarea?.value || '').trim();/* ★ 新增 */
 
   refreshEventSelect();
   status.textContent = '場次已更新';
   saveToStorage();
+
+  
+
 });
 
 /* 刪除場次（沿用） */
@@ -1047,7 +1161,7 @@ function updatePreview(index){
   const month = dateObj.getMonth()+1;
   const day = dateObj.getDate();
   const weekday = ['週日','週一','週二','週三','週四','週五','週六'][dateObj.getDay()];
-  dynamicTitle.innerHTML = `<span class="datePart">報名${roc}/${month}/${day}(${weekday})</span><span class="titlePhrase">「佛化奠祭誦念」菩薩</span>`;
+  dynamicTitle.innerHTML = `<span class="datePart">報名${roc}/${month}/${day}(${weekday})</span><span class="titlePhrase">「追思祝福誦念」菩薩</span>`;
 
   // meta 值
   metaTime.textContent = ev.time || '';
@@ -1105,6 +1219,20 @@ function updatePreview(index){
   // 溫馨提醒徽章
   reminderBadge.style.display = ev.showReminder ? 'inline-block' : 'none';
 
+    // ★ 備註區顯示邏輯（表格之後）
+  if (remarkBox && remarkBoxText) {
+    const showRemark = !!(ev.remarkEnabled && ev.remarkText && ev.remarkText.trim());
+    if (showRemark) {
+      remarkBox.style.display = 'block';
+      remarkBoxText.textContent = ev.remarkText.trim(); // 已有 escapeHtml 保護其他輸入流；此處用 textContent 確保安全
+    } else {
+      remarkBox.style.display = 'none';
+      remarkBoxText.textContent = '';
+    }
+  }
+
+
+  
   // 人力狀態三態（★ 合計/缺額帶入訊息）
   const mode = ev.statusMode || 'none';
   const needTotal = Number(ev.requiredTotal || 0);
@@ -1114,7 +1242,7 @@ function updatePreview(index){
     fullNote.style.display = 'block';
     deficitNote.style.display = 'none';
     fullNote.classList.add('fullNote');
-    fullNote.innerHTML = `人力已圓滿，共 <span class="highlight-total">${total}</span> 位菩薩，感恩護持！`;
+    fullNote.innerHTML = `人力已圓滿，共 <span class="highlight-total">${total}</span> 位菩薩護持，感恩！`;
   } else if(mode === 'deficit'){
     fullNote.style.display = 'none';
     deficitNote.style.display = 'block';
@@ -1185,6 +1313,28 @@ statusModeRadios.forEach(r=>{
     updatePreview(idx);
     saveToStorage();
   });
+});
+/* ★ 勾選顯示備註：切換輸入框與提示、即時預覽與保存 */
+remarkEnableCheckbox?.addEventListener('change', ()=>{
+  const idx = Number(eventSelect.value);
+  if (isNaN(idx)) return;
+  const enabled = !!remarkEnableCheckbox.checked;
+  remarkTextarea.style.display = enabled ? 'block' : 'none';
+  remarkHint.style.display = enabled ? 'block' : 'none';
+  events[idx].remarkEnabled = enabled;
+  // 若取消勾選仍保留文字於欄位（不清空），但不顯示於預覽
+  updatePreview(idx);
+  saveToStorage();
+});
+
+/* ★ 輸入備註內容：即時預覽與保存（可視需要改成 debounce） */
+remarkTextarea?.addEventListener('input', ()=>{
+  const idx = Number(eventSelect.value);
+  if (isNaN(idx)) return;
+  events[idx].remarkText = (remarkTextarea.value || '').trim();
+  updatePreview(idx);
+  saveToStorage();
+
 });
 reminderCheckbox.addEventListener('change', ()=>{
   const idx = Number(eventSelect.value);
