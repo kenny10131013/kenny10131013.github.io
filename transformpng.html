@@ -131,7 +131,7 @@
   }
   .fullNote .highlight-total{
     font-size: calc(var(--full-note-size) * 1.3); /* ★ 修改：數字放大（預覽） */
-    color: var(--accent);
+    color:#000;             /* 改為黑色 */
     font-weight:900;
   }
 
@@ -226,7 +226,7 @@
   .capture-root td .roleSuffix { font-size: var(--cap-reg-role-suffix-size) !important; }
   .capture-root #exportArea { background-color: var(--export-bg) !important; }
   .capture-root .fullNote { font-size: var(--cap-full-note-size) !important; color:#000 !important; text-align:center; }
-  .capture-root .fullNote .highlight-total { font-size: var(--cap-full-note-size); color: var(--accent); font-weight:900; }
+  .capture-root .fullNote .highlight-total { font-size: var(--cap-full-note-size); color:#000;  font-weight:900; }
   .capture-root #deficitNote { font-size: var(--cap-deficit-note-size) !important; color:#000 !important; }
   .capture-root #deficitNote .num,
   .capture-root #deficitNote .deficit-num { font-size: var(--cap-deficit-number-size) !important; color: var(--accent) !important; font-weight:900 !important; }
@@ -323,6 +323,107 @@
   details.usage[open] summary::before{
     content: "▼";
   }
+    /* ★ 新增：自填地點輸入框（其他）友善樣式 */
+    #evLocationOther{
+      display:none;            /* 由 JS 控制顯示 */
+      margin-top:6px;
+      font-size:18px;          /* 放大字體 */
+      line-height:1.4;
+      padding:12px 14px;       /* 增加內距，較好點選 */
+      min-height:48px;         /* 比一般輸入框更高 */
+      border:2px solid #d0d0d0;
+      border-radius:8px;
+      background:#fffdfa;      /* 淡底突顯是自填欄位 */
+      /* ★ 新增，和下拉選單保持一致 */
+      width:100%;
+      box-sizing:border-box; /* 確保 padding 不會撐爆 */
+    }
+
+    /* 手機再放大一點字、降低誤觸 */
+    @media (max-width:480px){
+      #evLocationOther{
+        font-size:20px;
+        padding:14px 16px;
+        min-height:52px;
+      }
+    }
+        /* === 綠色：正向操作（建立、儲存、加入） === */
+      #createEventBtn,
+      #saveRolesBtn,
+      #addNamesBtn{
+        background:#e9f9f0;      /* 淡綠底 */
+        color:#006644;           /* 深綠字 */
+        border:1px solid #b5e0c5;
+      }
+      #createEventBtn:hover,
+      #saveRolesBtn:hover,
+      #addNamesBtn:hover{ background:#d2f2e0; }
+      #createEventBtn:active,
+      #saveRolesBtn:active,
+      #addNamesBtn:active{ background:#c0ebd3; }
+      #createEventBtn:focus-visible,
+      #saveRolesBtn:focus-visible,
+      #addNamesBtn:focus-visible{
+        outline:2px solid #9dd6b8;
+        outline-offset:2px;
+      }
+      #createEventBtn:disabled,
+      #saveRolesBtn:disabled,
+      #addNamesBtn:disabled{
+        opacity:.6; cursor:not-allowed;
+      }
+
+      /* === 紅色：警示操作（刪除、清除） === */
+      #deleteEventBtn,
+      #clearRolesBtn,
+      #removeSelectedBtn,
+      #clearNamesBtn{
+        background:#ffecec;      /* 淡紅底 */
+        color:#b40000;           /* 深紅字 */
+        border:1px solid #f3b3b3;
+      }
+      #deleteEventBtn:hover,
+      #clearRolesBtn:hover,
+      #removeSelectedBtn:hover,
+      #clearNamesBtn:hover{ background:#ffd9d9; }
+      #deleteEventBtn:active,
+      #clearRolesBtn:active,
+      #removeSelectedBtn:active,
+      #clearNamesBtn:active{ background:#ffcfcf; }
+      #deleteEventBtn:focus-visible,
+      #clearRolesBtn:focus-visible,
+      #removeSelectedBtn:focus-visible,
+      #clearNamesBtn:focus-visible{
+        outline:2px solid #ffb3b3;
+        outline-offset:2px;
+      }
+      #deleteEventBtn:disabled,
+      #clearRolesBtn:disabled,
+      #removeSelectedBtn:disabled,
+      #clearNamesBtn:disabled{
+        opacity:.6; cursor:not-allowed;
+      }
+
+      /* === 藍色：更新操作 === */
+      #updateEventBtn{
+        background:#e8f2ff;      /* 淡藍底 */
+        color:#004a99;           /* 深藍字 */
+        border:1px solid #aac6f3;
+      }
+      #updateEventBtn:hover{ background:#d5e7ff; }
+      #updateEventBtn:active{ background:#c2dcff; }
+      #updateEventBtn:focus-visible{
+        outline:2px solid #99c2ff;
+        outline-offset:2px;
+      }
+      #updateEventBtn:disabled{
+        opacity:.6; cursor:not-allowed;
+      }
+
+
+
+
+
 </style>
 </head>
 <body>
@@ -648,6 +749,9 @@ function formatLocationForDisplay(str){
 
   // 至仁1廳 → 至仁一廳；至善12廳 → 至善十二廳
   s = s.replace(/(至[\u4e00-\u9fa5]{1,3})(\d+)\s*廳/g, (_,p1,d)=> p1 + numToCJK(parseInt(d,10)) + '廳');
+
+  /* ★ 新增：樓 後補「・」——只在後面不是「・」且接「至/景」時補上 */
+  s = s.replace(/樓(?!・)(?=(至|景))/g, '樓・');
 
   // 仍有「…樓至…」等補點
   if(!/・/.test(s) && /至/.test(s)) s = s.replace('至','・至');
@@ -1237,8 +1341,17 @@ function init(){
     evLocationSelect.appendChild(o);
   });
   evLocationSelect.addEventListener('change', ()=>{
-    evLocationOther.style.display = evLocationSelect.value === '其他' ? 'block' : 'none';
+  const isOther = (evLocationSelect.value === '其他');
+  evLocationOther.style.display = isOther ? 'block' : 'none';
+  if(isOther){
+    // ★ 新增：顯示即聚焦、若有舊值則全選，方便覆寫
+    setTimeout(()=>{
+      evLocationOther.focus();
+      evLocationOther.select?.();
+    }, 0);
+  }
   });
+
 
   // 需求總人數（★ 上限 36；允許空白）
   evRequiredTotal.innerHTML = '';
