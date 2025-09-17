@@ -34,8 +34,8 @@
     --deficit-number-size: 32px;
 
     /* ★ 修改：新增匯出（圖片）字級 */
-    --cap-reg-name-size: 23px;
-    --cap-reg-role-suffix-size: 10px;
+    --cap-reg-name-size: 24.5px;
+    --cap-reg-role-suffix-size: 8px;
     --cap-footer-tip-size: 30px;
     --cap-full-note-size: 30px;
     --cap-deficit-note-size: 30px;
@@ -50,7 +50,7 @@
     --meta-value-size: 26px;          /* 時間與地點的值字級（預覽） */
 
     /* === 備註與 Meta 字級（匯出圖片） === */
-    --cap-remark-font-size: 22px;     /* 備註區字級（匯出） */
+    --cap-remark-font-size: 16px;     /* 備註區字級（匯出） */
     --cap-meta-label-size: 27px;      /* 標籤字級（匯出） */
     --cap-meta-value-size: 30px;      /* 值字級（匯出） */
 
@@ -90,13 +90,14 @@
   /* 溫馨提醒徽章（第4點） */
   #reminderBadge{
     position:absolute;
-    left:0; top:0;
-    transform:translateY(-6px);
+    left:-10px;     /* 原本 0 → 改 12px，往右縮 */
+    top:6px;      /* 原本 0 → 改 12px，往下縮 */
+    transform:none;/* 拿掉往上推的 transform */
     background:#ffdfe0;
     border:1px solid #f2a8ad;
     color:#b40000;
     border-radius:999px;
-    padding:0px 9px;
+    padding:6px 10px;
     font-size:18px;
     font-weight:600;
     display:none; /* JS 依勾選顯示 */
@@ -256,11 +257,19 @@
     width:880px;
     margin:0;
   }
-  /* 匯出圖字體：標楷體 + 粗體（第6點） */
+  /* 匯出圖字體（擴充平台候補） */
   .capture-root, .capture-root *{
-    font-family:"DFKai-SB","標楷體",serif !important;
+    font-family:
+      "BiauKai",     /* iOS 的標楷體 */
+      "DFKai-SB",    /* Windows 的標楷體 */
+      "KaiTi",       /* 部分系統/舊裝置 */
+      "標楷體",       /* 少數環境用中文名稱 */
+      serif          /* 最後回退 */
+    !important;
     font-weight: bold !important;
-    line-height:1.2;
+    line-height: 1.2;  
+  }
+
   }
   body.capture-mode #exportArea{
     width:880px !important;
@@ -479,6 +488,10 @@
       #updateEventBtn:disabled{
         opacity:.6; cursor:not-allowed;
       }
+     /* === 這裡新增一行，隱藏「下載目前預覽」按鈕 === */
+      #downloadPreviewBtn {
+      display: none;
+    }
 
 
 
@@ -640,7 +653,7 @@
             <input id="outputName" placeholder="event-2025-09-02" />
           </div>
           <div style="margin-top:10px;display:flex;gap:8px">
-            <button id="exportBtn" class="primary">匯出 PNG</button>
+            <button id="exportBtn" class="primary">匯出圖片</button>
             <button id="downloadPreviewBtn">下載目前預覽</button>
           </div>
           <div id="status" class="small" style="margin-top:8px"></div>
@@ -651,8 +664,8 @@
     <!-- 預覽 / 匯出區 -->
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <div style="font-weight:700">匯出預覽（將轉成 PNG）</div>
-        <div class="small">輸出為 PNG • 解析度 2×（固定）</div>
+        <div style="font-weight:700">匯出圖片預覽</div>
+        <div class="small">匯出為PNG格式</div>
       </div>
 
       <div id="exportArea" aria-label="匯出預覽">
