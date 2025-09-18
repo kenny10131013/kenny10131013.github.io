@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>匯出報名[追思祝福]名單圖檔</title>
+<title>匯出護持[追思祝福]名單圖檔</title>
 
 <!-- html2canvas -->
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
@@ -45,12 +45,12 @@
     --export-bg: #fff4e6;
 
       /* === 備註與 Meta 字級（預覽） === */
-    --remark-font-size: 16px;         /* 備註區字級（預覽） */
+    --remark-font-size: 19px;         /* 備註區字級（預覽） */
     --meta-label-size: 27px;          /* 「集合時間：」「集合地點：」標籤字級（預覽） */
     --meta-value-size: 26px;          /* 時間與地點的值字級（預覽） */
 
     /* === 備註與 Meta 字級（匯出圖片） === */
-    --cap-remark-font-size: 16px;     /* 備註區字級（匯出） */
+    --cap-remark-font-size: 23px;     /* 備註區字級（匯出） */
     --cap-meta-label-size: 27px;      /* 標籤字級（匯出） */
     --cap-meta-value-size: 30px;      /* 值字級（匯出） */
 
@@ -58,7 +58,7 @@
 
   *{box-sizing:border-box}
   body{font-family:"Microsoft JhengHei","Noto Sans TC","PingFang TC",Arial,sans-serif;background:#f2f4f7;margin:18px;color:#111}
-  .wrap{max-width:1180px;margin:0 auto}
+  .wrap{max-width:1440px;margin:0 auto}
   h1{font-size:20px;margin:0 0 12px 0; /* ★ 修改（手機溢出保護）*/ overflow-wrap:anywhere; word-break:break-word;}
   .container{display:grid;grid-template-columns:420px 1fr;gap:18px}
   .card{background:var(--panel);border-radius:8px;padding:14px;border:1px solid #e6e6e6;box-shadow:0 6px 18px rgba(0,0,0,0.03); /* ★ 修改 */ min-width:0;}
@@ -159,7 +159,7 @@
   #deficitNote{
     display:none;
     margin-top:12px;
-    padding:10px;
+    padding:6px 10px; /* 上下縮小為 6px，左右維持 10px */
     background:#fff7f7;
     border-left:6px solid #f0a0a0;
     font-weight:700;
@@ -494,6 +494,10 @@
     }
 
 
+    
+
+
+
 
 
 
@@ -556,7 +560,7 @@
             <button id="updateEventBtn">更新場次</button>
             <button id="deleteEventBtn" style="color:#b00">刪除場次</button>
           </div>
-          <div class="small" style="margin-top:6px">建立後會加入下方場次清單（本測試為本機暫存）</div>
+          <div class="small" style="margin-top:6px">建立後會加入下方場次清單（資料只會在使用的手機或電腦暫存）</div>
         </div>
 
         <hr style="border:none;border-top:1px dashed #e6e6e6"/>
@@ -690,7 +694,7 @@
 
          <!-- 備註區（勾選且有內容才顯示；JS 控制 display） -->
         <div id="remarkBox" role="note" aria-label="備註">
-          <span class="label">備註</span>
+          <span class="label">備註:</span>
           <div class="text"></div>
         </div>
 
@@ -698,7 +702,7 @@
 
         <!-- 人力狀態訊息（與 statusMode 互斥顯示；★ 修改：字級與合計移出由 JS 控制） -->
         <div id="fullNote" class="fullNote" style="display:none;">人力已圓滿，感恩護持！</div>
-        <div id="deficitNote" style="display:none;" class="fullNote">尚須<span class="num">0</span>位菩薩護持，感恩！</div>
+        <div id="deficitNote" style="display:none;" class="fullNote">尚需<span class="num">0</span>位菩薩護持，感恩！</div>
 
         <div style="margin-top:12px;padding:10px;background:#fff7e6;border-left:6px solid #f0c070;font-weight:700;color:#7a3e00;text-align:center;">
           請穿著義工服、黑襪、黑鞋、戴口罩，帶海青。
@@ -709,7 +713,7 @@
 </div>
 
 <!-- 右下角版本標註 -->
-<div class="version-tag">三寶弟子2025/09/15製作| 版本：V4.0（2025/09/18更新）</div>
+<div class="version-tag">三寶弟子2025/09/15製作| 版本：V4.5（2025/09/18更新）</div>
 <script>
 /* ---------- 地點下拉清單（保留原值；顯示時再格式化） ---------- */
 const LOCATION_LIST = [
@@ -1406,7 +1410,7 @@ async function exportPNG(){
   document.body.appendChild(stage);
 
   /* ★ 在這裡加延遲 ★ */
-  await new Promise(r => setTimeout(r, 300));  // 延遲 300ms，可調整
+  await new Promise(r => setTimeout(r, 450));  // 延遲 450ms，可調整
 
   // 取用 CSS 變數的底色
   const exportBg = getComputedStyle(document.documentElement).getPropertyValue('--export-bg').trim() || '#fff4e6';
