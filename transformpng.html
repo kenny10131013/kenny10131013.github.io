@@ -542,7 +542,7 @@
               <select id="evHour"></select>
             </div>
             <div>
-              <label>分 (10 分刻度)</label>
+              <label>分 (5分為單位)</label>
               <select id="evMin"></select>
             </div>
           </div>
@@ -1493,14 +1493,21 @@ exportBtn.addEventListener('click', exportPNG);
 
 /* ---------- 初始化：清單、36 上限、固定六欄、UA 提示 ---------- */
 function init(){
-  // 時 / 分（10 分刻度）
+    // 時 / 分（5 分刻度）
   for(let h=0;h<24;h++){
-    const o = document.createElement('option'); o.value = String(h).padStart(2,'0'); o.text = String(h).padStart(2,'0');
+    const o = document.createElement('option'); 
+    o.value = String(h).padStart(2,'0'); 
+    o.text = String(h).padStart(2,'0'); 
     evHour.appendChild(o);
   }
-  ['00','10','20','30','40','50'].forEach(m=>{
-    const o = document.createElement('option'); o.value = m; o.text = m; evMin.appendChild(o);
-  });
+
+  for (let m = 0; m < 60; m += 5) {
+    const mm = String(m).padStart(2,'0');
+    const o = document.createElement('option'); 
+    o.value = mm; 
+    o.text = mm; 
+    evMin.appendChild(o);
+  }
 
   // 地點清單：值用原字串，text 用國字化顯示；「其他」原樣
   evLocationSelect.innerHTML = '';
