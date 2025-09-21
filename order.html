@@ -22,7 +22,7 @@ input[type="text"]{width:100%;padding:8px;font-size:var(--fz-large);border:1px s
 .btn:active{transform:scale(.97)}
 
 .cat-header{display:flex;justify-content:space-between;align-items:center;background:var(--cat);padding:6px 8px;border-radius:var(--radius);margin-top:10px;margin-bottom:6px;font-weight:700;}
-.cat-header .btn{flex:0 0 auto;} /* 修正：避免按鈕撐滿整列 */
+.cat-header .btn{flex:0 0 auto;}
 
 .item{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:6px;margin-bottom:4px;transition:background .15s;}
 .item.highlight{background:var(--hi);}
@@ -68,7 +68,7 @@ input[type="text"]{width:100%;padding:8px;font-size:var(--fz-large);border:1px s
 .table{width:100%;border-collapse:collapse}
 .table th,.table td{border-bottom:1px solid #eee;padding:6px;text-align:right}
 .table th:first-child,.table td:first-child{text-align:left}
-.table .group{background:#f7f7f7;font-weight:800;} /* 彙總分類列樣式 */
+.table .group{background:#f7f7f7;font-weight:800;}
 .bad{color:#a00}
 .danger{background:#ffe8e8;border:1px solid #ffbdbd}
 
@@ -95,7 +95,7 @@ input[type="text"]{width:100%;padding:8px;font-size:var(--fz-large);border:1px s
     <button class="btn" id="btn-toggle">檢視模式</button>
   </div>
 
-  <!-- 目錄（一般/檢視模式） -->
+  <!-- 目錄 -->
   <div id="catalog">
     <div class="cat-header">
       <span>2500cc 袋裝</span>
@@ -116,7 +116,7 @@ input[type="text"]{width:100%;padding:8px;font-size:var(--fz-large);border:1px s
     <div id="cat-330"></div>
   </div>
 
-  <!-- 小計清單（小計模式顯示） -->
+  <!-- 小計清單 -->
   <div id="summary" class="summary"></div>
 
   <div class="totals">
@@ -127,23 +127,22 @@ input[type="text"]{width:100%;padding:8px;font-size:var(--fz-large);border:1px s
     <div>330cc 小計：$<span id="sub-330"  class="accent">0</span></div>
     <div>總金額：$<span id="grand-total" class="accent">0</span></div>
 
-    <!-- 加入清單 / 小計模式 / 清空所有紀錄 -->
     <div class="toolbar" style="margin-top:8px">
-      <button class="btn" id="btn-add-record">填寫完成/加入至統計表</button>
+      <button class="btn" id="btn-add-record">填寫完成/加入至統計表（送雲端）</button>
       <button class="btn" id="btn-bottom-mode">小計模式（截圖使用）/復原檢視模式</button>
     </div>
-    <button class="btn danger" id="btn-clear-all" title="清除所有紀錄與輸入">⚠️ 清空所有紀錄（防呆）</button>
-    <div class="muted">說明：僅限由團主執行"清空所有紀錄"，並且須輸入「清空」才會執行。</div>
+    <button class="btn danger" id="btn-clear-all" title="清除所有紀錄與輸入">⚠️ 清空頁面數量（僅清本頁，不動雲端）</button>
+    <div class="muted">說明：雲端資料請於下方明細逐筆刪除（依權限）。</div>
   </div>
 
-  <!-- 團購清單（使用者紀錄） -->
+  <!-- 團購清單（雲端資料） -->
   <div class="section" id="records-section">
-    <h2>團購清單（使用者紀錄）</h2>
+    <h2>團購清單（雲端即時）</h2>
     <div id="records-list" class="records"></div>
     <div class="muted">點「明細」可展開查看每位填寫者的品項與數量。</div>
   </div>
 
-  <!-- 總彙總（全部紀錄；★已分大分類） -->
+  <!-- 總彙總（全部雲端紀錄） -->
   <div class="section" id="aggregate-section">
     <h2>目前總彙總（全部紀錄）</h2>
     <table class="table" id="agg-table">
@@ -203,7 +202,6 @@ const items330 = [
 ];
 const items=[...items2500,...items1050,...items330];
 
-/* ---------- 小工具 ---------- */
 const $ = s => document.querySelector(s);
 const $$ = s => document.querySelectorAll(s);
 const fmt = n => Number(n).toLocaleString('zh-Hant-TW');
@@ -290,7 +288,6 @@ $('#btn-bottom-mode').addEventListener('click',()=>{
 function enterSummaryMode(){
   ['cat-2500','cat-1050','cat-330'].forEach(id=>{
     const el=document.getElementById(id); prevCollapsed[id]=el.classList.contains('collapsed'); el.classList.remove('collapsed');
-    // 同步按鈕文案
     const btn = document.querySelector(`.btn-toggle-cat[data-target="${id}"]`);
     if (btn){ btn.textContent='收合'; btn.setAttribute('aria-expanded','true'); }
   });
@@ -338,7 +335,7 @@ function buildSummary(){
   });
 }
 
-/* ---------- 展開/收合（修正版） ---------- */
+/* ---------- 展開/收合 ---------- */
 function setCollapsed(targetId, collapsed){
   const panel = document.getElementById(targetId);
   if (!panel) return;
@@ -351,7 +348,6 @@ function setCollapsed(targetId, collapsed){
 }
 $$('.btn-toggle-cat').forEach(btn=>{
   btn.addEventListener('click',()=>{
-    // 若在小計模式，先退出，避免看不到卡片
     if (wrapBox.classList.contains('summary-mode')) exitSummaryMode();
     const id = btn.dataset.target;
     const willCollapse = !document.getElementById(id).classList.contains('collapsed');
@@ -359,11 +355,7 @@ $$('.btn-toggle-cat').forEach(btn=>{
   });
 });
 
-/* ---------- 團購清單（localStorage） ---------- */
-const STORE_KEY='groupOrderRecords';
-function getRecords(){ return JSON.parse(localStorage.getItem(STORE_KEY)||'[]'); }
-function setRecords(arr){ localStorage.setItem(STORE_KEY, JSON.stringify(arr)); }
-
+/* ---------- 建立提交資料 ---------- */
 function getQuantities(){
   const q=[]; $$('.item').forEach(card=>q.push(parseInt(card.querySelector('input[type="number"]').value||'0',10)||0));
   return q;
@@ -388,25 +380,84 @@ function buildRecord(){
 
   return { buyer, ts, items:itemsPicked, sum:{'2500':sum2500,'1050':sum1050,'330':sum330, grand} };
 }
+</script>
 
-/* 渲染使用者紀錄清單 */
-function renderRecords(){
-  const listEl=$('#records-list'); if(!listEl) return;
-  listEl.innerHTML='';
-  const records=getRecords();
-  if(!records.length){ listEl.innerHTML='<div class="muted">尚無紀錄，請先在上方輸入並按「填寫完成」。</div>'; renderAggregate(); return; }
+<!-- ===== Firebase（以 <script type="module"> 匯入） ===== -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+  import { getFirestore, collection, addDoc, serverTimestamp,
+           query, orderBy, onSnapshot, getDocs, deleteDoc, doc } 
+    from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
-  records.forEach((rec,ri)=>{
-    const card=document.createElement('div'); card.className='record';
+  /* ① 將下方換成你的 firebaseConfig（從 Console 複製） */
+  const firebaseConfig = {
+    apiKey: "AIzaSyBDtSRcMhjLUqzU_BS9p3bFaqT2nZc4lu8",
+    authDomain: "order-c9c29.firebaseapp.com",
+    projectId: "order-c9c29",
+    storageBucket: "order-c9c29.firebasestorage.app",
+    messagingSenderId: "596005686391",
+    appId: "1:596005686391:web:2795ea118834b749214a72",
+    measurementId: "G-Z3PHZMCGNW"
+  };
+
+
+  const app = initializeApp(firebaseConfig);
+  const db  = getFirestore(app);
+
+  /* ② 送單：把本次填寫寫入 Firestore */
+  document.getElementById('btn-add-record').addEventListener('click', async ()=>{
+    const rec = buildRecord();
+    if(!rec.items.length){ alert('目前沒有填寫任何數量。'); return; }
+    try{
+      await addDoc(collection(db, 'orders'), {
+        buyer: rec.buyer,
+        ts: rec.ts,
+        items: rec.items,
+        sum_2500: rec.sum['2500'],
+        sum_1050: rec.sum['1050'],
+        sum_330:  rec.sum['330'],
+        grand:    rec.sum.grand,
+        created_at: serverTimestamp()
+      });
+      alert('已提交到雲端！');
+      // 清空頁面數量
+      document.querySelectorAll('.item input[type="number"]').forEach(i=>i.value=0);
+      recalc();
+    }catch(err){
+      alert('提交失敗：' + err.message);
+    }
+  });
+
+  /* ③ 即時監聽 orders → 渲染列表與彙總 */
+  function subscribeOrders(callback){
+    const q = query(collection(db,'orders'), orderBy('created_at','desc'));
+    return onSnapshot(q, snap=>{
+      const rows = snap.docs.map(d=>({ id:d.id, ...d.data() }));
+      callback(rows);
+    });
+  }
+
+  function renderRecordsCloud(rows){
+  const listEl = document.getElementById('records-list');
+  if(!rows.length){
+    listEl.innerHTML = '<div class="muted">尚無紀錄，請先在上方輸入並按「填寫完成」。</div>';
+    renderAggregateCloud([]); 
+    return;
+  }
+  listEl.innerHTML = '';
+
+  rows.forEach((rec)=>{
+    const card=document.createElement('div'); 
+    card.className='record';
     card.innerHTML=`
       <div class="hdr">
-        <div>${rec.buyer} <span class="meta">（${rec.ts}）</span></div>
-        <div>總金額 $${fmt(rec.sum.grand)}</div>
+        <div>${rec.buyer} <span class="meta">（${rec.ts||''}）</span></div>
+        <div>總金額 $${fmt(rec.grand||0)}</div>
       </div>
-      <div class="muted">2500小計 $${fmt(rec.sum['2500'])} ｜ 1050小計 $${fmt(rec.sum['1050'])} ｜ 330小計 $${fmt(rec.sum['330'])}</div>
+      <div class="muted">2500小計 $${fmt(rec.sum_2500||0)} ｜ 1050小計 $${fmt(rec.sum_1050||0)} ｜ 330小計 $${fmt(rec.sum_330||0)}</div>
       <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
         <button class="btn btn-toggle-detail">明細</button>
-        <button class="btn bad btn-del-record">刪除此筆</button>
+        <button class="btn bad btn-del-record" data-id="${rec.id}">刪除此筆</button>
       </div>
       <div class="details">
         <table>
@@ -414,107 +465,102 @@ function renderRecords(){
           <tbody></tbody>
         </table>
       </div>`;
-    const tbody=card.querySelector('tbody');
-    rec.items.forEach(it=>{
+
+    const tbody = card.querySelector('tbody');
+    (rec.items||[]).forEach(it=>{
       const tr=document.createElement('tr');
       tr.innerHTML=`<td style="text-align:left">${it.name}</td><td>$${fmt(it.price)}</td><td>${fmt(it.qty)}</td><td>$${fmt(it.money)}</td>`;
       tbody.appendChild(tr);
     });
+
     card.querySelector('.btn-toggle-detail').addEventListener('click',()=>card.classList.toggle('open'));
-    card.querySelector('.btn-del-record').addEventListener('click',()=>{
-      if(!confirm(`確定刪除「${rec.buyer}（${rec.ts}）」這筆紀錄？`)) return;
-      const arr=getRecords(); arr.splice(ri,1); setRecords(arr); renderRecords(); renderAggregate();
+
+    card.querySelector('.btn-del-record').addEventListener('click', async (ev)=>{
+      const id = ev.currentTarget.getAttribute('data-id');
+      const word = prompt(`⚠️ 確定要刪除這筆紀錄嗎？\n請輸入「刪除」以確認：`);
+      if(word !== "刪除") {
+        alert("已取消刪除。");
+        return;
+      }
+      try {
+        await deleteDoc(doc(db, 'orders', id));
+        alert("✅ 已刪除！");
+      } catch(e){
+        alert('❌ 刪除失敗：' + e.message);
+      }
     });
+
     listEl.appendChild(card);
   });
 
-  renderAggregate();
+  renderAggregateCloud(rows);
 }
 
-/* 彙總所有紀錄（★分大分類輸出） */
-function renderAggregate(){
-  const tbody = document.getElementById('agg-body'); if(!tbody) return;
-  tbody.innerHTML='';
 
-  const qByItem = Array(items.length).fill(0);
-  const sumByCat = {'2500':0,'1050':0,'330':0};
-  let qtyAll=0,sumAll=0;
+  function renderAggregateCloud(rows){
+    const tbody = document.getElementById('agg-body'); if(!tbody) return;
+    tbody.innerHTML='';
+    const qByKey = {}; // key = cat::name::price
+    const sumByCat = {'2500':0,'1050':0,'330':0};
+    let qtyAll=0,sumAll=0;
 
-  getRecords().forEach(rec=>{
-    rec.items.forEach(it=>{
-      qByItem[it.idx]+=it.qty;
-      sumByCat[it.cat]+=it.money;
-      qtyAll+=it.qty; sumAll+=it.money;
+    rows.forEach(r=>{
+      (r.items||[]).forEach(it=>{
+        const key = `${it.cat}:::${it.name}:::${it.price}`;
+        qByKey[key] = (qByKey[key]||0) + it.qty;
+        sumByCat[it.cat] += it.money;
+        qtyAll += it.qty; sumAll += it.money;
+      });
     });
+
+    const cats = [
+      {id:'2500', title:'2500cc 袋裝'},
+      {id:'1050', title:'1050cc 口栓袋'},
+      {id:'330',  title:'330cc 杯裝'}
+    ];
+    cats.forEach(c=>{
+      const th = document.createElement('tr'); th.className='group'; th.innerHTML=`<td colspan="4">${c.title}</td>`;
+      tbody.appendChild(th);
+      let hasAny=false;
+      Object.entries(qByKey).forEach(([k,qty])=>{
+        const [cat,name,price] = k.split(':::'); if(cat!==c.id || qty<=0) return;
+        hasAny=true;
+        const money = qty * Number(price);
+        const tr=document.createElement('tr');
+        tr.innerHTML=`<td>${name}</td><td>$${fmt(price)}</td><td>${fmt(qty)}</td><td>$${fmt(money)}</td>`;
+        tbody.appendChild(tr);
+      });
+      if(!hasAny){
+        const tr=document.createElement('tr');
+        tr.innerHTML=`<td colspan="4" class="muted">（此分類目前無數量）</td>`;
+        tbody.appendChild(tr);
+      }
+    });
+
+    document.getElementById('agg-q-2500').textContent = '';
+    document.getElementById('agg-q-1050').textContent = '';
+    document.getElementById('agg-q-330').textContent  = '';
+    document.getElementById('agg-s-2500').textContent = `$${fmt(sumByCat['2500'])}`;
+    document.getElementById('agg-s-1050').textContent = `$${fmt(sumByCat['1050'])}`;
+    document.getElementById('agg-s-330').textContent  = `$${fmt(sumByCat['330'])}`;
+    document.getElementById('agg-q-all').textContent  = fmt(qtyAll);
+    document.getElementById('agg-s-all').textContent  = `$${fmt(sumAll)}`;
+  }
+
+  // 啟用即時監聽
+  subscribeOrders(renderRecordsCloud);
+
+  /* ④ 僅清空本頁輸入，不動雲端 */
+  document.getElementById('btn-clear-all').addEventListener('click',()=>{
+    document.querySelectorAll('.item input[type="number"]').forEach(i=>i.value=0);
+    recalc();
+    alert('已清空本頁數量（雲端資料未變動）。');
   });
 
-  // 依分類輸出群組
-  const catDefs = [
-    {id:'2500', title:'2500cc 袋裝', range:[0, items2500.length]},
-    {id:'1050', title:'1050cc 口栓袋', range:[items2500.length, items2500.length+items1050.length]},
-    {id:'330',  title:'330cc 杯裝',   range:[items2500.length+items1050.length, items.length]}
-  ];
-
-  catDefs.forEach(def=>{
-    // 組分類標題列
-    const th = document.createElement('tr');
-    th.className='group';
-    th.innerHTML = `<td colspan="4">${def.title}</td>`;
-    tbody.appendChild(th);
-
-    // 該分類的品項逐一列出（只顯示 qty>0）
-    let hasAny=false;
-    for(let i=def.range[0]; i<def.range[1]; i++){
-      const qty=qByItem[i]; if(qty<=0) continue;
-      hasAny=true;
-      const money=qty*items[i].price;
-      const tr=document.createElement('tr');
-      tr.innerHTML=`<td>${items[i].name}</td><td>$${fmt(items[i].price)}</td><td>${fmt(qty)}</td><td>$${fmt(money)}</td>`;
-      tbody.appendChild(tr);
-    }
-    if(!hasAny){
-      const tr=document.createElement('tr');
-      tr.innerHTML=`<td colspan="4" class="muted">（此分類目前無數量）</td>`;
-      tbody.appendChild(tr);
-    }
-  });
-
-  // 類別小計 & 總金額
-  document.getElementById('agg-q-2500').textContent = ''; // 數量欄留白（不同單價時統計意義不大）
-  document.getElementById('agg-q-1050').textContent = '';
-  document.getElementById('agg-q-330').textContent  = '';
-  document.getElementById('agg-s-2500').textContent = `$${fmt(sumByCat['2500'])}`;
-  document.getElementById('agg-s-1050').textContent = `$${fmt(sumByCat['1050'])}`;
-  document.getElementById('agg-s-330').textContent  = `$${fmt(sumByCat['330'])}`;
-  document.getElementById('agg-q-all').textContent  = fmt(qtyAll);
-  document.getElementById('agg-s-all').textContent  = `$${fmt(sumAll)}`;
-}
-
-/* 加入本次填寫到清單 */
-document.getElementById('btn-add-record').addEventListener('click',()=>{
-  const rec=buildRecord();
-  if(!rec.items.length){ alert('目前沒有填寫任何數量。'); return; }
-  const arr=getRecords(); arr.push(rec); setRecords(arr);
-  renderRecords();
-  alert('已加入團購清單！');
-});
-
-/* 清空所有紀錄（防呆：需輸入「清空」） */
-document.getElementById('btn-clear-all').addEventListener('click',()=>{
-  const word = prompt('此動作會刪除所有「團購清單」紀錄與頁面數量。\n請輸入「清空」以確認：');
-  if(word!=='清空'){ alert('已取消。'); return; }
-  localStorage.removeItem('groupOrderRecords');
-  document.querySelectorAll('.item input[type="number"]').forEach(i=>i.value=0);
+  // 初始顯示
+  document.getElementById('ts').textContent = nowTS();
+  const buyerInput=document.getElementById('buyer'); document.getElementById('buyer-name').textContent = buyerInput.value || '';
   recalc();
-  renderRecords();
-  alert('已清空所有紀錄與數量。');
-});
-
-/* 初始：事件與渲染 */
-buyerName.textContent = buyerInput.value || '';
-document.getElementById('ts').textContent = nowTS();
-recalc();
-renderRecords();
 </script>
 </body>
 </html>
