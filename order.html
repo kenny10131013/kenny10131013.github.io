@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>每週豆漿團購登記</title>
+<title>每週豆漿團購登記 V3.0</title>
 <style>
 :root{
   --radius: 10px; --border:#ddd; --cat:#d9edf7; --hi:#fff7b1;
@@ -85,7 +85,7 @@ input[type="text"]{width:100%;padding:8px;font-size:var(--fz-large);border:1px s
 </head>
 <body>
 <div class="wrap" id="wrap">
-  <h1>每週豆漿團購登記</h1>
+  <h1>每週豆漿團購登記 V3.0(2025/9/21更新)</h1>
 
   <label for="buyer">訂購人姓名</label>
   <input type="text" id="buyer" placeholder="輸入姓名" />
@@ -131,7 +131,10 @@ input[type="text"]{width:100%;padding:8px;font-size:var(--fz-large);border:1px s
       <button class="btn" id="btn-add-record">填寫完成/加入至統計表（送雲端）</button>
       <button class="btn" id="btn-bottom-mode">小計模式（截圖使用）/復原檢視模式</button>
     </div>
-    <button class="btn danger" id="btn-clear-all" title="清除所有紀錄與輸入">⚠️ 清空頁面數量（僅清本頁，不動雲端）</button>
+    <button class="btn danger" id="btn-clear-all" title="清除所有紀錄與輸入">
+    ⚠️ 清空頁面數量＋清空雲端全部紀錄（防呆）
+    </button>
+
     <div class="muted">說明：雲端資料請於下方明細逐筆刪除（依權限）。</div>
   </div>
 
@@ -385,9 +388,11 @@ function buildRecord(){
 <!-- ===== Firebase（以 <script type="module"> 匯入） ===== -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-  import { getFirestore, collection, addDoc, serverTimestamp,
-           query, orderBy, onSnapshot, getDocs, deleteDoc, doc } 
-    from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+  import {
+  getFirestore, collection, addDoc, serverTimestamp,
+  query, orderBy, onSnapshot, getDocs, deleteDoc, doc, writeBatch
+  } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
 
   /* ① 將下方換成你的 firebaseConfig（從 Console 複製） */
   const firebaseConfig = {
@@ -550,12 +555,55 @@ function buildRecord(){
   // 啟用即時監聽
   subscribeOrders(renderRecordsCloud);
 
-  /* ④ 僅清空本頁輸入，不動雲端 */
-  document.getElementById('btn-clear-all').addEventListener('click',()=>{
-    document.querySelectorAll('.item input[type="number"]').forEach(i=>i.value=0);
-    recalc();
-    alert('已清空本頁數量（雲端資料未變動）。');
-  });
+  /* ④ 清空本頁輸入，會同步刪除雲端 */
+    document.getElementById('btn-clear-all').addEventListener('click', async ()=>{
+      const word = prompt(
+        '⚠️ 此動作會刪除資料庫「所有訂單」紀錄，且無法復原，並清空本頁輸入。\n\n' +
+        '請輸入「全部刪除」以確認：'
+      );
+      if (word !== '全部刪除') {
+        alert('已取消。');
+        return;
+      }
+
+      try {
+        // 1) 先清空本頁輸入
+        document.querySelectorAll('.item input[type="number"]').forEach(i=>i.value=0);
+        recalc();
+
+        // 2) 讀出所有 orders
+        const snap = await getDocs(collection(db, 'orders'));
+        if (snap.empty) {
+          alert('雲端目前沒有紀錄；已清空本頁數量。');
+          return;
+        }
+
+        // 3) 分批批次刪除（Firestore 單批最多 500 筆；用 450 留餘裕）
+        let total = 0;
+        let ops = 0;
+        let batch = writeBatch(db);
+
+        snap.forEach(docSnap => {
+          batch.delete(docSnap.ref);
+          ops++; total++;
+          if (ops === 450) {
+            // 立即送出一批，重建下一批
+            batch.commit();
+            batch = writeBatch(db);
+            ops = 0;
+          }
+        });
+
+        if (ops > 0) {
+          await batch.commit();
+        }
+
+        alert(`✅ 已刪除雲端 ${total} 筆，並清空本頁數量。`);
+      } catch (e) {
+        alert('❌ 刪除失敗：' + e.message);
+      }
+    });
+
 
   // 初始顯示
   document.getElementById('ts').textContent = nowTS();
