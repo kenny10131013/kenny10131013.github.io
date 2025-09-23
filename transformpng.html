@@ -26,16 +26,16 @@
     --backdrop: rgba(0,0,0,.45);
 
     /* ★ 修改：新增可調字級（預覽用） */
-    --reg-name-size: 20px;
-    --reg-role-suffix-size: 12px;
+    --reg-name-size: 22px;
+    --reg-role-suffix-size: 16px;
     --footer-tip-size: 20px;
     --full-note-size: 22px;
     --deficit-note-size: 22px;
     --deficit-number-size: 32px;
 
     /* ★ 修改：新增匯出（圖片）字級 */
-    --cap-reg-name-size: 24.5px;
-    --cap-reg-role-suffix-size: 8px;
+    --cap-reg-name-size: 27px;
+    --cap-reg-role-suffix-size: 14px;
     --cap-footer-tip-size: 30px;
     --cap-full-note-size: 30px;
     --cap-deficit-note-size: 30px;
@@ -62,12 +62,12 @@
   h1{font-size:20px;margin:0 0 12px 0; /* ★ 修改（手機溢出保護）*/ overflow-wrap:anywhere; word-break:break-word;}
   .container{display:grid;grid-template-columns:420px 1fr;gap:18px}
   .card{background:var(--panel);border-radius:8px;padding:14px;border:1px solid #e6e6e6;box-shadow:0 6px 18px rgba(0,0,0,0.03); /* ★ 修改 */ min-width:0;}
-  label{display:block;margin:6px 0 6px;color:var(--muted);font-size:16px}
+  
   input[type="text"], input[type="date"], select, textarea {width:100%;padding:8px;border:1px solid #d0d0d0;border-radius:6px;font-size:14px;font-family:inherit; /* ★ 修改 */ max-width:100%;}
   textarea{resize:vertical}
   button{padding:8px 12px;border-radius:6px;border:1px solid #bbb;background:#fff;cursor:pointer;font-family:inherit; /* ★ 修改 */ max-width:100%;}
   button.primary{background:var(--accent);color:#fff;border-color:rgba(0,0,0,0.06)}
-  .small{font-size:13px;color:var(--muted)}
+  
   .controls{display:flex;flex-direction:column;gap:12px}
   .row{display:flex;gap:8px}
   .row> *{flex:1}
@@ -125,19 +125,25 @@
     table-layout: fixed;
   }
   table.regTable td{
-    border:1px solid #9a8f7a;
-    padding:10px;
-    font-size: var(--reg-name-size); /* ★ 修改：表格姓名字級（預覽） */
-    height:48px;
-    vertical-align:middle;
-    text-align:center;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+  border:1px solid #9a8f7a;
+  padding:12px;              /* 10 → 12 */
+  font-size: var(--reg-name-size);
+  height:56px;               /* 48 → 56 */
+  vertical-align:middle;
+  text-align:center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   }
+
+  
   table.regTable td.empty{color:#bbb}
   td.totalCell{font-weight:700;color:var(--accent);background:#fff6f6}
-  .roleSuffix{font-size: var(--reg-role-suffix-size); color:#444;margin-left:6px}
+  .roleSuffix{
+  font-size: var(--reg-role-suffix-size);  /* 角色字級較小，保留變數 */
+  margin-left: .25em;                      /* 改用相對間距 */
+  }
+
 
   .fullNote{
     margin-top:12px;
@@ -197,7 +203,24 @@
       #remarkBox .text{
         white-space: pre-wrap;          /* 依使用者換行呈現 */
       }
+  /* === 修改後：標題、標籤、小字統一放大 === */
+  .section-title {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
 
+  label {
+    display:block;
+    margin:6px 0 6px;
+    color:var(--muted);
+    font-size:18px;
+  }
+
+  .small {
+    font-size:20px;
+    color:var(--muted);
+  }
 
 
   .instruction{margin-top:8px;font-size:13px;color:var(--muted)}
@@ -257,27 +280,41 @@
     width:880px;
     margin:0;
   }
-  /* 匯出圖字體（擴充平台候補） */
+  /* 匯出圖字體（改為無襯線字體堆疊） */
   .capture-root, .capture-root *{
-    font-family:
-      "BiauKai",     /* iOS 的標楷體 */
-      "DFKai-SB",    /* Windows 的標楷體 */
-      "KaiTi",       /* 部分系統/舊裝置 */
-      "標楷體",       /* 少數環境用中文名稱 */
-      serif          /* 最後回退 */
-    !important;
-    font-weight: bold !important;
-    line-height: 1.2;  
+  font-family:
+    "Microsoft JhengHei",
+    "PingFang TC",
+    "Noto Sans TC",
+    "Heiti TC",
+    Arial, sans-serif !important;
+  line-height: 1.25 !important;
+  /* 移除強制粗體，避免整張圖片字太厚 */
+}
+
+  
+
+  
+    :root{
+    /* ★ 新增一個舞台寬度變數 */
+    --stage-width: 960px;
   }
 
-  }
   body.capture-mode #exportArea{
-    width:880px !important;
+    width: var(--stage-width) !important;
   }
+  .capture-root #exportArea {
+    width: var(--stage-width) !important;
+    background-color: var(--export-bg) !important;
+  }
+
+  
 
   /* ★ 修改：匯出圖片的字級覆蓋（統一用變數） */
+  /* 匯出圖片的字級覆蓋 */
   .capture-root td { font-size: var(--cap-reg-name-size) !important; }
   .capture-root td .roleSuffix { font-size: var(--cap-reg-role-suffix-size) !important; }
+ 
   .capture-root #exportArea { background-color: var(--export-bg) !important; }
   .capture-root .fullNote { font-size: var(--cap-full-note-size) !important; color:#000 !important; text-align:center; }
   .capture-root .fullNote .highlight-total { font-size: var(--cap-full-note-size); color:#000;  font-weight:900; }
@@ -531,139 +568,143 @@
   <div class="container">
     <!-- 控制面板 -->
     <div class="card">
-      <div class="controls">
+  <div class="controls">
+
+    <!-- 區塊 1：建立 / 編輯場次 -->
+    <div>
+      <div class="section-title">建立 / 編輯場次</div>
+      <label>日期</label>
+      <input type="date" id="evDate" />
+      <div class="row" style="margin-top:6px">
         <div>
-          <div style="font-weight:700;margin-bottom:8px">建立 / 編輯場次</div>
-          <label>日期</label>
-          <input type="date" id="evDate" />
-          <div class="row" style="margin-top:6px">
-            <div>
-              <label>時</label>
-              <select id="evHour"></select>
-            </div>
-            <div>
-              <label>分 (5分為單位)</label>
-              <select id="evMin"></select>
-            </div>
-          </div>
-
-          <label style="margin-top:8px">集合地點</label>
-          <select id="evLocationSelect"></select>
-          <input id="evLocationOther" placeholder="若選「其他」，請輸入地點" style="display:none;margin-top:6px"/>
-
-          <!-- 需求總人數（★ 修改：邏輯在 JS 將上限改為 36） -->
-          <label style="margin-top:8px">需求總人數</label>
-          <select id="evRequiredTotal"></select>
-
-          <div style="margin-top:10px" class="btn-row">
-            <button id="createEventBtn" class="primary">建立場次</button>
-            <button id="updateEventBtn">更新場次</button>
-            <button id="deleteEventBtn" style="color:#b00">刪除場次</button>
-          </div>
-          <div class="small" style="margin-top:6px">建立後會加入下方場次清單（資料只會在使用的手機或電腦暫存）</div>
+          <label>時</label>
+          <select id="evHour"></select>
         </div>
-
-        <hr style="border:none;border-top:1px dashed #e6e6e6"/>
-
         <div>
-          <div style="font-weight:700;margin-bottom:8px">維護：固定名單（會隨場次儲存）</div>
-          <div class="small">填好一次會儲存在該場次，顯示順序：維那 → 木魚 → 代說法 → 場控1..5</div>
-
-          <label style="margin-top:8px">維那姓名</label>
-          <input id="role_weina" placeholder="維那姓名 (例如 王大明)" />
-
-          <label style="margin-top:8px">木魚姓名</label>
-          <input id="role_muyu" placeholder="木魚姓名" />
-
-          <label style="margin-top:8px">代說法姓名</label>
-          <input id="role_speaker" placeholder="代說法姓名" />
-
-          <label style="margin-top:8px">場控姓名（1）</label>
-          <input id="role_stage1" placeholder="場控1" />
-
-          <label style="margin-top:8px">場控姓名（2）</label>
-          <input id="role_stage2" placeholder="場控2" />
-
-          <label style="margin-top:8px">場控姓名（3）</label>
-          <input id="role_stage3" placeholder="場控3" />
-
-          <label style="margin-top:8px">場控姓名（4）</label>
-          <input id="role_stage4" placeholder="場控4" />
-
-          <label style="margin-top:8px">場控姓名（5）</label>
-          <input id="role_stage5" placeholder="場控5" />
-
-          <div style="margin-top:10px" class="btn-row">
-            <button id="saveRolesBtn">儲存固定名單到場次</button>
-            <button id="clearRolesBtn">清除固定名單</button>
-          </div>
-        </div>
-
-        <hr style="border:none;border-top:1px dashed #e6e6e6"/>
-
-        <div>
-          <div style="font-weight:700;margin-bottom:8px">選取場次 / 報名管理</div>
-          <label>場次列表</label>
-          <select id="eventSelect"></select>
-
-          <label style="margin-top:8px">加入報名者（逗號、頓號、換行皆視為分隔）</label>
-          <textarea id="namesInput" placeholder="張三, 李四、王五 或每行一個" style="height:80px"></textarea>
-          <div style="display:flex;gap:8px;margin-top:8px">
-            <button id="addNamesBtn">加入名單</button>
-            <button id="clearNamesBtn">清空名單</button>
-            <button id="removeSelectedBtn">刪除勾選名單</button>
-          </div>
-
-          <div style="margin-top:10px">
-            <label class="small">目前報名（固定名單會顯示於上方）</label>
-            <div id="fixedRolesArea" class="role-fixed"></div>
-            <div class="registration-list" id="registrationList"></div>
-          </div>
-        </div>
-
-        <hr style="border:none;border-top:1px dashed #e6e6e6"/>
-
-        <div>
-          <div style="font-weight:700;margin-bottom:8px">匯出設定</div>
-
-          <!-- 單選群組：不顯示 / 人力已圓滿 / 顯示缺額 -->
-          <div class="status-row" role="radiogroup" aria-label="人力狀態">
-            <label class="option"><input type="radio" name="statusMode" value="none" checked> 不顯示人力狀態</label>
-            <label class="option"><input type="radio" name="statusMode" value="full"> 勾選：人力已圓滿</label>
-            <label class="option"><input type="radio" name="statusMode" value="deficit"> 勾選：顯示本場次護持人數缺額</label>
-          </div>
-
-          <div class="checkbox-row" style="margin-top:8px">
-            <input type="checkbox" id="reminderCheckbox">
-            <label for="reminderCheckbox">勾選：溫馨提醒（匯出圖左上角顯示「溫馨提醒」圖示）</label>
-          </div>
-                    <!-- 備註（可選） -->
-          <div style="margin-top:10px">
-            <div class="checkbox-row" style="margin-bottom:6px">
-              <input type="checkbox" id="remarkEnableCheckbox" />
-              <label for="remarkEnableCheckbox">勾選：顯示備註</label>
-            </div>
-            <textarea id="remarkTextarea" placeholder="請輸入備註內容（勾選後才會顯示於報名表格下方）" style="height:80px; display:none"></textarea>
-            <div class="small" id="remarkHint" style="display:none; margin-top:4px">
-              備註將顯示於「報名表格」下方。
-            </div>
-          </div>
-
-
-
-
-          <div style="margin-top:8px">
-            <label>輸出檔名</label>
-            <input id="outputName" placeholder="event-2025-09-02" />
-          </div>
-          <div style="margin-top:10px;display:flex;gap:8px">
-            <button id="exportBtn" class="primary">匯出圖片</button>
-            <button id="downloadPreviewBtn">下載目前預覽</button>
-          </div>
-          <div id="status" class="small" style="margin-top:8px"></div>
+          <label>分 (5分為單位)</label>
+          <select id="evMin"></select>
         </div>
       </div>
+
+      <label style="margin-top:8px">集合地點</label>
+      <select id="evLocationSelect"></select>
+      <input id="evLocationOther" placeholder="若選「其他」，請輸入地點" style="display:none;margin-top:6px"/>
+
+      <label style="margin-top:8px">需求總人數</label>
+      <select id="evRequiredTotal"></select>
+
+      <div style="margin-top:10px" class="btn-row">
+        <button id="createEventBtn" class="primary">建立場次</button>
+        <button id="updateEventBtn">更新場次</button>
+        <button id="deleteEventBtn" style="color:#b00">刪除場次</button>
+      </div>
+      <div class="small" style="margin-top:6px">
+        建立後會加入下方場次清單（資料只會在使用的手機或電腦暫存）
+      </div>
     </div>
+
+    <hr style="border:none;border-top:1px dashed #e6e6e6"/>
+
+    <!-- 區塊 2：維護固定名單 -->
+    <div>
+      <div class="section-title">維護：固定名單（會隨場次儲存）</div>
+      <div class="small">填好一次會儲存在該場次，顯示順序：維那 → 木魚 → 代說法 → 場控1..5</div>
+
+      <label style="margin-top:8px">維那姓名</label>
+      <input id="role_weina" placeholder="維那姓名 (例如 王大明)" />
+
+      <label style="margin-top:8px">木魚姓名</label>
+      <input id="role_muyu" placeholder="木魚姓名" />
+
+      <label style="margin-top:8px">代說法姓名</label>
+      <input id="role_speaker" placeholder="代說法姓名" />
+
+      <label style="margin-top:8px">場控姓名（1）</label>
+      <input id="role_stage1" placeholder="場控1" />
+
+      <label style="margin-top:8px">場控姓名（2）</label>
+      <input id="role_stage2" placeholder="場控2" />
+
+      <label style="margin-top:8px">場控姓名（3）</label>
+      <input id="role_stage3" placeholder="場控3" />
+
+      <label style="margin-top:8px">場控姓名（4）</label>
+      <input id="role_stage4" placeholder="場控4" />
+
+      <label style="margin-top:8px">場控姓名（5）</label>
+      <input id="role_stage5" placeholder="場控5" />
+
+      <div style="margin-top:10px" class="btn-row">
+        <button id="saveRolesBtn">儲存固定名單到場次</button>
+        <button id="clearRolesBtn">清除固定名單</button>
+      </div>
+    </div>
+
+    <hr style="border:none;border-top:1px dashed #e6e6e6"/>
+
+    <!-- 區塊 3：選取場次 / 報名管理 -->
+    <div>
+      <div class="section-title">選取場次 / 報名管理</div>
+      <label>場次列表</label>
+      <select id="eventSelect"></select>
+
+      <label style="margin-top:8px">加入報名者（逗號、頓號、換行皆視為分隔）</label>
+      <textarea id="namesInput" placeholder="張三, 李四、王五 或每行一個" style="height:80px"></textarea>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button id="addNamesBtn">加入名單</button>
+        <button id="clearNamesBtn">清空名單</button>
+        <button id="removeSelectedBtn">刪除勾選名單</button>
+      </div>
+
+      <div style="margin-top:10px">
+        <label class="small">目前報名（固定名單會顯示於上方）</label>
+        <div id="fixedRolesArea" class="role-fixed"></div>
+        <div class="registration-list" id="registrationList"></div>
+      </div>
+    </div>
+
+    <hr style="border:none;border-top:1px dashed #e6e6e6"/>
+
+    <!-- 區塊 4：匯出設定 -->
+    <div>
+      <div class="section-title">匯出設定</div>
+
+      <div class="status-row" role="radiogroup" aria-label="人力狀態">
+        <label class="option"><input type="radio" name="statusMode" value="none" checked> 不顯示人力狀態</label>
+        <label class="option"><input type="radio" name="statusMode" value="full"> 勾選：人力已圓滿</label>
+        <label class="option"><input type="radio" name="statusMode" value="deficit"> 勾選：顯示本場次護持人數缺額</label>
+      </div>
+
+      <div class="checkbox-row" style="margin-top:8px">
+        <input type="checkbox" id="reminderCheckbox">
+        <label for="reminderCheckbox">勾選：溫馨提醒（匯出圖左上角顯示「溫馨提醒」圖示）</label>
+      </div>
+
+      <div style="margin-top:10px">
+        <div class="checkbox-row" style="margin-bottom:6px">
+          <input type="checkbox" id="remarkEnableCheckbox" />
+          <label for="remarkEnableCheckbox">勾選：顯示備註</label>
+        </div>
+        <textarea id="remarkTextarea" placeholder="請輸入備註內容（勾選後才會顯示於報名表格下方）" style="height:80px; display:none"></textarea>
+        <div class="small" id="remarkHint" style="display:none; margin-top:4px">
+          備註將顯示於「報名表格」下方。
+        </div>
+      </div>
+
+      <div style="margin-top:8px">
+        <label>輸出檔名</label>
+        <input id="outputName" placeholder="event-2025-09-02" />
+      </div>
+      <div style="margin-top:10px;display:flex;gap:8px">
+        <button id="exportBtn" class="primary">匯出圖片</button>
+        <button id="downloadPreviewBtn">下載目前預覽</button>
+      </div>
+      <div id="status" class="small" style="margin-top:8px"></div>
+    </div>
+
+  </div>
+</div>
+
 
     <!-- 預覽 / 匯出區 -->
     <div class="card">
@@ -713,7 +754,7 @@
 </div>
 
 <!-- 右下角版本標註 -->
-<div class="version-tag">三寶弟子2025/09/15製作| 版本：V5.0（2025/09/21更新）</div>
+<div class="version-tag">三寶弟子2025/09/15製作| 版本：V6.0（2025/09/24更新）</div>
 <script>
 /* ---------- 地點下拉清單（保留原值；顯示時再格式化） ---------- */
 const LOCATION_LIST = [
@@ -978,14 +1019,19 @@ function renderRegistrationList(index){
     {key:'stage4', label:'場控'},
     {key:'stage5', label:'場控'}
   ];
-  let fixedHtml = '';
+   let fixedHtml = '';
   roleOrder.forEach(r => {
-    const n = roles[r.key];
-    if(n && n.trim()){
-      fixedHtml += `<div style="margin-bottom:4px;"><strong>${escapeHtml(n)}</strong><span style="font-size:12px;color:#666;margin-left:6px">(${r.label})</span></div>`;
-    }
+  const n = roles[r.key];
+  if(n && n.trim()){
+    fixedHtml += `
+      <div style="margin-bottom:4px;">
+        <strong>${escapeHtml(n)}</strong><span class="roleSuffix" style="font-size:12px;margin-left:0px">${r.label}</span>
+      </div>`;
+  }
   });
   fixedRolesArea.innerHTML = fixedHtml || '<span class="small">（尚無固定名單）</span>';
+
+
 
   (ev.registrants || []).forEach((name, i) => {
     const div = document.createElement('div'); div.className='reg-item';
@@ -1219,10 +1265,11 @@ function updatePreview(index){
         const item = combined[idxCell];
         if(item){
           if(item.role){
-            td.innerHTML = `${escapeHtml(item.name)}<span class="roleSuffix">(${escapeHtml(item.role)})</span>`;
+            td.innerHTML = `${escapeHtml(item.name)}<span class="roleSuffix">${escapeHtml(item.role)}</span>`;
           } else {
             td.textContent = item.name;
           }
+
         } else {
           td.className = 'empty';
           td.textContent = '';
@@ -1290,11 +1337,16 @@ function renderFixedRolesPreview(ev){
   roleOrder.forEach(r => {
     const n = roles[r.key];
     if(n && n.trim()){
-      fixedHtml += `<div style="margin-bottom:4px;"><strong>${escapeHtml(n)}</strong><span style="font-size:12px;color:#666;margin-left:6px">(${r.label})</span></div>`;
+      fixedHtml += `
+        <div style="margin-bottom:4px;">
+          <strong>${escapeHtml(n)}</strong><span class="roleSuffix" style="font-size:12px;margin-left:0px">${r.label}</span>
+        </div>`;
     }
   });
   fixedRolesArea.innerHTML = fixedHtml || '<span class="small">（尚無固定名單）</span>';
 }
+
+
 
 /* ---------- 小工具 ---------- */
 function escapeHtml(str){
@@ -1404,7 +1456,11 @@ async function exportPNG(){
   `;
   clone.prepend(style);
 
-  clone.style.width = '880px';
+  const stageWidth = getComputedStyle(document.documentElement)
+  .getPropertyValue('--stage-width')
+  .trim() || '960px';
+clone.style.width = stageWidth;
+
   root.appendChild(clone);
   stage.appendChild(root);
   document.body.appendChild(stage);
