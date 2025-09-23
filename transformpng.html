@@ -291,6 +291,34 @@
   line-height: 1.25 !important;
   /* 移除強制粗體，避免整張圖片字太厚 */
 }
+  /* 匯出圖片強制桌機版樣式（不受手機 RWD 影響） */
+.capture-root #exportArea {
+  width: 960px !important;      /* 桌機固定寬度 */
+  max-width: 960px !important;
+}
+
+.capture-root #dynamicTitle {
+  font-size: 34px !important;   /* 主標題大小固定 */
+  line-height: 1.2 !important;
+}
+
+.capture-root td {
+  font-size: var(--cap-reg-name-size) !important; /* 表格姓名 */
+}
+
+.capture-root td .roleSuffix {
+  font-size: var(--cap-reg-role-suffix-size) !important; /* 角色 */
+}
+
+/* 阻止手機 RWD 影響匯出 */
+@media (max-width:1000px), (max-width:480px) {
+  .capture-root #exportArea {
+    width: 960px !important;
+    max-width: 960px !important;
+  }
+  .capture-root #dynamicTitle { font-size: 34px !important; }
+  .capture-root td { font-size: var(--cap-reg-name-size) !important; }
+}
 
   
 
@@ -754,7 +782,7 @@
 </div>
 
 <!-- 右下角版本標註 -->
-<div class="version-tag">三寶弟子2025/09/15製作| 版本：V6.0（2025/09/24更新）</div>
+<div class="version-tag">三寶弟子2025/09/15製作| 版本：V6.5（2025/09/24更新）</div>
 <script>
 /* ---------- 地點下拉清單（保留原值；顯示時再格式化） ---------- */
 const LOCATION_LIST = [
