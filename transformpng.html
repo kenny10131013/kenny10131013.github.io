@@ -34,12 +34,14 @@
     --deficit-number-size: 32px;
 
     /* ★ 修改：新增匯出（圖片）字級 */
-    --cap-reg-name-size: 27px;
+    --cap-reg-name-size: 30px;
     --cap-reg-role-suffix-size: 14px;
     --cap-footer-tip-size: 30px;
     --cap-full-note-size: 30px;
     --cap-deficit-note-size: 30px;
     --cap-deficit-number-size: 40px;
+
+    --kai-name-bump: 3px; /* 視覺補償：覺得還小就改 4px */
 
     /* ★ 修改：統一預覽/匯出底色 */
     --export-bg: #fff4e6;
@@ -54,6 +56,7 @@
     --cap-meta-label-size: 27px;      /* 標籤字級（匯出） */
     --cap-meta-value-size: 30px;      /* 值字級（匯出） */
 
+    
   }
 
   *{box-sizing:border-box}
@@ -562,9 +565,9 @@
 
       /* 1) 預覽用：放大姓名字級 + 換楷體 + 行高微增 */
       #exportArea.use-kai table.regTable td {
-        font-family: "DFKai-SB", "BiauKai", "Kaiti TC", "KaiTi", "STKaiti", serif !important;
-        line-height: 1.32 !important; /* 推薦範圍 1.30–1.35 */
-        font-size: calc(var(--reg-name-size) + 3px) !important; /* 建議 +2~3px，先用 +3px */
+      font-family: "DFKai-SB", "BiauKai", "Kaiti TC", "KaiTi", "STKaiti", serif !important;
+      line-height: 1.32 !important;
+      font-size: calc(var(--reg-name-size) + 3px + var(--kai-name-bump)) !important;
       }
 
       /* 角色尾註仍用無襯線，以保對比與緊湊 */
@@ -576,7 +579,7 @@
       .capture-root #exportArea.use-kai td {
         font-family: "DFKai-SB", "BiauKai", "Kaiti TC", "KaiTi", "STKaiti", serif !important;
         line-height: 1.32 !important;
-        font-size: calc(var(--cap-reg-name-size) + 1px) !important; /* 建議 +4~6px，先用 +5px */
+        font-size: calc(var(--cap-reg-name-size) + var(--kai-name-bump)) !important;
       }
       .capture-root #exportArea.use-kai td .roleSuffix {
         font-family: "Microsoft JhengHei","PingFang TC","Noto Sans TC","Heiti TC",Arial,sans-serif !important;
@@ -1572,45 +1575,61 @@ async function exportPNG(){
 
   const node = document.getElementById('exportArea');
 
+  // 等待字型就緒（若可用）
   try { if (document.fonts && document.fonts.ready) await document.fonts.ready; } catch(e){}
 
+  // 建立離屏舞台與副本
   const stage = document.createElement('div'); stage.className = 'capture-stage';
-  const root = document.createElement('div'); root.className = 'capture-root';
+  const root  = document.createElement('div'); root.className  = 'capture-root';
   const clone = node.cloneNode(true);
 
-  // colgroup 保底
+  // 保底 colgroup（固定 6 欄）
   const cloneTable = clone.querySelector('table.regTable');
-  if(cloneTable && !cloneTable.querySelector('colgroup')){
+  if (cloneTable && !cloneTable.querySelector('colgroup')) {
     const cg = document.createElement('colgroup');
-    for(let i=0;i<6;i++){ cg.appendChild(document.createElement('col')); }
+    for (let i = 0; i < 6; i++) cg.appendChild(document.createElement('col'));
     cloneTable.insertBefore(cg, cloneTable.firstChild);
   }
 
-  // ★ 匯出時強化數字樣式（可省略；保留一致性）
+  // 匯出時的小樣式（可省略）
   const style = document.createElement('style');
-  style.textContent = `
-    .fullNote { color:#000 !important; text-align:center; }
-  `;
+  style.textContent = `.fullNote { color:#000 !important; text-align:center; }`;
   clone.prepend(style);
 
+  // 舞台寬度：吃 CSS 變數
   const stageWidth = getComputedStyle(document.documentElement)
-  .getPropertyValue('--stage-width')
-  .trim() || '960px';
-clone.style.width = stageWidth;
+    .getPropertyValue('--stage-width')
+    .trim() || '960px';
+  clone.style.width = stageWidth;
 
   root.appendChild(clone);
   stage.appendChild(root);
   document.body.appendChild(stage);
 
-  /* ★ 在這裡加延遲 ★ */
-  await new Promise(r => setTimeout(r, 450));  // 延遲 450ms，可調整
+  /* ============================================================
+     ★★★ 補丁：移除預覽階段為解決溢出而加上的 inline 字級 ★★★
+     預覽中的 updatePreview() 可能對 <td> 寫了 td.style.fontSize。
+     匯出前把 clone 裡的 inline 字級移除，確保吃到
+     .capture-root 下用 var(--cap-reg-name-size) 的設定。
+     ============================================================ */
+  clone.querySelectorAll('td, td .nameText, td .roleSuffix')
+       .forEach(el => el.style.removeProperty('font-size'));
 
-  // 取用 CSS 變數的底色
-  const exportBg = getComputedStyle(document.documentElement).getPropertyValue('--export-bg').trim() || '#fff4e6';
+  // 讓字型/佈局穩定一下（避免快照時還在排版）
+  await new Promise(r => setTimeout(r, 450));
+
+  // 取用 CSS 變數設定的底色
+  const exportBg = getComputedStyle(document.documentElement)
+    .getPropertyValue('--export-bg')
+    .trim() || '#fff4e6';
 
   let dataUrl = '';
   try {
-    const canvas = await html2canvas(clone, { scale: 2, useCORS: true, backgroundColor: exportBg });
+    const canvas = await html2canvas(clone, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: exportBg
+    });
     dataUrl = canvas.toDataURL('image/png');
   } catch(err){
     console.error(err);
@@ -1622,7 +1641,9 @@ clone.style.width = stageWidth;
 
   if(!dataUrl) return;
 
-  const filename = (outputName.value || `event-${events[idx].date}`).replace(/\s+/g,'_') + '.png';
+  const filename = (outputName.value || `event-${events[idx].date}`)
+    .replace(/\s+/g,'_') + '.png';
+
   if(!isInAppBrowser() && supportsAnchorDownload()){
     triggerDownload(dataUrl, filename);
     status.textContent = '匯出完成，已下載 PNG';
@@ -1631,6 +1652,7 @@ clone.style.width = stageWidth;
     status.textContent = '已生成圖片，請長按上方預覽進行儲存（或使用分享/複製功能）';
   }
 }
+
 
 /* 能力偵測 / 下載 / 分享 / 複製 / 新分頁 */
 function supportsAnchorDownload(){ const a = document.createElement('a'); return 'download' in a; }
