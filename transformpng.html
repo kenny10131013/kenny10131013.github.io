@@ -26,22 +26,26 @@
     --backdrop: rgba(0,0,0,.45);
 
     /* ★ 修改：新增可調字級（預覽用） */
-    --reg-name-size: 22px;
-    --reg-role-suffix-size: 16px;
+    --reg-name-size: 30px;
+    --reg-role-suffix-size: 15px;
     --footer-tip-size: 20px;
     --full-note-size: 22px;
     --deficit-note-size: 22px;
     --deficit-number-size: 32px;
 
     /* ★ 修改：新增匯出（圖片）字級 */
-    --cap-reg-name-size: 30px;
-    --cap-reg-role-suffix-size: 14px;
+    --cap-reg-name-size: 28px;
+      /* 新增：表格字級的「唯一來源」變數 */
+    --cell-font-size: var(--reg-name-size);
+    --cap-reg-role-suffix-size: 15px;
+      /* 新增一個共用角色字級變數，預設吃預覽值 */
+      --role-suffix-size: var(--reg-role-suffix-size);
     --cap-footer-tip-size: 30px;
     --cap-full-note-size: 30px;
     --cap-deficit-note-size: 30px;
     --cap-deficit-number-size: 40px;
 
-    --kai-name-bump: 3px; /* 視覺補償：覺得還小就改 4px */
+    --kai-name-bump: 0px; /* 降低放大，楷體更不擁擠（可再調成 0px） */
 
     /* ★ 修改：統一預覽/匯出底色 */
     --export-bg: #fff4e6;
@@ -130,7 +134,7 @@
   table.regTable td{
   border:1px solid #9a8f7a;
   padding:12px;              /* 10 → 12 */
-  font-size: var(--reg-name-size);
+  font-size: var(--cell-font-size, var(--reg-name-size));
   height:56px;               /* 48 → 56 */
   vertical-align:middle;
   text-align:center;
@@ -143,8 +147,8 @@
   table.regTable td.empty{color:#bbb}
   td.totalCell{font-weight:700;color:var(--accent);background:#fff6f6}
   .roleSuffix{
-  font-size: var(--reg-role-suffix-size);  /* 角色字級較小，保留變數 */
-  margin-left: .25em;                      /* 改用相對間距 */
+  font-size: var(--role-suffix-size);      /* 改成只吃共用變數 */
+  margin-left: .10em;                      /* 改用相對間距 */
   }
 
 
@@ -283,18 +287,40 @@
     width:880px;
     margin:0;
   }
-  /* 匯出圖字體（改為無襯線字體堆疊） */
-  .capture-root, .capture-root *{
-  font-family:
-   /*"DFKai-SB",*/有這個語法會變超粗
-    "Microsoft JhengHei",
-    "PingFang TC",
-    "Noto Sans TC",
-    "Heiti TC",
-    Arial, sans-serif !important;
+  /* 預設匯出字體：無襯線 */
+.capture-root, .capture-root * {
+  font-family: "Microsoft JhengHei","PingFang TC","Noto Sans TC","Heiti TC",Arial,sans-serif;
   line-height: 1.25 !important;
-  /* 移除強制粗體，避免整張圖片字太厚 */
 }
+
+/* ✅ 楷體模式覆蓋，確保有效 */
+.capture-root #exportArea.use-kai td,
+.capture-root #exportArea.use-kai .nameText {
+  font-family: "DFKai-SB","BiauKai","Kaiti TC","KaiTi","STKaiti",serif !important;
+  font-weight: 700 !important;             /* 強制加粗 */
+  -webkit-text-stroke: 0.25px currentColor; /* 模擬粗體 */
+  line-height: 1.32 !important;
+}
+
+
+  /* 預覽：楷體＋微擬粗（只套姓名，不動角色）*/
+#exportArea.use-kai .nameText{
+  font-weight: 700;          /* 比 600 再明確一點 */
+  letter-spacing: 0.02em;    /* 保持一點空氣感 */
+  -webkit-text-stroke: 0.2px currentColor;  /* 非常細的描邊，避免變肥 */
+}
+
+/* 匯出：楷體＋微擬粗（輸出解析度較高，描邊可略大一點點） */
+.capture-root #exportArea.use-kai .nameText{
+  font-weight: 700;
+  letter-spacing: 0.025em;
+  -webkit-text-stroke: 0.25px currentColor;
+}
+
+
+
+
+
   /* 匯出圖片強制桌機版樣式（不受手機 RWD 影響） */
 .capture-root #exportArea {
   width: 960px !important;      /* 桌機固定寬度 */
@@ -306,12 +332,12 @@
   line-height: 1.2 !important;
 }
 
-.capture-root td {
-  font-size: var(--cap-reg-name-size) !important; /* 表格姓名 */
+.capture-root  {
+  font-size: var(--cap-reg-name-size) ; /* 表格姓名 */
 }
 
 .capture-root td .roleSuffix {
-  font-size: var(--cap-reg-role-suffix-size) !important; /* 角色 */
+  font-size: var(--cap-reg-role-suffix-size); /* 角色 */
 }
 
 /* 阻止手機 RWD 影響匯出 */
@@ -563,12 +589,17 @@
     }
       /* === 楷體模式：掛在 exportArea 上的 .use-kai class 觸發 === */
 
-      /* 1) 預覽用：放大姓名字級 + 換楷體 + 行高微增 */
-      #exportArea.use-kai table.regTable td {
-      font-family: "DFKai-SB", "BiauKai", "Kaiti TC", "KaiTi", "STKaiti", serif !important;
-      line-height: 1.32 !important;
-      font-size: calc(var(--reg-name-size) + 3px + var(--kai-name-bump)) !important;
+          /* 預覽：楷體模式下，僅改變變數，不再對 td 設字級 */
+      #exportArea.use-kai{
+        --cell-font-size: calc(var(--reg-name-size) + 3px + var(--kai-name-bump));
       }
+
+      /* 字族與行高可維持，但拿掉對字級與 !important 的強制 */
+      #exportArea.use-kai table.regTable td {
+        font-family: "DFKai-SB", "BiauKai", "Kaiti TC","KaiTi","STKaiti", serif;
+        line-height: 1.32;
+      }
+
 
       /* 角色尾註仍用無襯線，以保對比與緊湊 */
       #exportArea.use-kai table.regTable td .roleSuffix {
@@ -585,35 +616,28 @@
         font-family: "Microsoft JhengHei","PingFang TC","Noto Sans TC","Heiti TC",Arial,sans-serif !important;
       }
       /* === 楷體模式下：姓名擬粗（只套在 .nameText，不動 .roleSuffix） === */
-#exportArea.use-kai .nameText {
-  /* 如字型支援，優先允許系統合成粗體（多數楷體不會生效，但不妨一試） */
-  font-synthesis-weight: auto;
+    /* 楷體時：不再用描邊/陰影擬粗，改用極小字距提升可讀性 */
+    #exportArea.use-kai .nameText {
+      /* 移除擬粗 */
+      -webkit-text-stroke: 0;
+      text-shadow: none;
+      /* 微調：略緊實的粗度，但不會變肥 */
+      font-weight: 600;
+      /* 加一點空氣感（中文有效） */
+      letter-spacing: 0.02em;
+    }
 
-  /* 1) 外描邊：極細 0.6px，避免髒糊；Safari/iOS、Chrome 皆支援 */
-  -webkit-text-stroke: 0.45px #000;   /* 推薦範圍：0.5–0.8px */
-
-  /* 2) 多向陰影：0.3px 微擴散，填補筆畫，強化對比 */
-  text-shadow:
-    0   0   0.20px #000,
-    0.20px 0   0.20px #000,
-   -0.20px 0   0.20px #000,
-    0   0.20px 0.20px #000,
-    0  -0.20px 0.20px #000;
-
-  /* 3) 提高字重標示（多半對 DFKai/BiauKai 無效，但保持語義） */
-  font-weight: 700;
+/* ✅ 最終保留 */
+.capture-root #exportArea.use-kai .nameText {
+  font-weight: 700;                /* 明確加粗 */
+  letter-spacing: 0.025em;         /* 微字距 */
+  -webkit-text-stroke: 0.25px currentColor; /* 模擬粗體 */
 }
 
-/* 匯出（.capture-root）同樣適用 */
-.capture-root #exportArea.use-kai .nameText {
-  -webkit-text-stroke: 0.35px #000;
-  text-shadow:
-    0   0   0.15px #000,
-    0.15px 0   0.15px #000,
-   -0.15px 0   0.15px #000,
-    0   0.15px 0.15px #000,
-    0  -0.15px 0.15px #000;
-  font-weight: 700;
+
+/* 匯出圖片：楷體字級略縮小，避免擁擠 */
+.capture-root #exportArea.use-kai  {
+  font-size: calc(var(--cap-reg-name-size) - 1px) !important;
 }
 
 
@@ -847,7 +871,7 @@
 </div>
 
 <!-- 右下角版本標註 -->
-<div class="version-tag">三寶弟子2025/09/15製作| 版本：V7.5（2025/09/24更新）</div>
+<div class="version-tag">三寶弟子2025/09/15製作| 版本：V8.0（2025/09/25更新）</div>
 <script>
 /* ---------- 地點下拉清單（保留原值；顯示時再格式化） ---------- */
 const LOCATION_LIST = [
@@ -1438,24 +1462,13 @@ function updatePreview(index){
     deficitNote.style.display = 'none';
   }
 
-  // ★ 在 updatePreview(...) 最後新增：溢出檢測 → 微縮 1~2px
+  /// ★ 在 updatePreview(...) 最後：呼叫共用調整函式
 Array.from(regBody.querySelectorAll('td')).forEach(td => {
   if (td.classList.contains('empty')) return;
-  // 只縮「姓名」（含角色後綴也可）
-      // 先清掉殘留的調整，避免越縮越小
-    td.style.removeProperty('font-size');
-
-    const overflowed = td.scrollWidth > td.clientWidth;
-    if (overflowed) {
-      const cs = window.getComputedStyle(td);
-      const base = parseFloat(cs.fontSize) || 16;
-      td.style.fontSize = (base - 2) + 'px';   // 第一次微縮 2px
-      if (td.scrollWidth > td.clientWidth) {
-        td.style.fontSize = (base - 3) + 'px'; // 仍溢出再多縮 1px
-      }
-    }
-
+  const isKai = document.getElementById('exportArea').classList.contains('use-kai');
+  adjustCell(td, isKai);
 });
+
 
 
   renderFixedRolesPreview(ev);
@@ -1567,11 +1580,123 @@ uaOpenExternBtn?.addEventListener('click', ()=>{
   alert('若未成功，請使用右上或右下的「⋯」→ 以「使用預設瀏覽器開啟」或使用 Safari/Chrome 開啟本頁。');
 });
 
+  function applyDynamicAdjustmentToClone(cloneNode) {
+  const regBody = cloneNode.querySelector('#regBody');
+  const exportAreaEl = cloneNode.querySelector('#exportArea'); // ⚠️ 不是 cloneNode 本身
+  const isKai = !!exportAreaEl && exportAreaEl.classList.contains('use-kai');
+  if (!regBody) return;
+  Array.from(regBody.querySelectorAll('td')).forEach(td => adjustCell(td, isKai));
+}
+
+
+  function adjustCell(td, isKai){
+  if (td.classList.contains('empty')) return;
+
+  // 清掉舊 inline
+  td.style.removeProperty('font-size');
+  td.style.removeProperty('letter-spacing');
+
+  const roleEl = td.querySelector('.roleSuffix');
+  const nameEl = td.querySelector('.nameText');
+
+  if (roleEl) {
+    // 保留 nowrap，避免換行
+    roleEl.style.whiteSpace = 'nowrap';
+    roleEl.style.display = 'inline-block';
+    // 先清既有 inline
+    ['font-size','margin-left','letter-spacing','font-weight','transform']
+      .forEach(p=>roleEl.style.removeProperty(p));
+  }
+  if (nameEl) {
+    nameEl.style.display = 'inline';
+    ['letter-spacing','transform'].forEach(p=>nameEl.style.removeProperty(p));
+  }
+
+  const isOverflow = () => {
+    // 重新計算 layout
+    void td.offsetWidth;
+    const EPS = 2;
+    return td.scrollWidth > (td.clientWidth - EPS);
+  };
+
+  const cs = window.getComputedStyle(td);
+  let base = parseFloat(cs.fontSize) || 30;
+
+  const roleLen = roleEl ? (roleEl.textContent || '').trim().length : 0;
+  const nameLen = nameEl ? (nameEl.textContent || '').trim().length : 0;
+
+  /* Step A：先壓角色（非楷體更積極） */
+  if (isOverflow() && roleEl) {
+    roleEl.style.fontWeight = '400';
+    roleEl.style.marginLeft = '0.04em';
+    roleEl.style.letterSpacing = '-0.01em';
+
+    // 依字型與角色長度決定目標字級序列
+    let roleTargets;
+    if (roleLen >= 3) {
+      roleTargets = isKai ? [15, 13, 12, 11] : [14, 12, 11, 10]; // 非楷體更小
+    } else if (roleLen === 2) {
+      roleTargets = isKai ? [16, 15, 14, 13] : [15, 14, 13, 12];
+    } else {
+      roleTargets = isKai ? [16, 15, 14] : [15, 14, 13];
+    }
+
+    for (const px of roleTargets) {
+      if (!isOverflow()) break;
+      roleEl.style.fontSize = px + 'px';
+      if (isOverflow()) roleEl.style.letterSpacing = '-0.02em';
+      if (isOverflow() && roleLen >= 3) roleEl.style.letterSpacing = '-0.03em';
+    }
+    if (isOverflow() && roleLen >= 3) {
+      // 非楷體更緊
+      roleEl.style.transform = `scaleX(${isKai ? 0.97 : 0.94})`;
+    }
+  }
+
+  /* Step B：壓姓名的字距與寬度（四字以上特別處理） */
+  if (isOverflow() && nameEl) {
+    // 先來一層普遍壓縮
+    nameEl.style.letterSpacing = '-0.02em';
+    if (isOverflow()) {
+      nameEl.style.display = 'inline-block';
+      nameEl.style.transform = `scaleX(${isKai ? 0.985 : 0.96})`;
+    }
+    // 四字（含）以上再加碼
+    if (isOverflow() && nameLen >= 4) {
+      nameEl.style.letterSpacing = '-0.03em';
+      if (isOverflow()) nameEl.style.transform = `scaleX(${isKai ? 0.975 : 0.94})`;
+      // 角色也在場時再微調角色間距
+      if (roleEl && isOverflow()) roleEl.style.marginLeft = '0.02em';
+    }
+  }
+
+  /* Step C：降整體字級（非楷體更低的底線） */
+  let minFloor = isKai ? 24 : 22;
+  if (roleEl && nameLen >= 4) minFloor = isKai ? 23 : 21;
+
+  for (const step of [2, 2, 1, 1]) {
+    if (!isOverflow()) break;
+    base = Math.max(minFloor, base - step);
+    td.style.fontSize = base + 'px';
+    if (base === minFloor) break;
+  }
+
+  /* Step D：仍溢出的最後保底（少量回退） */
+  if (isOverflow()) {
+    td.style.fontSize = Math.max(minFloor - 1, base - 1) + 'px';
+    if (nameEl && isOverflow()) nameEl.style.letterSpacing = '-0.035em';
+  }
+}
+
+
+
+
+
 /* ---------- 匯出核心：離屏副本（★ 背景用 --export-bg） ---------- */
 async function exportPNG(){
   const idx = Number(eventSelect.value);
   if(isNaN(idx)) { alert('請先選取場次'); return; }
-  status.textContent = '正在生成 PNG…（固定 880px，解析度 2×）';
+  status.textContent = '正在生成 PNG…（固定 960px，解析度 2×）';
 
   const node = document.getElementById('exportArea');
 
@@ -1606,14 +1731,22 @@ async function exportPNG(){
   stage.appendChild(root);
   document.body.appendChild(stage);
 
-  /* ============================================================
-     ★★★ 補丁：移除預覽階段為解決溢出而加上的 inline 字級 ★★★
-     預覽中的 updatePreview() 可能對 <td> 寫了 td.style.fontSize。
-     匯出前把 clone 裡的 inline 字級移除，確保吃到
-     .capture-root 下用 var(--cap-reg-name-size) 的設定。
+ /* ============================================================
+     ★★★ 修正：保留字型樣式，僅移除可能衝突的字級設定 ★★★
+     只移除可能干擾 CSS 變數的 font-size，但保留其他樣式
      ============================================================ */
-  clone.querySelectorAll('td, td .nameText, td .roleSuffix')
-       .forEach(el => el.style.removeProperty('font-size'));
+  clone.querySelectorAll('td').forEach(td => {
+    // 只移除 td 本身的 font-size，保留其他樣式
+    if (td.style.fontSize) {
+      td.style.removeProperty('font-size');
+    }
+    // 不要移除 .nameText 和 .roleSuffix 的樣式，它們可能包含重要的字體設定
+  });
+
+
+
+  // 重新應用動態調整機制到 clone 中
+  applyDynamicAdjustmentToClone(clone);
 
   // 讓字型/佈局穩定一下（避免快照時還在排版）
   await new Promise(r => setTimeout(r, 450));
@@ -1754,17 +1887,18 @@ function init(){
     evRequiredTotal.appendChild(o);
   }
   // ★ 勾選「表格姓名加粗」：立即套用＆存回目前場次
-  kaiModeCheckbox.addEventListener('change', () => {
-    const exportArea = document.getElementById('exportArea');
-    exportArea.classList.toggle('use-kai', kaiModeCheckbox.checked);
+    kaiModeCheckbox.addEventListener('change', () => {
+      const exportAreaEl = document.getElementById('exportArea');
+      exportAreaEl.classList.toggle('use-kai', kaiModeCheckbox.checked);
 
-    const idx = Number(eventSelect.value);
-    if (!isNaN(idx) && events[idx]) {
-      events[idx].useKai = kaiModeCheckbox.checked;
-      updatePreview(idx);
-      saveToStorage();
-    }
-  });
+      const idx = Number(eventSelect.value);
+      if (!isNaN(idx) && events[idx]) {
+        events[idx].useKai = kaiModeCheckbox.checked;
+        updatePreview(idx);
+        saveToStorage();
+      }
+    });
+
 
 
 
