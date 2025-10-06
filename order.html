@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>每週豆漿團購登記 V3.0</title>
+<title>每週豆漿團購登記 V4.0(2025/10/6更新)</title>
 <style>
 :root{
   --radius: 10px; --border:#ddd; --cat:#d9edf7; --hi:#fff7b1;
@@ -16,6 +16,8 @@ body{margin:0;background:#fafafa;font-family:-apple-system,BlinkMacSystemFont,"S
 h1{font-size:var(--fz-large);margin:4px 0 12px;text-align:center;}
 label{display:block;margin-bottom:6px;font-weight:600;}
 input[type="text"]{width:100%;padding:8px;font-size:var(--fz-large);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:10px;}
+/* 姓名必填的視覺提示 */
+input[type="text"]:required:invalid{border-color:#ff6b6b;background:#fff5f5;}
 
 .toolbar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;}
 .btn{padding:10px 12px;font-size:var(--fz-base);border:1px solid var(--border);background:#fff;border-radius:var(--radius);cursor:pointer;}
@@ -85,10 +87,10 @@ input[type="text"]{width:100%;padding:8px;font-size:var(--fz-large);border:1px s
 </head>
 <body>
 <div class="wrap" id="wrap">
-  <h1>每週豆漿團購登記 V3.0(2025/9/21更新)</h1>
+  <h1>每週豆漿團購登記 V4.0(2025/10/6更新)</h1>
 
   <label for="buyer">訂購人姓名</label>
-  <input type="text" id="buyer" placeholder="輸入姓名" />
+  <input type="text" id="buyer" placeholder="輸入姓名" required aria-required="true" />
 
   <div class="toolbar">
     <button class="btn" id="btn-clear-inputs">清空頁面數量</button>
@@ -154,8 +156,8 @@ input[type="text"]{width:100%;padding:8px;font-size:var(--fz-large);border:1px s
       </thead>
       <tbody id="agg-body"></tbody>
       <tfoot>
-        <tr><th>2500cc 小計</th><td></td><td id="agg-q-2500" style="text-align:right"></td><td id="agg-s-2500" style="text-align:right"></td></tr>
-        <tr><th>1050cc 小計</th><td></td><td id="agg-q-1050" style="text-align:right"></td><td id="agg-s-1050" style="text-align:right"></td></tr>
+        <tr><th>2,500cc 小計</th><td></td><td id="agg-q-2500" style="text-align:right"></td><td id="agg-s-2500" style="text-align:right"></td></tr>
+        <tr><th>1,050cc 小計</th><td></td><td id="agg-q-1050" style="text-align:right"></td><td id="agg-s-1050" style="text-align:right"></td></tr>
         <tr><th>330cc 小計</th><td></td><td id="agg-q-330"  style="text-align:right"></td><td id="agg-s-330"  style="text-align:right"></td></tr>
         <tr><th>總金額</th><td></td><td id="agg-q-all"  style="text-align:right"></td><td id="agg-s-all"  style="text-align:right"></td></tr>
       </tfoot>
@@ -366,7 +368,7 @@ function getQuantities(){
 function buildRecord(){
   const quantities=getQuantities();
   const ts = nowTS();
-  const buyer = ($('#buyer')?.value.trim()) || '（未填姓名）';
+  const buyer = ($('#buyer')?.value ?? '').trim(); // 不再給「（未填姓名）」預設，改由驗證阻擋
   const itemsPicked=[];
   let sum2500=0,sum1050=0,sum330=0, grand=0;
 
@@ -409,10 +411,19 @@ function buildRecord(){
   const app = initializeApp(firebaseConfig);
   const db  = getFirestore(app);
 
-  /* ② 送單：把本次填寫寫入 Firestore */
+  /* ② 送單：把本次填寫寫入 Firestore（新增：姓名必填驗證） */
   document.getElementById('btn-add-record').addEventListener('click', async ()=>{
+    const buyerEl = document.getElementById('buyer');
+    const buyerValue = buyerEl.value.trim();
+    if(!buyerValue){
+      alert('請先填寫「訂購人姓名」。');
+      buyerEl.focus();
+      return;
+    }
+
     const rec = buildRecord();
     if(!rec.items.length){ alert('目前沒有填寫任何數量。'); return; }
+
     try{
       await addDoc(collection(db, 'orders'), {
         buyer: rec.buyer,
@@ -443,63 +454,63 @@ function buildRecord(){
   }
 
   function renderRecordsCloud(rows){
-  const listEl = document.getElementById('records-list');
-  if(!rows.length){
-    listEl.innerHTML = '<div class="muted">尚無紀錄，請先在上方輸入並按「填寫完成」。</div>';
-    renderAggregateCloud([]); 
-    return;
+    const listEl = document.getElementById('records-list');
+    if(!rows.length){
+      listEl.innerHTML = '<div class="muted">尚無紀錄，請先在上方輸入並按「填寫完成」。</div>';
+      renderAggregateCloud([]); 
+      return;
+    }
+    listEl.innerHTML = '';
+
+    rows.forEach((rec)=>{
+      const card=document.createElement('div'); 
+      card.className='record';
+      card.innerHTML=`
+        <div class="hdr">
+          <div>${rec.buyer} <span class="meta">（${rec.ts||''}）</span></div>
+          <div>總金額 $${fmt(rec.grand||0)}</div>
+        </div>
+        <div class="muted">2,500cc小計 $${fmt(rec.sum_2500||0)} ｜ 1,050cc小計 $${fmt(rec.sum_1050||0)} ｜ 330cc小計 $${fmt(rec.sum_330||0)}</div>
+        <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn btn-toggle-detail">明細</button>
+          <button class="btn bad btn-del-record" data-id="${rec.id}">刪除此筆</button>
+        </div>
+        <div class="details">
+          <table>
+            <thead><tr><th>品項</th><th>單價</th><th>數量</th><th>小計</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>`;
+
+      const tbody = card.querySelector('tbody');
+      (rec.items||[]).forEach(it=>{
+        const tr=document.createElement('tr');
+        tr.innerHTML=`<td style="text-align:left">${it.name}</td><td>$${fmt(it.price)}</td><td>${fmt(it.qty)}</td><td>$${fmt(it.money)}</td>`;
+        tbody.appendChild(tr);
+      });
+
+      card.querySelector('.btn-toggle-detail').addEventListener('click',()=>card.classList.toggle('open'));
+
+      card.querySelector('.btn-del-record').addEventListener('click', async (ev)=>{
+        const id = ev.currentTarget.getAttribute('data-id');
+        const word = prompt(`⚠️ 確定要刪除這筆紀錄嗎？\n請輸入「刪除」以確認：`);
+        if(word !== "刪除") {
+          alert("已取消刪除。");
+          return;
+        }
+        try {
+          await deleteDoc(doc(db, 'orders', id));
+          alert("✅ 已刪除！");
+        } catch(e){
+          alert('❌ 刪除失敗：' + e.message);
+        }
+      });
+
+      listEl.appendChild(card);
+    });
+
+    renderAggregateCloud(rows);
   }
-  listEl.innerHTML = '';
-
-  rows.forEach((rec)=>{
-    const card=document.createElement('div'); 
-    card.className='record';
-    card.innerHTML=`
-      <div class="hdr">
-        <div>${rec.buyer} <span class="meta">（${rec.ts||''}）</span></div>
-        <div>總金額 $${fmt(rec.grand||0)}</div>
-      </div>
-      <div class="muted">2500小計 $${fmt(rec.sum_2500||0)} ｜ 1050小計 $${fmt(rec.sum_1050||0)} ｜ 330小計 $${fmt(rec.sum_330||0)}</div>
-      <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
-        <button class="btn btn-toggle-detail">明細</button>
-        <button class="btn bad btn-del-record" data-id="${rec.id}">刪除此筆</button>
-      </div>
-      <div class="details">
-        <table>
-          <thead><tr><th>品項</th><th>單價</th><th>數量</th><th>小計</th></tr></thead>
-          <tbody></tbody>
-        </table>
-      </div>`;
-
-    const tbody = card.querySelector('tbody');
-    (rec.items||[]).forEach(it=>{
-      const tr=document.createElement('tr');
-      tr.innerHTML=`<td style="text-align:left">${it.name}</td><td>$${fmt(it.price)}</td><td>${fmt(it.qty)}</td><td>$${fmt(it.money)}</td>`;
-      tbody.appendChild(tr);
-    });
-
-    card.querySelector('.btn-toggle-detail').addEventListener('click',()=>card.classList.toggle('open'));
-
-    card.querySelector('.btn-del-record').addEventListener('click', async (ev)=>{
-      const id = ev.currentTarget.getAttribute('data-id');
-      const word = prompt(`⚠️ 確定要刪除這筆紀錄嗎？\n請輸入「刪除」以確認：`);
-      if(word !== "刪除") {
-        alert("已取消刪除。");
-        return;
-      }
-      try {
-        await deleteDoc(doc(db, 'orders', id));
-        alert("✅ 已刪除！");
-      } catch(e){
-        alert('❌ 刪除失敗：' + e.message);
-      }
-    });
-
-    listEl.appendChild(card);
-  });
-
-  renderAggregateCloud(rows);
-}
 
 
   function renderAggregateCloud(rows){
@@ -519,8 +530,8 @@ function buildRecord(){
     });
 
     const cats = [
-      {id:'2500', title:'2500cc 袋裝'},
-      {id:'1050', title:'1050cc 口栓袋'},
+      {id:'2500', title:'2,500cc 袋裝'},
+      {id:'1050', title:'1,050cc 口栓袋'},
       {id:'330',  title:'330cc 杯裝'}
     ];
     cats.forEach(c=>{
@@ -556,53 +567,53 @@ function buildRecord(){
   subscribeOrders(renderRecordsCloud);
 
   /* ④ 清空本頁輸入，會同步刪除雲端 */
-    document.getElementById('btn-clear-all').addEventListener('click', async ()=>{
-      const word = prompt(
-        '⚠️ 此動作會刪除資料庫「所有訂單」紀錄，且無法復原，並清空本頁輸入。\n\n' +
-        '請輸入「全部刪除」以確認：'
-      );
-      if (word !== '全部刪除') {
-        alert('已取消。');
+  document.getElementById('btn-clear-all').addEventListener('click', async ()=>{
+    const word = prompt(
+      '⚠️ 此動作會刪除資料庫「所有訂單」紀錄，且無法復原，並清空本頁輸入。\n\n' +
+      '請輸入「全部刪除」以確認：'
+    );
+    if (word !== '全部刪除') {
+      alert('已取消。');
+      return;
+    }
+
+    try {
+      // 1) 先清空本頁輸入
+      document.querySelectorAll('.item input[type="number"]').forEach(i=>i.value=0);
+      recalc();
+
+      // 2) 讀出所有 orders
+      const snap = await getDocs(collection(db, 'orders'));
+      if (snap.empty) {
+        alert('雲端目前沒有紀錄；已清空本頁數量。');
         return;
       }
 
-      try {
-        // 1) 先清空本頁輸入
-        document.querySelectorAll('.item input[type="number"]').forEach(i=>i.value=0);
-        recalc();
+      // 3) 分批批次刪除（Firestore 單批最多 500 筆；用 450 留餘裕）
+      let total = 0;
+      let ops = 0;
+      let batch = writeBatch(db);
 
-        // 2) 讀出所有 orders
-        const snap = await getDocs(collection(db, 'orders'));
-        if (snap.empty) {
-          alert('雲端目前沒有紀錄；已清空本頁數量。');
-          return;
+      snap.forEach(docSnap => {
+        batch.delete(docSnap.ref);
+        ops++; total++;
+        if (ops === 450) {
+          // 立即送出一批，重建下一批
+          batch.commit();
+          batch = writeBatch(db);
+          ops = 0;
         }
+      });
 
-        // 3) 分批批次刪除（Firestore 單批最多 500 筆；用 450 留餘裕）
-        let total = 0;
-        let ops = 0;
-        let batch = writeBatch(db);
-
-        snap.forEach(docSnap => {
-          batch.delete(docSnap.ref);
-          ops++; total++;
-          if (ops === 450) {
-            // 立即送出一批，重建下一批
-            batch.commit();
-            batch = writeBatch(db);
-            ops = 0;
-          }
-        });
-
-        if (ops > 0) {
-          await batch.commit();
-        }
-
-        alert(`✅ 已刪除雲端 ${total} 筆，並清空本頁數量。`);
-      } catch (e) {
-        alert('❌ 刪除失敗：' + e.message);
+      if (ops > 0) {
+        await batch.commit();
       }
-    });
+
+      alert(`✅ 已刪除雲端 ${total} 筆，並清空本頁數量。`);
+    } catch (e) {
+      alert('❌ 刪除失敗：' + e.message);
+    }
+  });
 
 
   // 初始顯示
