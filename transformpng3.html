@@ -56,6 +56,9 @@
     --cap-meta-label-size: 29px;
     --cap-meta-value-size: 33px;
 
+    --title-size: 36px;        /* 預覽用標題字級 */
+    --cap-title-size: 50px;    /* 匯出圖片用標題字級（改這個就能只影響匯出） */
+
     /* 舞台寬度（改為 1280px） */
     --stage-width: 1280px;
   }
@@ -71,7 +74,14 @@
   --footer-tip-size: var(--cap-footer-tip-size);         /* 「請穿著…」（匯出） */
   --meta-label-size: var(--cap-meta-label-size);
   --meta-value-size: var(--cap-meta-value-size);
+  --title-size: var(--cap-title-size);  /* 讓匯出圖片的標題字級改用 cap 值 */
 }
+
+/* 匯出圖：標題字級固定吃 cap 變數（確保匯出時生效） */
+.capture-root #dynamicTitle{
+  font-size: var(--cap-title-size) !important;
+}
+
 
 /* 匯出圖：角色字級一律吃 cap 值，覆蓋 JS 的 inline 縮小 */
 .capture-root #exportArea td .roleSuffix{
@@ -107,7 +117,7 @@
   #exportArea{width:880px;background:var(--export-bg);border:3px solid #d8c9a3;padding:18px;box-sizing:border-box;color:#222;position:relative}
   .headerRow{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;position:relative}
   #dynamicTitle{
-    font-size:36px;
+     font-size: var(--title-size);
     font-weight:700;
     line-height:1.05;
     margin: 8px 0 6px 0;
