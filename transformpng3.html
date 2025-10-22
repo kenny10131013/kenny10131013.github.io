@@ -1,0 +1,1452 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>匯出護持[追思祝福]名單圖檔</title>
+
+<!-- html2canvas -->
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
+<style>
+  /* === 字體與主題變數 ===================== */
+  @font-face{
+    font-family: "Microsoft JhengHei";
+    src: local("Microsoft JhengHei"), local("微軟正黑體");
+    font-weight: 400;
+    font-style: normal;
+  }
+
+  :root{
+    --accent:#b40000;
+    --muted:#666;
+    --panel:#ffffff;
+    --highlight:#fff4e6;
+    --strong-note-bg:#fff1f0;
+    --backdrop: rgba(0,0,0,.45);
+
+    /* 預覽字級（放大） */
+    --reg-name-size: 33px;             /* 姓名（預覽） */
+    --reg-role-suffix-size: 16px;      /* 角色（預覽） */
+    --footer-tip-size: 20px;
+
+    /* 人力狀態（預覽，與備註同大） */
+    --full-note-size: 28px;
+    --deficit-note-size: 28px;
+    --deficit-number-size: 42px;
+
+    /* 匯出（圖片）字級（放大） */
+    --cap-reg-name-size: 38px;         /* 姓名（匯出） */
+    --cell-font-size: var(--reg-name-size);
+    --cap-reg-role-suffix-size: 22px;  /* 角色（匯出） */
+    --role-suffix-size: var(--reg-role-suffix-size);
+    --cap-footer-tip-size: 36px;
+    --cap-full-note-size: 36px;        /* 匯出的人力狀態 */
+    --cap-deficit-note-size: 36px;
+    --cap-deficit-number-size: 44px;
+
+    --kai-name-bump: 0px;
+    --export-bg: #fff4e6;
+
+    /* 備註與 Meta 字級（備註 = 人力狀態大小） */
+    --remark-font-size: var(--full-note-size);      /* 預覽備註 = 28px */
+    --meta-label-size: 27px;
+    --meta-value-size: 26px;
+    --cap-remark-font-size: var(--cap-full-note-size); /* 匯出備註 = 34px */
+    --cap-meta-label-size: 29px;
+    --cap-meta-value-size: 33px;
+
+    /* 舞台寬度（改為 1280px） */
+    --stage-width: 1280px;
+  }
+    /* === 匯出舞台：把 cap 變數映射到實際用到的變數（角色／姓名／備註／提示等） === */
+/* 匯出舞台把 cap 變數接到實際用的變數 */
+.capture-root{
+  --cell-font-size: var(--cap-reg-name-size);
+  --role-suffix-size: var(--cap-reg-role-suffix-size);   /* 角色（匯出） */
+  --full-note-size: var(--cap-full-note-size);           /* 人力已圓滿…（匯出） */
+  --deficit-note-size: var(--cap-deficit-note-size);     /* 尚需…位…（匯出） */
+  --remark-font-size: var(--cap-remark-font-size);       /* 備註（匯出） */
+  --deficit-number-size: var(--cap-deficit-number-size);
+  --footer-tip-size: var(--cap-footer-tip-size);         /* 「請穿著…」（匯出） */
+  --meta-label-size: var(--cap-meta-label-size);
+  --meta-value-size: var(--cap-meta-value-size);
+}
+
+/* 匯出圖：角色字級一律吃 cap 值，覆蓋 JS 的 inline 縮小 */
+.capture-root #exportArea td .roleSuffix{
+  font-size: var(--cap-reg-role-suffix-size) !important;
+}
+
+/* （可選）若你勾楷體模式也要同樣生效，可加這行，但其實上面那行已涵蓋 */
+.capture-root #exportArea.use-kai td .roleSuffix{
+  font-size: var(--cap-reg-role-suffix-size) !important;
+}
+
+
+
+
+  *{box-sizing:border-box}
+  body{font-family:"Microsoft JhengHei","Noto Sans TC","PingFang TC",Arial,sans-serif;background:#f2f4f7;margin:18px;color:#111}
+  .wrap{max-width:1440px;margin:0 auto}
+  h1{font-size:20px;margin:0 0 12px 0; overflow-wrap:anywhere; word-break:break-word;}
+  .container{display:grid;grid-template-columns:420px 1fr;gap:18px}
+  .card{background:var(--panel);border-radius:8px;padding:14px;border:1px solid #e6e6e6;box-shadow:0 6px 18px rgba(0,0,0,0.03); min-width:0;}
+  
+  input[type="text"], input[type="date"], select, textarea {width:100%;padding:8px;border:1px solid #d0d0d0;border-radius:6px;font-size:14px;font-family:inherit; max-width:100%;}
+  textarea{resize:vertical}
+  button{padding:8px 12px;border-radius:6px;border:1px solid #bbb;background:#fff;cursor:pointer;font-family:inherit; max-width:100%;}
+  button.primary{background:var(--accent);color:#fff;border-color:rgba(0,0,0,0.06)}
+  
+  .controls{display:flex;flex-direction:column;gap:12px}
+  .row{display:flex;gap:8px}
+  .row> *{flex:1}
+  .btn-row{display:flex;gap:8px;justify-content:space-between;align-items:center}
+
+  /* 預覽 / 匯出區 */
+  #exportArea{width:880px;background:var(--export-bg);border:3px solid #d8c9a3;padding:18px;box-sizing:border-box;color:#222;position:relative}
+  .headerRow{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;position:relative}
+  #dynamicTitle{
+    font-size:36px;
+    font-weight:700;
+    line-height:1.05;
+    margin: 8px 0 6px 0;
+    text-align:center;
+  }
+
+  #dynamicTitle .datePart{color:var(--accent);margin-right:6px}
+  #dynamicTitle .titlePhrase{color:#000}
+
+  /* 溫馨提醒徽章 */
+  #reminderBadge{
+    position:absolute;
+    left:-10px;
+    top:6px;
+    transform:none;
+    background:#ffdfe0;
+    border:1px solid #f2a8ad;
+    color:#b40000;
+    border-radius:999px;
+    padding:6px 10px;
+    font-size:18px;
+    font-weight:600;
+    display:none; /* JS 控制 */
+    box-shadow:0 2px 6px rgba(0,0,0,.06);
+  }
+
+  .metaBox{border:2px solid #dcd0b8;padding:10px;background:#fff;margin-top:12px}
+  .meta-left{display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+  .meta-left .time-line,
+  .meta-left .loc-line{font-size: var(--meta-label-size);font-weight:700;}
+  .metaValue{color:#b40000;font-weight:900;font-size: var(--meta-value-size);margin-left:4px;}
+
+  /* ✅ 固定六欄 + 提升字寬利用率 */
+  table.regTable{
+    width:100%;
+    border-collapse:collapse;
+    margin-top:12px;
+    table-layout: fixed;
+    font-feature-settings: "palt" 1;
+  }
+  table.regTable td{
+    border:1px solid #9a8f7a;
+    padding:12px;                     /* 預覽保持 12px；匯出時另降 */
+    font-size: var(--cell-font-size, var(--reg-name-size));
+    height:56px;
+    vertical-align:middle;
+    text-align:center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  /* 匯出時更緊湊（A）*/
+  .capture-root table.regTable td{ padding:8px !important; }
+
+  table.regTable td.empty{color:#bbb}
+  td.totalCell{font-weight:700;color:var(--accent);background:#fff6f6}
+
+  /* ★ 姓名：強制加粗 + 擬粗（預覽） */
+  .nameText{
+    font-feature-settings: "palt" 1;
+    font-weight:700;
+    -webkit-text-stroke: 0.25px currentColor;
+    letter-spacing: 0.02em;
+  }
+  /* 匯出時擬粗略增 */
+  .capture-root #exportArea .nameText{
+    -webkit-text-stroke: 0.30px currentColor;
+  }
+
+  /* 角色：字級放大 + 預設更小間距 */
+  .roleSuffix{
+    font-size: var(--role-suffix-size);
+    margin-left: .04em;
+    font-feature-settings: "palt" 1;
+  }
+
+  .fullNote{
+    margin-top:12px;
+    padding:10px;
+    background:var(--strong-note-bg);
+    border-left:6px solid #f5c0c0;
+    font-weight:700;
+    color:#000;
+    text-align:center;
+    font-size: var(--full-note-size);
+  }
+  .fullNote .highlight-total{
+    font-size: calc(var(--full-note-size) * 1.3);
+    color:#000;
+    font-weight:900;
+  }
+
+  #deficitNote{
+    display:none;
+    margin-top:12px;
+    padding:6px 10px;
+    background:#fff7f7;
+    border-left:6px solid #f0a0a0;
+    font-weight:700;
+    color:#000;
+    text-align:center;
+    font-size: var(--deficit-note-size);
+  }
+  #deficitNote .num,
+  #deficitNote .deficit-num{
+    font-size: var(--deficit-number-size);
+    color: var(--accent);
+    font-weight:900;
+  }
+
+  /* 備註（字級 = 人力已圓滿…） */
+  #remarkBox{
+    display:none;
+    margin-top: 12px;
+    padding: 10px 12px;
+    background: #fff9f0;
+    border-left: 6px solid #f0c070;
+    border: 1px solid #f3e2c2;
+    border-radius: 6px;
+    color: #333;
+    line-height: 1.6;
+    font-size: var(--remark-font-size);
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    font-weight:700;
+  }
+  #remarkBox .label{display:block;font-weight:700;margin-bottom:6px;color:#7a3e00;}
+  #remarkBox .text{white-space: pre-wrap;font-weight:700;}
+
+  .section-title {font-size: 22px;font-weight: 700;margin-bottom: 8px;}
+  label {display:block;margin:6px 0 6px;color:var(--muted);font-size:18px;}
+  .small {font-size:20px;color:var(--muted);}
+
+  .instruction{margin-top:8px;font-size:13px;color:var(--muted)}
+  .registration-list{max-height:260px;overflow:auto;border:1px dashed #e0e0e0;padding:8px;border-radius:6px;background:#fafafa}
+  .reg-item{display:flex;justify-content:space-between;padding:6px 4px;border-bottom:1px solid #eee;font-size:14px}
+  .reg-item:last-child{border-bottom:none}
+
+  .checkbox-row{display:flex;align-items:center;gap:8px}
+  .role-fixed{background:#fffef7;padding:6px;border-radius:6px;margin-bottom:6px;font-size:14px}
+
+  .status-row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+  .status-row .option{display:flex;align-items:center;gap:6px;padding:6px 8px;border:1px solid #e5e5e5;border-radius:8px;background:#fff}
+
+  .version-tag{position:fixed;right:12px;bottom:10px;font-size:12px;color:#888;user-select:none;pointer-events:none;}
+
+  /* 底部橘色提醒（預覽） */
+  #exportArea > div:last-child{ font-size: var(--footer-tip-size); }
+
+  /* RWD */
+  @media (max-width:1000px){
+    .container{grid-template-columns:1fr; padding:8px}
+    #exportArea{width:100%}
+    #dynamicTitle{font-size:26px}
+    #reminderBadge{transform:none}
+  }
+  @media (max-width:480px){
+    .wrap{padding:0 12px;}
+    .metaBox > div:last-child{display:none;}
+  }
+
+  /* === 匯出「離屏舞台」與捕捉模式 ===================== */
+  .capture-stage{position:fixed;left:-100000px;top:0;width:1px;height:1px;overflow:hidden;pointer-events:none;z-index:-1;}
+  .capture-root{width:880px;margin:0;}
+
+  /* 匯出預設字體（仍為無襯線；未改為全站楷體） */
+  .capture-root, .capture-root * {
+    font-family: "Microsoft JhengHei","PingFang TC","Noto Sans TC","Heiti TC",Arial,sans-serif;
+    line-height: 1.25 !important;
+  }
+
+  /* 勾選楷體模式（保留） */
+  #exportArea.use-kai{ --cell-font-size: calc(var(--reg-name-size) + 3px + var(--kai-name-bump)); }
+  #exportArea.use-kai table.regTable td { font-family: "DFKai-SB","BiauKai","Kaiti TC","KaiTi","STKaiti", serif; line-height: 1.32; }
+  #exportArea.use-kai table.regTable td .roleSuffix { font-family: "Microsoft JhengHei","PingFang TC","Noto Sans TC","Heiti TC",Arial,sans-serif !important; }
+  .capture-root #exportArea.use-kai td {
+    font-family: "DFKai-SB","BiauKai","Kaiti TC","KaiTi","STKaiti", serif !important;
+    line-height: 1.32 !important;
+    font-size: calc(var(--cap-reg-name-size) + var(--kai-name-bump)) !important;
+  }
+  .capture-root #exportArea.use-kai td .roleSuffix {
+    font-family: "Microsoft JhengHei","PingFang TC","Noto Sans TC","Heiti TC",Arial,sans-serif !important;
+  }
+  .capture-root #exportArea.use-kai .nameText { font-weight:700; letter-spacing:0.025em; -webkit-text-stroke:0.3px currentColor; }
+
+  /* 匯出圖片全楷書（僅限 #exportArea 範圍；保留原行為） */
+  .capture-root #exportArea, .capture-root #exportArea *{
+    font-family: "DFKai-SB","BiauKai","Kaiti TC","KaiTi","STKaiti", serif !important;
+  }
+
+  /* 隱藏「下載目前預覽」 */
+  #downloadPreviewBtn { display: none; }
+</style>
+</head>
+<body>
+<!-- UA 提示條 -->
+<div id="uaNotice" role="region" aria-label="環境提示">
+  <div style="font-weight:700">提示：此環境可能限制直接下載圖片</div>
+  <div class="small">建議改以外部瀏覽器開啟（Safari / Chrome），或匯出後以「長按圖片存圖」方式保存。</div>
+  <div class="actions" aria-label="操作">
+    <button id="uaOpenExternBtn" type="button">嘗試在外部開啟</button>
+    <button id="uaDismissBtn" type="button">知道了</button>
+  </div>
+</div>
+
+<div class="wrap">
+  <h1>匯出「追思祝福」護持菩薩名單至圖片檔（請以桌機電腦、手機的 Chrome 或 Safari 瀏覽器開啟，若直接以 LINE 中的瀏覽功能開啟，將無法正常產生圖片）</h1>
+
+  <div class="usage-wrap">
+    <details class="usage" open>
+      <summary>使用說明：</summary>
+      <div class="content">
+        匯出圖片功能為單機版功能，無法多人共同編輯、更新場次資料。若要從上次維護的資料中繼續作業，則須使用同一支手機（平板）或電腦才能繼續編輯或更新。
+      </div>
+    </details>
+  </div>
+
+  <div class="container">
+    <!-- 控制面板 -->
+    <div class="card">
+      <div class="controls">
+
+        <!-- 區塊 1：建立 / 編輯場次 -->
+        <div>
+          <div class="section-title">建立 / 編輯場次</div>
+          <label>日期</label>
+          <input type="date" id="evDate" />
+          <div class="row" style="margin-top:6px">
+            <div>
+              <label>時</label>
+              <select id="evHour"></select>
+            </div>
+            <div>
+              <label>分 (5分為單位)</label>
+              <select id="evMin"></select>
+            </div>
+          </div>
+
+          <label style="margin-top:8px">集合地點</label>
+          <select id="evLocationSelect"></select>
+          <input id="evLocationOther" placeholder="若選「其他」，請輸入地點" style="display:none;margin-top:6px"/>
+
+          <label style="margin-top:8px">需求總人數</label>
+          <select id="evRequiredTotal"></select>
+
+          <div style="margin-top:10px" class="btn-row">
+            <button id="createEventBtn" class="primary">建立場次</button>
+            <button id="updateEventBtn">更新場次</button>
+            <button id="deleteEventBtn" style="color:#b00">刪除場次</button>
+          </div>
+          <div class="small" style="margin-top:6px">
+            建立後會加入下方場次清單（資料只會在使用的手機或電腦暫存）
+          </div>
+        </div>
+
+        <hr style="border:none;border-top:1px dashed #e6e6e6"/>
+
+        <!-- 區塊 2：維護固定名單 -->
+        <div>
+          <div class="section-title">維護：固定名單（會隨場次儲存）</div>
+          <div class="small">填好一次會儲存在該場次，顯示順序：維那 → 木魚 → 代說法 → 場控1..5</div>
+
+          <label style="margin-top:8px">維那姓名</label>
+          <input id="role_weina" placeholder="維那姓名 (例如 王大明)" />
+
+          <label style="margin-top:8px">木魚姓名</label>
+          <input id="role_muyu" placeholder="木魚姓名" />
+
+          <label style="margin-top:8px">代說法姓名</label>
+          <input id="role_speaker" placeholder="代說法姓名" />
+
+          <label style="margin-top:8px">場控姓名（1）</label>
+          <input id="role_stage1" placeholder="場控1" />
+
+          <label style="margin-top:8px">場控姓名（2）</label>
+          <input id="role_stage2" placeholder="場控2" />
+
+          <label style="margin-top:8px">場控姓名（3）</label>
+          <input id="role_stage3" placeholder="場控3" />
+
+          <label style="margin-top:8px">場控姓名（4）</label>
+          <input id="role_stage4" placeholder="場控4" />
+
+          <label style="margin-top:8px">場控姓名（5）</label>
+          <input id="role_stage5" placeholder="場控5" />
+
+          <div style="margin-top:10px" class="btn-row">
+            <button id="saveRolesBtn">儲存固定名單到場次</button>
+            <button id="clearRolesBtn">清除固定名單</button>
+          </div>
+        </div>
+
+        <hr style="border:none;border-top:1px dashed #e6e6e6"/>
+
+        <!-- 區塊 3：選取場次 / 報名管理 -->
+        <div>
+          <div class="section-title">選取場次 / 報名管理</div>
+          <label>場次列表</label>
+          <select id="eventSelect"></select>
+
+          <label style="margin-top:8px">加入報名者（逗號、頓號、換行皆視為分隔）</label>
+          <textarea id="namesInput" placeholder="張三, 李四、王五 或每行一個" style="height:80px"></textarea>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button id="addNamesBtn">加入名單</button>
+            <button id="clearNamesBtn">清空名單</button>
+            <button id="removeSelectedBtn">刪除勾選名單</button>
+          </div>
+
+          <div style="margin-top:10px">
+            <label class="small">目前報名（固定名單會顯示於上方）</label>
+            <div id="fixedRolesArea" class="role-fixed"></div>
+            <div class="registration-list" id="registrationList"></div>
+          </div>
+        </div>
+
+        <hr style="border:none;border-top:1px dashed #e6e6e6"/>
+
+        <!-- 區塊 4：匯出設定 -->
+        <div>
+          <div class="section-title">匯出設定</div>
+
+          <div class="status-row" role="radiogroup" aria-label="人力狀態">
+            <label class="option"><input type="radio" name="statusMode" value="none" checked> 不顯示人力狀態</label>
+            <label class="option"><input type="radio" name="statusMode" value="full"> 勾選：人力已圓滿</label>
+            <label class="option"><input type="radio" name="statusMode" value="deficit"> 勾選：顯示本場次護持人數缺額</label>
+          </div>
+
+          <div class="checkbox-row" style="margin-top:8px">
+            <input type="checkbox" id="reminderCheckbox">
+            <label for="reminderCheckbox">勾選：溫馨提醒（匯出圖左上角顯示「溫馨提醒」圖示）</label>
+          </div>
+
+          <div style="margin-top:10px">
+            <div class="checkbox-row" style="margin-bottom:6px">
+              <input type="checkbox" id="remarkEnableCheckbox" />
+              <label for="remarkEnableCheckbox">勾選：顯示備註</label>
+            </div>
+            <textarea id="remarkTextarea" placeholder="請輸入備註內容（勾選後才會顯示於報名表格下方）" style="height:80px; display:none"></textarea>
+            <div class="small" id="remarkHint" style="display:none; margin-top:4px">
+              備註將顯示於「報名表格」下方。
+            </div>
+          </div>
+          <div class="checkbox-row" style="margin-top:8px">
+            <input type="checkbox" id="kaiModeCheckbox" checked>
+            <label for="kaiModeCheckbox">勾選：表格姓名加粗</label>
+          </div>
+
+          <div style="margin-top:8px">
+            <label>輸出檔名</label>
+            <input id="outputName" placeholder="event-2025-09-02" />
+          </div>
+          <div style="margin-top:10px;display:flex;gap:8px">
+            <button id="exportBtn" class="primary">匯出圖片</button>
+            <button id="downloadPreviewBtn">下載目前預覽</button>
+          </div>
+          <div id="status" class="small" style="margin-top:8px"></div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 預覽 / 匯出區 -->
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-weight:700">匯出圖片預覽</div>
+        <div class="small">匯出為PNG格式</div>
+      </div>
+
+      <div id="exportArea" aria-label="匯出預覽">
+        <div class="headerRow">
+          <div id="reminderBadge">溫馨提醒</div>
+          <div id="dynamicTitle" aria-hidden="true"></div>
+        </div>
+
+        <div class="metaBox" style="margin-top:12px;display:flex;align-items:flex-start;justify-content:space-between">
+          <div class="meta-left">
+            <div class="time-line">集合時間：<span id="metaTime" class="metaValue">10:30</span></div>
+            <div class="loc-line">集合地點：<span id="metaLocation" class="metaValue">懷愛館景行樓3樓・至仁1廳</span></div>
+          </div>
+          <div style="width:220px"></div>
+        </div>
+
+        <table class="regTable" aria-label="報名表格">
+          <tbody id="regBody"></tbody>
+        </table>
+
+        <div id="remarkBox" role="note" aria-label="備註">
+          <span class="label">備註:</span>
+          <div class="text"></div>
+        </div>
+
+        <div id="fullNote" class="fullNote" style="display:none;">人力已圓滿，感恩護持！</div>
+        <div id="deficitNote" style="display:none;" class="fullNote">尚需<span class="num">0</span>位菩薩護持，感恩！</div>
+
+        <div style="margin-top:12px;padding:10px;background:#fff7e6;border-left:6px solid #f0c070;font-weight:700;color:#7a3e00;text-align:center;">
+          請穿著義工服、黑襪、黑鞋、戴口罩，帶海青。
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 右下角版本標註 -->
+<div class="version-tag">三寶弟子2025/10/22製作| 版本：V9.0</div>
+
+<script>
+/* ---------- 地點下拉清單（保留原值；顯示時再格式化） ---------- */
+const LOCATION_LIST = [
+"懷愛館景仰樓1F至真1廳","懷愛館景仰樓1F至真2廳","懷愛館景仰樓1F至真3廳",
+"懷愛館景仰樓2F至善1廳","懷愛館景仰樓2F至善2廳","懷愛館景仰樓2F至善3廳","懷愛館景仰樓2F至善4廳",
+"懷愛館景仰樓3F至美1廳","懷愛館景仰樓3F至美2廳","懷愛館景仰樓3F至美3廳","懷愛館景仰樓3F至美4廳",
+"懷愛館景行樓1F景明廳","懷愛館景行樓1F至忠1廳","懷愛館景行樓1F至忠2廳","懷愛館景行樓1F至忠3廳","懷愛館景行樓1F至忠4廳",
+"懷愛館景行樓2F至孝1廳","懷愛館景行樓2F至孝2廳","懷愛館景行樓2F至孝3廳","懷愛館景行樓2F至孝4廳",
+"懷愛館景行樓3F至仁1廳","懷愛館景行樓3F至仁2廳","懷愛館景行樓3F至仁3廳","懷愛館景行樓3F至仁4廳",
+"懷愛館景行樓4F至愛2廳","懷愛館景行樓4F至愛3廳","懷愛館景行樓4F至愛4廳",
+"其他"
+];
+
+/* ---------- DOM refs ---------- */
+const evDate = document.getElementById('evDate');
+const evHour = document.getElementById('evHour');
+const evMin = document.getElementById('evMin');
+const evLocationSelect = document.getElementById('evLocationSelect');
+const evLocationOther = document.getElementById('evLocationOther');
+const evRequiredTotal = document.getElementById('evRequiredTotal');
+
+const createEventBtn = document.getElementById('createEventBtn');
+const updateEventBtn = document.getElementById('updateEventBtn');
+const deleteEventBtn = document.getElementById('deleteEventBtn');
+const eventSelect = document.getElementById('eventSelect');
+const registrationList = document.getElementById('registrationList');
+const namesInput = document.getElementById('namesInput');
+const addNamesBtn = document.getElementById('addNamesBtn');
+const clearNamesBtn = document.getElementById('clearNamesBtn');
+const removeSelectedBtn = document.getElementById('removeSelectedBtn');
+const exportBtn = document.getElementById('exportBtn');
+const downloadPreviewBtn = document.getElementById('downloadPreviewBtn');
+const metaTime = document.getElementById('metaTime');
+const metaLocation = document.getElementById('metaLocation');
+const regBody = document.getElementById('regBody');
+const outputName = document.getElementById('outputName');
+const status = document.getElementById('status');
+const kaiModeCheckbox = document.getElementById('kaiModeCheckbox');
+
+/* 備註控制 */
+const remarkEnableCheckbox = document.getElementById('remarkEnableCheckbox');
+const remarkTextarea = document.getElementById('remarkTextarea');
+const remarkHint = document.getElementById('remarkHint');
+
+/* 備註預覽區 */
+const remarkBox = document.getElementById('remarkBox');
+const remarkBoxText = remarkBox ? remarkBox.querySelector('.text') : null;
+
+/* 單選狀態 */
+const statusModeRadios = document.querySelectorAll('input[name="statusMode"]');
+const reminderCheckbox = document.getElementById('reminderCheckbox');
+
+/* 預覽區元素 */
+const fullNote = document.getElementById('fullNote');
+const deficitNote = document.getElementById('deficitNote');
+const dynamicTitle = document.getElementById('dynamicTitle');
+const fixedRolesArea = document.getElementById('fixedRolesArea');
+const reminderBadge = document.getElementById('reminderBadge');
+
+/* role inputs */
+const role_weina = document.getElementById('role_weina');
+const role_muyu = document.getElementById('role_muyu');
+const role_speaker = document.getElementById('role_speaker');
+const role_stage1 = document.getElementById('role_stage1');
+const role_stage2 = document.getElementById('role_stage2');
+const role_stage3 = document.getElementById('role_stage3');
+const role_stage4 = document.getElementById('role_stage4');
+const role_stage5 = document.getElementById('role_stage5');
+const saveRolesBtn = document.getElementById('saveRolesBtn');
+const clearRolesBtn = document.getElementById('clearRolesBtn');
+/* ---------- UA / Modal refs（可為 null，程式已容錯） ---------- */
+const uaNotice = document.getElementById('uaNotice');
+const uaOpenExternBtn = document.getElementById('uaOpenExternBtn');
+const uaDismissBtn = document.getElementById('uaDismissBtn');
+const exportModal = document.getElementById('exportModal');
+const exportModalClose = document.getElementById('exportModalClose');
+const exportImg = document.getElementById('exportImg');
+const shareImageBtn = document.getElementById('shareImageBtn');
+const copyImageBtn = document.getElementById('copyImageBtn');
+const openDataUrlBtn = document.getElementById('openDataUrlBtn');
+
+/* ---------- 本地儲存 ---------- */
+const LS_KEY = 'event_png_tool_v1';
+function saveToStorage(){
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify(events));
+    status.textContent = '已自動儲存（本機）';
+  } catch(e){ console.warn('localStorage 失敗', e); }
+}
+function loadFromStorage(){
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if(!raw) return null;
+    const parsed = JSON.parse(raw);
+    if(Array.isArray(parsed)) return parsed;
+  } catch(e){ console.warn('localStorage 讀取失敗', e); }
+  return null;
+}
+
+/* ---------- 事件暫存 ---------- */
+let events = loadFromStorage() || [];
+/*
+{
+  id, date, time,
+  location,
+  locationIsOther: false,
+  roles: {...},
+  registrants: [],
+  requiredTotal: number|null,
+  statusMode: 'none'|'full'|'deficit',
+  showReminder: boolean,
+  remarkEnabled: boolean,
+  remarkText: string,
+  useKai: boolean
+}
+*/
+
+/* ---------- 小工具 ---------- */
+function splitNamesInput(text){
+  if(!text) return [];
+  const unified = text.replace(/、/g, ',').replace(/;/g, ',').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  return unified.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+}
+function numToCJK(n){
+  const map=['零','一','二','三','四','五','六','七','八','九'];
+  if(n<=9) return map[n];
+  if(n<20) return '十' + (n%10?map[n%10]:'');
+  if(n%10===0) return map[Math.floor(n/10)] + '十';
+  return map[Math.floor(n/10)] + '十' + map[n%10];
+}
+function formatLocationForDisplay(str){
+  if(!str || str==='其他') return str||'';
+  let s = String(str);
+  s = s.replace('懷愛館景','懷愛館・景').replace('樓至','樓・至').replace('樓景','樓・景').replace(/\s+/g,'');
+  s = s.replace(/(\d+)\s*F/gi, (_,d)=> numToCJK(parseInt(d,10)) + '樓');
+  s = s.replace(/(至[\u4e00-\u9fa5]{1,3})(\d+)\s*廳/g, (_,p1,d)=> p1 + numToCJK(parseInt(d,10)) + '廳');
+  s = s.replace(/樓(?!・)(?=(至|景))/g, '樓・');
+  if(!/・/.test(s) && /至/.test(s)) s = s.replace('至','・至');
+  return s;
+}
+function getStatusMode(){
+  let val = 'none';
+  statusModeRadios.forEach(r => { if(r.checked) val = r.value; });
+  return val;
+}
+function escapeHtml(str){
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ---------- 表格欄寬保護 ---------- */
+function ensureRegTableColgroup(){
+  const table = document.querySelector('table.regTable');
+  if(!table) return;
+  if(!table.querySelector('colgroup')){
+    const cg = document.createElement('colgroup');
+    for(let i=0;i<6;i++){ cg.appendChild(document.createElement('col')); }
+    table.insertBefore(cg, table.firstChild);
+  }
+}
+function beforeRenderGridFix(){ ensureRegTableColgroup(); }
+
+/* ---------- 預覽渲染 ---------- */
+function renderEmptyGrid(){
+  beforeRenderGridFix();
+  regBody.innerHTML = '';
+  for(let r=0;r<6;r++){
+    const tr = document.createElement('tr');
+    for(let c=0;c<6;c++){
+      const td = document.createElement('td');
+      td.className='empty';
+      td.textContent='';
+      tr.appendChild(td);
+    }
+    regBody.appendChild(tr);
+  }
+}
+function renderFixedRolesPreview(ev){
+  const roles = ev.roles || {};
+  const roleOrder = [
+    {key:'weina', label:'維那'},
+    {key:'muyu', label:'木魚'},
+    {key:'speaker', label:'代說法'},
+    {key:'stage1', label:'場控'},
+    {key:'stage2', label:'場控'},
+    {key:'stage3', label:'場控'},
+    {key:'stage4', label:'場控'},
+    {key:'stage5', label:'場控'}
+  ];
+  let fixedHtml = '';
+  roleOrder.forEach(r => {
+    const n = roles[r.key];
+    if(n && n.trim()){
+      fixedHtml += `
+        <div style="margin-bottom:4px;">
+          <strong>${escapeHtml(n)}</strong><span class="roleSuffix" style="font-size:12px;margin-left:0px">${r.label}</span>
+        </div>`;
+    }
+  });
+  fixedRolesArea.innerHTML = fixedHtml || '<span class="small">（尚無固定名單）</span>';
+}
+
+function updatePreview(index){
+  beforeRenderGridFix();
+  const ev = events[index];
+  if(!ev) { renderEmptyGrid(); return; }
+
+  // 標題：ROC 年
+  const dateObj = new Date(ev.date + 'T00:00:00');
+  const gYear = dateObj.getFullYear();
+  const roc = gYear - 1911;
+  const month = dateObj.getMonth()+1;
+  const day = dateObj.getDate();
+  const weekday = ['週日','週一','週二','週三','週四','週五','週六'][dateObj.getDay()];
+  dynamicTitle.innerHTML = `<span class="datePart">報名${roc}/${month}/${day}(${weekday})</span><span class="titlePhrase">「追思祝福誦念」菩薩</span>`;
+
+  // meta
+  metaTime.textContent = ev.time || '';
+  metaLocation.textContent = ev.locationIsOther ? (ev.location||'') : formatLocationForDisplay(ev.location||'');
+
+  // 合併固定名單與報名
+  const roleOrder = [
+    {key:'weina', label:'維那'},
+    {key:'muyu', label:'木魚'},
+    {key:'speaker', label:'代說法'},
+    {key:'stage1', label:'場控'},
+    {key:'stage2', label:'場控'},
+    {key:'stage3', label:'場控'},
+    {key:'stage4', label:'場控'},
+    {key:'stage5', label:'場控'}
+  ];
+  const combined = [];
+  const roles = ev.roles || {};
+  roleOrder.forEach(r=>{
+    const name = roles[r.key];
+    if(name && name.trim()) combined.push({ name: name.trim(), role: r.label });
+  });
+  (ev.registrants || []).forEach(n => combined.push({ name: n, role: '' }));
+
+  // 6x6 表格
+  const total = combined.length;
+  const cols = 6, rows = 6;
+  regBody.innerHTML = '';
+  for(let r=0;r<rows;r++){
+    const tr = document.createElement('tr');
+    for(let c=0;c<cols;c++){
+      const idxCell = r*cols + c;
+      const td = document.createElement('td');
+      if(idxCell === cols*rows - 1){
+        td.className = 'empty';
+        td.textContent = '';
+      } else {
+        const item = combined[idxCell];
+        if (item) {
+          td.innerHTML = item.role
+            ? `<span class="nameText">${escapeHtml(item.name)}</span><span class="roleSuffix">${escapeHtml(item.role)}</span>`
+            : `<span class="nameText">${escapeHtml(item.name)}</span>`;
+        } else {
+          td.className = 'empty';
+          td.textContent = '';
+        }
+      }
+      tr.appendChild(td);
+    }
+    regBody.appendChild(tr);
+  }
+
+  // 溫馨提醒
+  reminderBadge.style.display = ev.showReminder ? 'inline-block' : 'none';
+
+  // 備註
+  if (remarkBox && remarkBoxText) {
+    const showRemark = !!(ev.remarkEnabled && ev.remarkText && ev.remarkText.trim());
+    if (showRemark) {
+      remarkBox.style.display = 'block';
+      remarkBoxText.textContent = ev.remarkText.trim();
+    } else {
+      remarkBox.style.display = 'none';
+      remarkBoxText.textContent = '';
+    }
+  }
+
+  // 人力狀態
+  const mode = ev.statusMode || 'none';
+  const needTotal = Number(ev.requiredTotal || 0);
+  const deficit = Math.max(0, needTotal - total);
+
+  if(mode === 'full'){
+    fullNote.style.display = 'block';
+    deficitNote.style.display = 'none';
+    fullNote.classList.add('fullNote');
+    fullNote.innerHTML = `人力已圓滿，共 <span class="highlight-total">${total}</span> 位菩薩護持，感恩！`;
+  } else if(mode === 'deficit'){
+    fullNote.style.display = 'none';
+    deficitNote.style.display = 'block';
+    const numEl = deficitNote.querySelector('.num') || deficitNote.querySelector('.deficit-num');
+    if(numEl) numEl.textContent = String(deficit);
+  } else {
+    fullNote.style.display = 'none';
+    deficitNote.style.display = 'none';
+  }
+
+  // 逐格微調（更積極）
+  Array.from(regBody.querySelectorAll('td')).forEach(td => {
+    if (td.classList.contains('empty')) return;
+    const isKai = document.getElementById('exportArea').classList.contains('use-kai');
+    adjustCell(td, isKai);
+  });
+
+  renderFixedRolesPreview(ev);
+}
+
+/* ---------- 名單側邊區 ---------- */
+function renderRegistrationList(index){
+  const ev = events[index] || {roles:{}, registrants:[]};
+  registrationList.innerHTML = '';
+  const roles = ev.roles || {};
+  const roleOrder = [
+    {key:'weina', label:'維那'},
+    {key:'muyu', label:'木魚'},
+    {key:'speaker', label:'代說法'},
+    {key:'stage1', label:'場控'},
+    {key:'stage2', label:'場控'},
+    {key:'stage3', label:'場控'},
+    {key:'stage4', label:'場控'},
+    {key:'stage5', label:'場控'}
+  ];
+  let fixedHtml = '';
+  roleOrder.forEach(r => {
+    const n = roles[r.key];
+    if(n && n.trim()){
+      fixedHtml += `
+        <div style="margin-bottom:4px;">
+          <strong>${escapeHtml(n)}</strong><span class="roleSuffix" style="font-size:12px;margin-left:0px">${r.label}</span>
+        </div>`;
+    }
+  });
+  fixedRolesArea.innerHTML = fixedHtml || '<span class="small">（尚無固定名單）</span>';
+
+  (ev.registrants || []).forEach((name, i) => {
+    const div = document.createElement('div'); div.className='reg-item';
+    const left = document.createElement('div'); left.textContent = name;
+    const right = document.createElement('div');
+    const chk = document.createElement('input'); chk.type='checkbox'; chk.dataset.idx = i;
+    const del = document.createElement('button'); del.textContent='刪除'; del.style.marginLeft='8px';
+    del.addEventListener('click', ()=> {
+      if(confirm(`確定刪除 ${name}？`)){
+        ev.registrants.splice(i,1);
+        renderRegistrationList(index);
+        updatePreview(index);
+        saveToStorage();
+      }
+    });
+    right.appendChild(chk); right.appendChild(del);
+    div.appendChild(left); div.appendChild(right);
+    registrationList.appendChild(div);
+  });
+  updatePreview(index);
+}
+
+/* ---------- 事件：固定名單 ---------- */
+saveRolesBtn.addEventListener('click', ()=>{
+  const idx = Number(eventSelect.value);
+  if(isNaN(idx)) return alert('請先選取場次');
+  const ev = events[idx];
+  ev.roles = {
+    weina: role_weina.value.trim(),
+    muyu: role_muyu.value.trim(),
+    speaker: role_speaker.value.trim(),
+    stage1: role_stage1.value.trim(),
+    stage2: role_stage2.value.trim(),
+    stage3: role_stage3.value.trim(),
+    stage4: role_stage4.value.trim(),
+    stage5: role_stage5.value.trim()
+  };
+  renderRegistrationList(idx);
+  status.textContent = '固定名單已儲存（僅本機）';
+  saveToStorage();
+});
+clearRolesBtn.addEventListener('click', ()=>{
+  const idx = Number(eventSelect.value);
+  if(isNaN(idx)) return alert('請先選取場次');
+  if(!confirm('確定要清除此場次的固定名單（維那/木魚/代說法/場控）？')) return;
+  const ev = events[idx];
+  ev.roles = {};
+  role_weina.value = role_muyu.value = role_speaker.value =
+  role_stage1.value = role_stage2.value = role_stage3.value = role_stage4.value = role_stage5.value = '';
+  renderRegistrationList(idx);
+  status.textContent = '固定名單已清除';
+  saveToStorage();
+});
+
+/* ---------- 事件：建立 / 更新 / 刪除場次 ---------- */
+createEventBtn.addEventListener('click', ()=>{
+  const d = evDate.value; if(!d){ alert('請選日期'); return; }
+  const hh = evHour.value; const mm = evMin.value;
+  if(!hh || !mm){ alert('請選時間（時/分）'); return; }
+  const time = `${hh}:${mm}`;
+
+  const locationIsOther = (evLocationSelect.value === '其他');
+  const loc = locationIsOther ? (evLocationOther.value || '其他') : evLocationSelect.value;
+  if(!loc){ alert('請選集合地點'); return; }
+
+  const req = evRequiredTotal.value ? Math.min(36, Math.max(1, Number(evRequiredTotal.value))) : null;
+
+  const id = `${d}_${hh+mm}`;
+  const ev = {
+    id, date:d, time,
+    location: loc,
+    locationIsOther,
+    roles: {}, registrants: [],
+    requiredTotal: req,
+    statusMode: getStatusMode(),
+    showReminder: !!reminderCheckbox.checked,
+    remarkEnabled: !!remarkEnableCheckbox?.checked,
+    remarkText: (remarkTextarea?.value || '').trim(),
+    useKai: !!kaiModeCheckbox?.checked
+  };
+
+  events.push(ev);
+  refreshEventSelect();
+  status.textContent = '場次已建立（本機暫存）';
+  saveToStorage();
+});
+
+updateEventBtn.addEventListener('click', ()=>{
+  const idx = Number(eventSelect.value); if(isNaN(idx)) return alert('請先選場次');
+  const d = evDate.value; if(!d){ alert('請選日期'); return; }
+  const hh = evHour.value; const mm = evMin.value;
+  if(!hh || !mm){ alert('請選時間（時/分）'); return; }
+  const time = `${hh}:${mm}`;
+
+  const locationIsOther = (evLocationSelect.value === '其他');
+  const loc = locationIsOther ? (evLocationOther.value || '其他') : evLocationSelect.value;
+  if(!loc){ alert('請選集合地點'); return; }
+
+  const req = evRequiredTotal.value ? Math.min(36, Math.max(1, Number(evRequiredTotal.value))) : null;
+
+  const id = `${d}_${hh+mm}`;
+  events[idx].date = d;
+  events[idx].time = time;
+  events[idx].location = loc;
+  events[idx].locationIsOther = locationIsOther;
+  events[idx].id = id;
+  events[idx].requiredTotal = req;
+  events[idx].statusMode = getStatusMode();
+  events[idx].showReminder = !!reminderCheckbox.checked;
+  events[idx].remarkEnabled = !!remarkEnableCheckbox?.checked;
+  events[idx].remarkText = (remarkTextarea?.value || '').trim();
+  events[idx].useKai = !!kaiModeCheckbox.checked;
+
+  refreshEventSelect();
+  status.textContent = '場次已更新';
+  saveToStorage();
+});
+
+deleteEventBtn.addEventListener('click', ()=>{
+  const idx = Number(eventSelect.value); if(isNaN(idx)) return alert('請先選場次');
+  if(!confirm('確定刪除此場次？')) return;
+  events.splice(idx,1);
+  refreshEventSelect();
+  status.textContent = '場次已刪除';
+  saveToStorage();
+});
+
+/* ---------- 事件：報名名單 ---------- */
+addNamesBtn.addEventListener('click', ()=>{
+  const idx = Number(eventSelect.value); if(isNaN(idx)) return alert('請先選場次');
+  const text = namesInput.value.trim(); if(!text) return alert('請輸入姓名（逗號、頓號或換行分隔）');
+  const arr = splitNamesInput(text);
+  const ev = events[idx];
+  ev.registrants = ev.registrants.concat(arr);
+  namesInput.value = '';
+  renderRegistrationList(idx);
+  status.textContent = `已加入 ${arr.length} 位（已自動保存）`;
+  saveToStorage();
+});
+clearNamesBtn.addEventListener('click', ()=>{
+  const idx = Number(eventSelect.value); if(isNaN(idx)) return alert('請先選場次');
+  if(!confirm('確定清空此場次所有報名者？')) return;
+  events[idx].registrants = [];
+  renderRegistrationList(idx);
+  status.textContent = '已清空名單（已自動保存）';
+  saveToStorage();
+});
+removeSelectedBtn.addEventListener('click', ()=>{
+  const idx = Number(eventSelect.value); if(isNaN(idx)) return alert('請先選場次');
+  const checks = Array.from(registrationList.querySelectorAll('input[type="checkbox"]'));
+  const toRemove = [];
+  checks.forEach(ch => { if(ch.checked) toRemove.push(Number(ch.dataset.idx)); });
+  if(toRemove.length===0) return alert('請勾選要刪除的報名者');
+  toRemove.sort((a,b)=>b-a).forEach(i => events[idx].registrants.splice(i,1));
+  renderRegistrationList(idx);
+  updatePreview(idx);
+  status.textContent = '已刪除勾選名單（已自動保存）';
+  saveToStorage();
+});
+
+/* ---------- 下拉、預覽、狀態切換 ---------- */
+function refreshEventSelect(){
+  eventSelect.innerHTML = '';
+  events.forEach((ev, idx) => {
+    const o = document.createElement('option');
+    o.value = idx;
+    o.text = `${ev.date} ${ev.time} — ${ev.locationIsOther ? ev.location : formatLocationForDisplay(ev.location)}`;
+    eventSelect.appendChild(o);
+  });
+  if(events.length>0){
+    eventSelect.value = 0;
+    loadEventToForm(0);
+    updatePreview(0);
+  } else {
+    evDate.value = evHour.value = evMin.value = '';
+    evLocationSelect.value = '';
+    evLocationOther.value = '';
+    evLocationOther.style.display = 'none';
+    evRequiredTotal.value = '';
+    metaTime.textContent = '';
+    metaLocation.textContent = '';
+    renderEmptyGrid();
+  }
+}
+function loadEventToForm(index){
+  const ev = events[index];
+  if(!ev) return;
+  evDate.value = ev.date || '';
+  const [hh,mm] = (ev.time || ':').split(':');
+  evHour.value = (hh||'').toString().padStart(2,'0');
+  evMin.value = (mm||'').toString().padStart(2,'0');
+
+  if(ev.locationIsOther){
+    evLocationSelect.value = '其他';
+    evLocationOther.style.display = 'block';
+    evLocationOther.value = ev.location || '';
+  } else {
+    const rawMatch = LOCATION_LIST.find(src => src === ev.location);
+    if(rawMatch){
+      evLocationSelect.value = rawMatch;
+      evLocationOther.style.display = 'none';
+      evLocationOther.value = '';
+    } else {
+      evLocationSelect.value = '其他';
+      evLocationOther.style.display = 'block';
+      evLocationOther.value = ev.location || '';
+    }
+  }
+
+  evRequiredTotal.value = ev.requiredTotal ? String(ev.requiredTotal) : '';
+
+  const mode = ev.statusMode || 'none';
+  statusModeRadios.forEach(r => r.checked = (r.value === mode));
+  reminderCheckbox.checked = !!ev.showReminder;
+
+  const roles = ev.roles || {};
+  role_weina.value = roles.weina || '';
+  role_muyu.value = roles.muyu || '';
+  role_speaker.value = roles.speaker || '';
+  role_stage1.value = roles.stage1 || '';
+  role_stage2.value = roles.stage2 || '';
+  role_stage3.value = roles.stage3 || '';
+  role_stage4.value = roles.stage4 || '';
+  role_stage5.value = roles.stage5 || '';
+
+  outputName.value = ev.date ? `event-${ev.date}` : '';
+
+  const re = !!ev.remarkEnabled;
+  remarkEnableCheckbox.checked = re;
+  remarkTextarea.style.display = re ? 'block' : 'none';
+  remarkHint.style.display = re ? 'block' : 'none';
+  remarkTextarea.value = ev.remarkText || '';
+
+  renderRegistrationList(index);
+
+  const useKai = (typeof ev.useKai === 'boolean') ? ev.useKai : true;
+  kaiModeCheckbox.checked = useKai;
+  const exportArea = document.getElementById('exportArea');
+  exportArea.classList.toggle('use-kai', useKai);
+}
+
+eventSelect.addEventListener('change', ()=>{
+  const idx = Number(eventSelect.value);
+  if(isNaN(idx)) return;
+  loadEventToForm(idx);
+  updatePreview(idx);
+});
+statusModeRadios.forEach(r=>{
+  r.addEventListener('change', ()=>{
+    const idx = Number(eventSelect.value);
+    if(isNaN(idx)) return;
+    events[idx].statusMode = r.value;
+    updatePreview(idx);
+    saveToStorage();
+  });
+});
+remarkEnableCheckbox?.addEventListener('change', ()=>{
+  const idx = Number(eventSelect.value);
+  if (isNaN(idx)) return;
+  const enabled = !!remarkEnableCheckbox.checked;
+  remarkTextarea.style.display = enabled ? 'block' : 'none';
+  remarkHint.style.display = enabled ? 'block' : 'none';
+  events[idx].remarkEnabled = enabled;
+  updatePreview(idx);
+  saveToStorage();
+});
+remarkTextarea?.addEventListener('input', ()=>{
+  const idx = Number(eventSelect.value);
+  if (isNaN(idx)) return;
+  events[idx].remarkText = (remarkTextarea.value || '').trim();
+  updatePreview(idx);
+  saveToStorage();
+});
+reminderCheckbox.addEventListener('change', ()=>{
+  const idx = Number(eventSelect.value);
+  if(isNaN(idx)) return;
+  events[idx].showReminder = !!reminderCheckbox.checked;
+  updatePreview(idx);
+  saveToStorage();
+});
+
+/* =========================================================================
+   更積極的緊湊演算法（for 舞台 1280，姓名‧角色放大下的溢出控制）
+   - 角色字級下限：12px（必要時 11px）
+   - 角色 letter-spacing：-0.03~-0.04em；scaleX：~0.93（楷體略放寬）
+   - 姓名 letter-spacing：-0.02~-0.03em；scaleX：~0.97（楷體 ~0.98）
+   - 匯出時 padding 已由 CSS 降為 8px
+   ========================================================================= */
+function adjustCell(td, isKai){
+  if (td.classList.contains('empty')) return;
+
+  // 清理殘留 inline
+  td.style.removeProperty('font-size');
+  td.style.removeProperty('letter-spacing');
+
+  const roleEl = td.querySelector('.roleSuffix');
+  const nameEl = td.querySelector('.nameText');
+
+  if (roleEl) {
+    roleEl.style.whiteSpace = 'nowrap';
+    roleEl.style.display = 'inline-block';
+    ['font-size','margin-left','letter-spacing','font-weight','transform']
+      .forEach(p=>roleEl.style.removeProperty(p));
+  }
+  if (nameEl) {
+    nameEl.style.display = 'inline';
+    ['letter-spacing','transform'].forEach(p=>nameEl.style.removeProperty(p));
+  }
+
+  const isOverflow = () => {
+    void td.offsetWidth;
+    const EPS = 1;
+    return td.scrollWidth > (td.clientWidth - EPS);
+  };
+
+  const cs = window.getComputedStyle(td);
+  let base = parseFloat(cs.fontSize) || 33;
+
+  const roleLen = roleEl ? (roleEl.textContent || '').trim().length : 0;
+  const nameLen = nameEl ? (nameEl.textContent || '').trim().length : 0;
+
+  // 1) 先處理角色
+  if (isOverflow() && roleEl) {
+    roleEl.style.fontWeight = '400';
+    roleEl.style.marginLeft = '0.02em';
+    roleEl.style.letterSpacing = '-0.02em';
+
+    let targets;
+    if (roleLen >= 3) {
+      targets = [14, 13, 12, 11];   // 三字角色：允許到 11px
+    } else if (roleLen === 2) {
+      targets = [15, 14, 13, 12];   // 兩字角色：允許到 12px
+    } else {
+      targets = [16, 15, 14];
+    }
+    for (const px of targets) {
+      if (!isOverflow()) break;
+      roleEl.style.fontSize = px + 'px';
+      if (isOverflow()) roleEl.style.letterSpacing = '-0.03em';
+      if (isOverflow() && roleLen >= 3) roleEl.style.letterSpacing = '-0.04em';
+    }
+    if (isOverflow() && roleLen >= 2) {
+      roleEl.style.transform = `scaleX(${isKai ? 0.95 : 0.93})`;
+    }
+  }
+
+  // 2) 再處理姓名（已強制粗體 + 擬粗，這裡只再做寬度微調）
+  if (isOverflow() && nameEl) {
+    nameEl.style.letterSpacing = '-0.02em';
+    if (isOverflow()) {
+      nameEl.style.display = 'inline-block';
+      nameEl.style.transform = `scaleX(${isKai ? 0.98 : 0.97})`;
+    }
+    if (isOverflow() && nameLen >= 4) {
+      nameEl.style.letterSpacing = '-0.03em';
+      if (isOverflow()) nameEl.style.transform = `scaleX(${isKai ? 0.975 : 0.96})`;
+      if (roleEl && isOverflow()) roleEl.style.marginLeft = '0.01em';
+    }
+  }
+
+  // 3) 最後整體降字級（保留可讀性）
+  let minFloor = isKai ? 23 : 21;
+  if (roleEl && nameLen >= 4) minFloor = isKai ? 22 : 21;
+
+  for (const step of [2, 2, 1, 1]) {
+    if (!isOverflow()) break;
+    base = Math.max(minFloor, base - step);
+    td.style.fontSize = base + 'px';
+    if (base === minFloor) break;
+  }
+
+  if (isOverflow()) {
+    td.style.fontSize = Math.max(minFloor - 1, base - 1) + 'px';
+    if (nameEl && isOverflow()) nameEl.style.letterSpacing = '-0.035em';
+  }
+}
+
+/* ---------- 匯出：離屏副本（舞台寬度 1280；自動 scale 保護） ---------- */
+function isInAppBrowser(){
+  const ua = navigator.userAgent || '';
+  return /Line\/|FBAN|FBAV|Instagram|Twitter/i.test(ua);
+}
+function showUaNoticeIfNeeded(){ if(isInAppBrowser()) uaNotice.style.display = 'block'; }
+uaDismissBtn?.addEventListener('click', ()=> uaNotice.style.display = 'none');
+uaOpenExternBtn?.addEventListener('click', ()=>{
+  try { window.open(location.href, '_blank'); } catch(e){}
+  alert('若未成功，請使用右上或右下的「⋯」→ 以「使用預設瀏覽器開啟」或使用 Safari/Chrome 開啟本頁。');
+});
+
+function applyDynamicAdjustmentToClone(cloneNode) {
+  const regBody = cloneNode.querySelector('#regBody');
+  const exportAreaEl = cloneNode.querySelector('#exportArea');
+  const isKai = !!exportAreaEl && exportAreaEl.classList.contains('use-kai');
+  if (!regBody) return;
+  Array.from(regBody.querySelectorAll('td')).forEach(td => adjustCell(td, isKai));
+}
+
+function dataUrlToBlob(dataUrl){
+  const arr = dataUrl.split(','), mime = arr[0].match(/:(.*?);/)[1];
+  const bstr = atob(arr[1]); let n = bstr.length; const u8 = new Uint8Array(n);
+  while(n--) u8[n] = bstr.charCodeAt(n);
+  return new Blob([u8], {type:mime});
+}
+function supportsAnchorDownload(){ const a = document.createElement('a'); return 'download' in a; }
+function triggerDownload(dataUrl, filename){
+  const a = document.createElement('a'); a.href = dataUrl; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+}
+function openExportModalWith(dataUrl, filename){
+  if(!exportModal) {
+    try { window.open(dataUrl, '_blank'); } catch(e){}
+    return;
+  }
+  exportImg.src = dataUrl; exportImg.dataset.filename = filename;
+  const blob = dataUrlToBlob(dataUrl);
+  const file = new File([blob], filename, { type: 'image/png' });
+
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    shareImageBtn.style.display = '';
+    shareImageBtn.onclick = async () => { try { await navigator.share({ files: [file], title: filename, text: '報名匯出圖片' }); } catch(e){} };
+  } else shareImageBtn.style.display = 'none';
+
+  if (navigator.clipboard && 'write' in navigator.clipboard && window.ClipboardItem) {
+    copyImageBtn.style.display = '';
+    copyImageBtn.onclick = async () => {
+      try { await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]); alert('已複製圖片到剪貼簿'); }
+      catch(e){ alert('複製失敗：' + (e?.message || e)); }
+    };
+  } else copyImageBtn.style.display = 'none';
+
+  openDataUrlBtn.onclick = ()=> { try { window.open(dataUrl, '_blank'); } catch(e){} };
+
+  exportModal.classList.add('open');
+  exportModal.setAttribute('aria-hidden','false');
+}
+function closeExportModal(){
+  exportModal.classList.remove('open');
+  exportModal.setAttribute('aria-hidden','true');
+  exportImg.removeAttribute('src');
+  exportImg.removeAttribute('data-filename');
+}
+exportModalClose?.addEventListener('click', closeExportModal);
+exportModal?.addEventListener('click', (e)=>{ if(e.target === exportModal) closeExportModal(); });
+
+async function exportPNG(){
+  const idx = Number(eventSelect.value);
+  if(isNaN(idx)) { alert('請先選取場次'); return; }
+  status.textContent = '正在生成 PNG…（依舞台寬度動態調整解析度）';
+
+  const node = document.getElementById('exportArea');
+
+  try { if (document.fonts && document.fonts.ready) await document.fonts.ready; } catch(e){}
+
+  const stage = document.createElement('div'); stage.className = 'capture-stage';
+  const root  = document.createElement('div'); root.className  = 'capture-root';
+  const clone = node.cloneNode(true);
+
+  const cloneTable = clone.querySelector('table.regTable');
+  if (cloneTable && !cloneTable.querySelector('colgroup')) {
+    const cg = document.createElement('colgroup');
+    for (let i = 0; i < 6; i++) cg.appendChild(document.createElement('col'));
+    cloneTable.insertBefore(cg, cloneTable.firstChild);
+  }
+
+  // 匯出時：確保 .fullNote 顏色與置中
+  const style = document.createElement('style');
+  style.textContent = `.fullNote { color:#000 !important; text-align:center; }`;
+  clone.prepend(style);
+
+  // 讀取舞台寬度（1280px）
+  const stageWidth = getComputedStyle(document.documentElement)
+    .getPropertyValue('--stage-width')
+    .trim() || '1280px';
+  clone.style.width = stageWidth;
+
+  root.appendChild(clone);
+  stage.appendChild(root);
+  document.body.appendChild(stage);
+
+  // 移除 td inline font-size，避免干擾 CSS 變數
+  clone.querySelectorAll('td').forEach(td => {
+    if (td.style.fontSize) td.style.removeProperty('font-size');
+  });
+
+  applyDynamicAdjustmentToClone(clone);
+  await new Promise(r => setTimeout(r, 450));
+
+  const exportBg = getComputedStyle(document.documentElement)
+    .getPropertyValue('--export-bg')
+    .trim() || '#fff4e6';
+
+  // 動態 scale：避免超過 4096px 畫布限制
+  const stageWidthPx = parseFloat(stageWidth) || 1280;
+  const MAX_DIM = 4096;
+  const computedScale = Math.min(2, Math.max(1, MAX_DIM / stageWidthPx));
+
+  let dataUrl = '';
+  try {
+    const canvas = await html2canvas(clone, {
+      scale: computedScale,
+      useCORS: true,
+      backgroundColor: exportBg
+    });
+    dataUrl = canvas.toDataURL('image/png');
+  } catch(err){
+    console.error(err);
+    status.textContent = '匯出失敗（查看 console）';
+    alert('匯出 PNG 發生錯誤，請查看瀏覽器 console');
+  } finally {
+    stage.remove();
+  }
+
+  if(!dataUrl) return;
+
+  const filename = (outputName.value || `event-${events[idx].date}`)
+    .replace(/\s+/g,'_') + '.png';
+
+  if(!isInAppBrowser() && supportsAnchorDownload()){
+    triggerDownload(dataUrl, filename);
+    status.textContent = '匯出完成，已下載 PNG';
+  } else {
+    openExportModalWith(dataUrl, filename);
+    status.textContent = '已生成圖片，請長按上方預覽進行儲存（或使用分享/複製功能）';
+  }
+}
+
+/* ---------- 綁定匯出 ---------- */
+downloadPreviewBtn.addEventListener('click', exportPNG);
+exportBtn.addEventListener('click', exportPNG);
+
+/* ---------- 初始化 ---------- */
+function init(){
+  // 時／分
+  for(let h=0;h<24;h++){
+    const o = document.createElement('option'); 
+    o.value = String(h).padStart(2,'0'); 
+    o.text = String(h).padStart(2,'0'); 
+    evHour.appendChild(o);
+  }
+  for (let m = 0; m < 60; m += 5) {
+    const mm = String(m).padStart(2,'0');
+    const o = document.createElement('option'); 
+    o.value = mm; 
+    o.text = mm; 
+    evMin.appendChild(o);
+  }
+
+  // 地點清單
+  evLocationSelect.innerHTML = '';
+  LOCATION_LIST.forEach(loc=>{
+    const o = document.createElement('option');
+    o.value = loc;
+    o.text = (loc==='其他') ? '其他' : formatLocationForDisplay(loc);
+    evLocationSelect.appendChild(o);
+  });
+  evLocationSelect.addEventListener('change', ()=>{
+    const isOther = (evLocationSelect.value === '其他');
+    evLocationOther.style.display = isOther ? 'block' : 'none';
+    if(isOther){
+      setTimeout(()=>{
+        evLocationOther.focus();
+        evLocationOther.select?.();
+      }, 0);
+    }
+  });
+
+  // 需求總人數（上限 36；允許空白）
+  evRequiredTotal.innerHTML = '';
+  const emptyOpt = document.createElement('option'); emptyOpt.value = ''; emptyOpt.text = '（未設定）';
+  evRequiredTotal.appendChild(emptyOpt);
+  for(let i=1;i<=36;i++){
+    const o = document.createElement('option'); o.value = String(i); o.text = String(i);
+    evRequiredTotal.appendChild(o);
+  }
+
+  // 楷體模式勾選：保留現有行為（只控制字族，不影響你已強制的姓名粗度）
+  kaiModeCheckbox.addEventListener('change', () => {
+    const exportAreaEl = document.getElementById('exportArea');
+    exportAreaEl.classList.toggle('use-kai', kaiModeCheckbox.checked);
+
+    const idx = Number(eventSelect.value);
+    if (!isNaN(idx) && events[idx]) {
+      events[idx].useKai = kaiModeCheckbox.checked;
+      updatePreview(idx);
+      saveToStorage();
+    }
+  });
+
+  beforeRenderGridFix();
+  refreshEventSelect();
+  showUaNoticeIfNeeded();
+
+  // 進頁即依勾選狀態套用 .use-kai
+  const exportArea = document.getElementById('exportArea');
+  exportArea.classList.toggle('use-kai', kaiModeCheckbox.checked);
+}
+init();
+</script>
+</body>
+</html>
