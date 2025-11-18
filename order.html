@@ -623,7 +623,6 @@ function buildRecord(){
   subscribeOrders(renderRecordsCloud);
 
   /* ---------- 清空本頁與備份（只保留最近一次） ----------
-
      流程：
      1) 確認（輸入「全部刪除」）
      2) 讀出所有 orders（若空則只清頁面）
@@ -632,11 +631,94 @@ function buildRecord(){
      5) 清空頁面輸入並 recalc()
   */
 
-  document.getElementById('btn-clear-all').addEventListener('click', async ()=>{...});
-  // NOTE: 上面行被壓縮為 ellipsis for brevity in this message,
-  // 在你現有檔案中該段完整內容已存在且未改動。
-  // （貼上時請保留原本的完整實作 — 若你需要我回傳完整未壓縮版本我也可以）
-  
+  document.getElementById('btn-clear-all').addEventListener('click', async ()=>{
+    const word = prompt(
+      '⚠️ 此動作會把資料備份為「上週訂購資料」（僅保留最近一次），並刪除資料庫「所有訂單」紀錄，且無法復原，並清空本頁輸入。\n\n' +
+      '請輸入「全部刪除」以確認：'
+    );
+    if (word !== '全部刪除') {
+      alert('已取消。');
+      return;
+    }
+
+    try {
+      // 1) 先讀出所有 orders
+      const snap = await getDocs(collection(db, 'orders'));
+      // 如果沒有任何 orders，仍清空本頁輸入但不建立 archive
+      if (snap.empty) {
+        document.querySelectorAll('.item input[type="number"]').forEach(i=>i.value=0);
+        recalc();
+        alert('雲端目前沒有紀錄；已清空本頁數量（無建立備份）。');
+        return;
+      }
+
+      // 2) 組成 orders 陣列與 summary
+      const ordersArray = [];
+      let sum2500=0, sum1050=0, sum330=0, grandTotal=0, totalQty=0, totalCount=0;
+      snap.forEach(d => {
+        const data = d.data();
+        ordersArray.push({
+          buyer: data.buyer || '',
+          ts: data.ts || '',
+          items: data.items || [],
+          sum_2500: data.sum_2500 || 0,
+          sum_1050: data.sum_1050 || 0,
+          sum_330:  data.sum_330  || 0,
+          grand:     data.grand   || 0
+        });
+        sum2500 += (data.sum_2500 || 0);
+        sum1050 += (data.sum_1050 || 0);
+        sum330  += (data.sum_330  || 0);
+        grandTotal += (data.grand || 0);
+        (data.items||[]).forEach(it => totalQty += (it.qty||0));
+        totalCount++;
+      });
+
+      // 3) 讓使用者輸入 archive label（或接受預設）
+      const now = new Date();
+      const defaultLabel = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}（備份 ${nowTS()}）`;
+      const label = prompt('請輸入此備份的標題（例如：2025-11 第2週）：', defaultLabel) || defaultLabel;
+
+      // 4) 寫入固定的 archive doc（archives/last-week，只保留最近一次）
+      const archiveDoc = {
+        label,
+        created_at: serverTimestamp(),
+        created_ts: nowTS(),
+        meta: { totalCount, totalQty },
+        summary: { sum_2500: sum2500, sum_1050: sum1050, sum_330: sum330, grand: grandTotal },
+        orders: ordersArray
+      };
+
+      const arcRef = doc(db, 'archives', 'last-week');
+      await setDoc(arcRef, archiveDoc);
+
+      // 5) 若寫入成功，開始分批刪除 orders（不先刪除任何東西）
+      let ops = 0, totalDeleted = 0;
+      let batch = writeBatch(db);
+      for (let i = 0; i < snap.docs.length; i++) {
+        const docSnap = snap.docs[i];
+        batch.delete(doc(db, 'orders', docSnap.id));
+        ops++; totalDeleted++;
+        if (ops === 450) {
+          await batch.commit();
+          batch = writeBatch(db);
+          ops = 0;
+        }
+      }
+      if (ops > 0) await batch.commit();
+
+      // 6) 清空頁面數量並更新 UI（subscribeOrders 會更新 records）
+      document.querySelectorAll('.item input[type="number"]').forEach(i=>i.value=0);
+      recalc();
+
+      alert(`✅ 已建立最新一筆「上週訂購資料」備份，共備份 ${totalCount} 筆，並刪除 ${totalDeleted} 筆雲端訂單。`);
+
+    } catch (e) {
+      console.error('備份/刪除發生錯誤', e);
+      alert('❌ 備份或刪除失敗：' + (e.message || e));
+    }
+  });
+
   // 初始顯示
   document.getElementById('ts').textContent = nowTS();
   const buyerInputEl=document.getElementById('buyer'); 
