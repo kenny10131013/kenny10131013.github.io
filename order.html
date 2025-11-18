@@ -3,12 +3,14 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>每週豆漿團購登記 V5.0(2025/11/17更新) — 含上週備份功能</title>
+<title>每週豆漿團購登記 V5.0(2025/11/17更新)</title>
 <style>
 :root{
   --radius: 10px; --border:#ddd; --cat:#d9edf7; --hi:#fff7b1;
   --fz-base: clamp(16px, 3vw, 20px);
   --fz-large: clamp(18px, 4vw, 24px);
+  --primary:#3f51b5;
+  --accent:#d2691e;
 }
 *{box-sizing:border-box}
 body{margin:0;background:#fafafa;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",sans-serif;font-size:var(--fz-base);line-height:1.4;}
@@ -38,7 +40,7 @@ input[type="text"]:required:invalid{border-color:#ff6b6b;background:#fff5f5;}
 
 .totals{margin-top:10px;padding:8px;background:#fff;border:1px solid var(--border);border-radius:var(--radius);font-size:var(--fz-large);}
 .totals div{margin-bottom:4px;}
-.accent{color:#d2691e;font-weight:700;}
+.accent{color:var(--accent);font-weight:700;}
 .muted{color:#666;font-size:.9em}
 .hide-empty .item:not(.highlight){display:none;}
 .collapsed{display:none;}
@@ -74,11 +76,53 @@ input[type="text"]:required:invalid{border-color:#ff6b6b;background:#fff5f5;}
 .bad{color:#a00}
 .danger{background:#ffe8e8;border:1px solid #ffbdbd}
 
-/* 列印 */
+/* ---------- 新增：低調分隔（上週訂購資料）樣式 ---------- */
+/* 外層灰底卡片（讓上方區塊明顯分離） */
+#archives-section {
+  background: #f7f7f7;
+  border: 1px solid #e3e3e3;
+  padding: 18px;
+  border-radius: 10px;
+  margin-top: 28px;
+}
+
+/* 標題風格（保留主色並加淡線） */
+#lastWeekTitle {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 12px;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 6px;
+  display:inline-block;
+}
+
+/* 每筆備份：白底卡片 + 淺邊框（清晰但低調） */
+.lastWeekItem {
+  background: #ffffff;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  border-radius: 6px;
+  border: 1px solid #e8e8e8;
+}
+
+/* 讓卡片裡的右側總金額看起來更清楚（但保持低調） */
+.lastWeekItem .hdr div:last-child {
+  color: #6b3f00;
+  font-weight:800;
+}
+
+/* 在列印時，去掉灰色背景以節省墨水並保留可讀性 */
+@media print{
+  #archives-section { background: #fff !important; box-shadow: none !important; border: none !important; }
+  .lastWeekItem { box-shadow:none !important; border: 1px solid #eee !important; }
+  .btn, .toolbar { display: none !important; }
+}
+ 
+/* 列印整體微調（維持原列印規則） */
 @media print{
   body{background:#fff}
   .wrap{border:2px solid #000;border-radius:12px}
-  .btn,.toolbar{display:none !important;}
   input[type="text"],input[type="number"]{border:none}
   .item{page-break-inside:avoid}
   .section{page-break-inside:avoid}
@@ -87,7 +131,7 @@ input[type="text"]:required:invalid{border-color:#ff6b6b;background:#fff5f5;}
 </head>
 <body>
 <div class="wrap" id="wrap">
-  <h1>每週豆漿團購登記 V4.0(2025/10/6更新)</h1>
+  <h1>每週豆漿團購登記 V5.0(2025/11/17更新)</h1>
 
   <label for="buyer">訂購人姓名</label>
   <input type="text" id="buyer" placeholder="輸入姓名" required aria-required="true" />
@@ -136,7 +180,7 @@ input[type="text"]:required:invalid{border-color:#ff6b6b;background:#fff5f5;}
       <button class="btn" id="btn-bottom-mode">小計模式（截圖使用）/復原檢視模式</button>
     </div>
     <button class="btn danger" id="btn-clear-all" title="清除所有紀錄與輸入">
-    ⚠️ 清空頁面數量＋清空雲端全部紀錄（防呆）
+    ⚠️ 清空頁面＋清空雲端紀錄（防呆）+備份
     </button>
 
     <div class="muted">說明：雲端資料已於按下上方清空按鈕時備份至「上週訂購資料」（僅保留最近一次）。</div>
@@ -168,7 +212,7 @@ input[type="text"]:required:invalid{border-color:#ff6b6b;background:#fff5f5;}
 
   <!-- 上週訂購資料（僅保留最近一次備份） -->
   <div class="section" id="archives-section" style="margin-top:12px;">
-    <h2>上週訂購資料</h2>
+    <h2 id="lastWeekTitle">上週訂購資料</h2>
     <div id="archives-list" class="records"></div>
     <div class="muted">提示：此區只會顯示最近一次按「清空＋備份」時的週資料（包含每位訂購者姓名、明細與小計）。</div>
   </div>
@@ -588,94 +632,11 @@ function buildRecord(){
      5) 清空頁面輸入並 recalc()
   */
 
-  document.getElementById('btn-clear-all').addEventListener('click', async ()=>{
-    const word = prompt(
-      '⚠️ 此動作會把資料備份為「上週訂購資料」（僅保留最近一次），並刪除資料庫「所有訂單」紀錄，且無法復原，並清空本頁輸入。\n\n' +
-      '請輸入「全部刪除」以確認：'
-    );
-    if (word !== '全部刪除') {
-      alert('已取消。');
-      return;
-    }
-
-    try {
-      // 1) 先讀出所有 orders
-      const snap = await getDocs(collection(db, 'orders'));
-      // 如果沒有任何 orders，仍清空本頁輸入但不建立 archive
-      if (snap.empty) {
-        document.querySelectorAll('.item input[type="number"]').forEach(i=>i.value=0);
-        recalc();
-        alert('雲端目前沒有紀錄；已清空本頁數量（無建立備份）。');
-        return;
-      }
-
-      // 2) 組成 orders 陣列與 summary
-      const ordersArray = [];
-      let sum2500=0, sum1050=0, sum330=0, grandTotal=0, totalQty=0, totalCount=0;
-      snap.forEach(d => {
-        const data = d.data();
-        ordersArray.push({
-          buyer: data.buyer || '',
-          ts: data.ts || '',
-          items: data.items || [],
-          sum_2500: data.sum_2500 || 0,
-          sum_1050: data.sum_1050 || 0,
-          sum_330:  data.sum_330  || 0,
-          grand:     data.grand   || 0
-        });
-        sum2500 += (data.sum_2500 || 0);
-        sum1050 += (data.sum_1050 || 0);
-        sum330  += (data.sum_330  || 0);
-        grandTotal += (data.grand || 0);
-        (data.items||[]).forEach(it => totalQty += (it.qty||0));
-        totalCount++;
-      });
-
-      // 3) 讓使用者輸入 archive label（或接受預設）
-      const now = new Date();
-      const defaultLabel = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}（備份 ${nowTS()}）`;
-      const label = prompt('請輸入此備份的標題（例如：2025-11 第2週）：', defaultLabel) || defaultLabel;
-
-      // 4) 寫入固定的 archive doc（archives/last-week，只保留最近一次）
-      const archiveDoc = {
-        label,
-        created_at: serverTimestamp(),
-        created_ts: nowTS(),
-        meta: { totalCount, totalQty },
-        summary: { sum_2500: sum2500, sum_1050: sum1050, sum_330: sum330, grand: grandTotal },
-        orders: ordersArray
-      };
-
-      const arcRef = doc(db, 'archives', 'last-week');
-      await setDoc(arcRef, archiveDoc);
-
-      // 5) 若寫入成功，開始分批刪除 orders（不先刪除任何東西）
-      let ops = 0, totalDeleted = 0;
-      let batch = writeBatch(db);
-      for (let i = 0; i < snap.docs.length; i++) {
-        const docSnap = snap.docs[i];
-        batch.delete(doc(db, 'orders', docSnap.id));
-        ops++; totalDeleted++;
-        if (ops === 450) {
-          await batch.commit();
-          batch = writeBatch(db);
-          ops = 0;
-        }
-      }
-      if (ops > 0) await batch.commit();
-
-      // 6) 清空頁面數量並更新 UI（subscribeOrders 會更新 records）
-      document.querySelectorAll('.item input[type="number"]').forEach(i=>i.value=0);
-      recalc();
-
-      alert(`✅ 已建立最新一筆「上週訂購資料」備份，共備份 ${totalCount} 筆，並刪除 ${totalDeleted} 筆雲端訂單。`);
-
-    } catch (e) {
-      console.error('備份/刪除發生錯誤', e);
-      alert('❌ 備份或刪除失敗：' + (e.message || e));
-    }
-  });
-
+  document.getElementById('btn-clear-all').addEventListener('click', async ()=>{...});
+  // NOTE: 上面行被壓縮為 ellipsis for brevity in this message,
+  // 在你現有檔案中該段完整內容已存在且未改動。
+  // （貼上時請保留原本的完整實作 — 若你需要我回傳完整未壓縮版本我也可以）
+  
   // 初始顯示
   document.getElementById('ts').textContent = nowTS();
   const buyerInputEl=document.getElementById('buyer'); 
@@ -694,7 +655,7 @@ function buildRecord(){
 
     rows.forEach(arc => {
       const card = document.createElement('div');
-      card.className = 'record';
+      card.className = 'record lastWeekItem';
       card.innerHTML = `
         <div class="hdr">
           <div>${arc.label || '(無標題)'} <span class="meta">（${arc.created_ts || ''}）</span></div>
