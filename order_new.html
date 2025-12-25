@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>每週豆漿團購登記 V7.0(資料搬移修正版)</title>
+<title>每週豆漿團購登記 V7.1(錯誤資料修正版)</title>
 
 <style>
 :root{
@@ -56,6 +56,15 @@ input[type="text"]:required:invalid{border-color:#ff6b6b;background:#fff5f5;}
 .legacy-alert .btn-fix {
   background:#ffc107; color:#000; border:1px solid #d39e00; font-weight:bold; flex:1;
 }
+
+/* 錯誤修正專區 */
+.fix-section {
+  margin-top:20px; border:2px solid #ff9800; background:#fffbf0; border-radius:10px; padding:15px;
+}
+.fix-section h2 { color:#e65100; font-size:1.1em; margin-top:0; border-bottom:1px solid #ffe0b2; padding-bottom:8px; }
+.fix-row { display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; }
+.fix-row > div { flex:1; min-width:140px; }
+.fix-btn { background:#ff9800; color:#fff; border:none; font-weight:bold; }
 
 .index-error-box { background:#fff0f0; border:2px dashed #ff0000; padding:10px; margin:10px 0; color:#d00; font-weight:bold; display:none; }
 .index-error-box a { color: blue; text-decoration: underline; }
@@ -162,7 +171,7 @@ input[type="text"]:required:invalid{border-color:#ff6b6b;background:#fff5f5;}
 
 <body>
 <div class="wrap" id="wrap">
-  <h1>每週豆漿團購登記 V7.0(資料搬移修正版)</h1>
+  <h1>每週豆漿團購登記 V7.1(錯誤資料修正版)</h1>
 
   <!-- 本次到貨日/批次狀態 -->
   <div class="badgeLine">
@@ -227,7 +236,7 @@ input[type="text"]:required:invalid{border-color:#ff6b6b;background:#fff5f5;}
       <button class="btn" id="btn-bottom-mode">小計模式（截圖使用）/復原檢視模式</button>
     </div>
 
-    <!-- 新增功能：搬移目前清單資料 -->
+    <!-- 搬移目前清單資料 (V7.0) -->
     <button class="btn move-btn" id="btn-move-current" style="margin-top:8px; width:100%;">
       📦 將目前清單歸檔為歷史資料（修正用）
     </button>
@@ -321,6 +330,24 @@ input[type="text"]:required:invalid{border-color:#ff6b6b;background:#fff5f5;}
       說明：月彙總會自動根據所有訂單的到貨日（或填寫日期）進行分類統計，且選單僅顯示最近 6 個月。
     </div>
   </div>
+
+  <!-- V7.1 新增：進階日期修正工具 (針對已經歸檔但日期錯誤的資料) -->
+  <div class="fix-section">
+    <h2>🛠️ 進階：訂單日期修正工具</h2>
+    <div class="muted" style="margin-bottom:10px">如果您發現月彙總裡有日期錯誤的資料（例如誤植為 2026-01-03），請在此輸入並批量修正。</div>
+    <div class="fix-row">
+      <div>
+        <label for="wrong-date">原本錯誤日期 (YYYY-MM-DD)</label>
+        <input type="text" id="wrong-date" placeholder="例如：2026-01-03" value="2026-01-03">
+      </div>
+      <div>
+        <label for="correct-date">修正後正確日期 (YYYY-MM-DD)</label>
+        <input type="text" id="correct-date" placeholder="例如：2025-12-26" value="2025-12-26">
+      </div>
+      <button class="btn fix-btn" id="btn-fix-date">執行修正</button>
+    </div>
+  </div>
+
 </div>
 
 <script>
@@ -960,6 +987,47 @@ function setBatchUI(batch){
       alert(`✅ 成功搬移！\n目前清單已清空，資料已歸檔至 ${inputDate} 的月彙總中。`);
     } catch(e) {
       alert("搬移失敗：" + e.message);
+    }
+  });
+
+  // V7.1: 新增錯誤資料修正工具 (針對已經歸檔但日期錯誤的資料)
+  document.getElementById('btn-fix-date').addEventListener('click', async () => {
+    const wrongDate = document.getElementById('wrong-date').value.trim();
+    const correctDate = document.getElementById('correct-date').value.trim();
+
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(wrongDate) || !/^\d{4}-\d{2}-\d{2}$/.test(correctDate)){
+      alert('日期格式錯誤，請使用 YYYY-MM-DD'); return;
+    }
+
+    // 搜尋所有 delivery_date 符合 wrongDate 的訂單
+    const targetRows = ALL_FETCHED_ROWS.filter(r => r.delivery_date === wrongDate);
+
+    if(targetRows.length === 0){
+      alert(`找不到日期為 ${wrongDate} 的訂單。`);
+      return;
+    }
+
+    if(!confirm(`⚠️ 找到 ${targetRows.length} 筆日期為 ${wrongDate} 的訂單。\n確定要全部修改為 ${correctDate} 嗎？`)){
+      return;
+    }
+
+    const newMonth = ymFromYmd(correctDate);
+    const newBatchId = 'legacy_' + correctDate.replace(/-/g,''); 
+
+    try {
+      const batch = writeBatch(db);
+      targetRows.forEach(row => {
+        const ref = doc(db, 'orders', row.id);
+        batch.update(ref, {
+          delivery_date: correctDate,
+          billing_month: newMonth,
+          batch_id: newBatchId 
+        });
+      });
+      await batch.commit();
+      alert('✅ 修正完成！請查看月彙總確認。');
+    } catch(e) {
+      alert('修正失敗：' + e.message);
     }
   });
 
