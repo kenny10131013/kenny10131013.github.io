@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>每週豆漿團購登記 V7.2(開發者刪除功能版)</title>
+<title>每週豆漿團購登記 V7.5(雙重確認結單版)</title>
 
 <style>
 :root{
@@ -57,10 +57,11 @@ input[type="text"]:required:invalid{border-color:#ff6b6b;background:#fff5f5;}
   background:#ffc107; color:#000; border:1px solid #d39e00; font-weight:bold; flex:1;
 }
 
-/* 錯誤修正專區 */
+/* 錯誤修正專區 (隱藏式) */
 .fix-section {
-  margin-top:20px; border:2px solid #ff9800; background:#fffbf0; border-radius:10px; padding:15px;
+  margin-top:20px; border:2px solid #ff9800; background:#fffbf0; border-radius:10px; padding:15px; display:none;
 }
+.fix-section.show { display:block; }
 .fix-section h2 { color:#e65100; font-size:1.1em; margin-top:0; border-bottom:1px solid #ffe0b2; padding-bottom:8px; }
 .fix-row { display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; }
 .fix-row > div { flex:1; min-width:140px; }
@@ -171,7 +172,7 @@ input[type="text"]:required:invalid{border-color:#ff6b6b;background:#fff5f5;}
 
 <body>
 <div class="wrap" id="wrap">
-  <h1>每週豆漿團購登記 V7.2(開發者刪除功能版)</h1>
+  <h1>每週豆漿團購登記 V7.5(雙重確認結單版)</h1>
 
   <!-- 本次到貨日/批次狀態 -->
   <div class="badgeLine">
@@ -236,18 +237,18 @@ input[type="text"]:required:invalid{border-color:#ff6b6b;background:#fff5f5;}
       <button class="btn" id="btn-bottom-mode">小計模式（截圖使用）/復原檢視模式</button>
     </div>
 
-    <!-- 搬移目前清單資料 (V7.0) -->
+    <!-- 搬移目前清單資料 (保留，這是好用的工具) -->
     <button class="btn move-btn" id="btn-move-current" style="margin-top:8px; width:100%;">
       📦 將目前清單歸檔為歷史資料（修正用）
     </button>
     <div class="muted" style="margin-bottom:8px;">說明：如果您發現舊資料混在「本次團購」中，請按此按鈕將它們移到正確的舊日期。</div>
 
     <button class="btn danger" id="btn-clear-all" title="結束本批次（備份為上週）並開啟新批次">
-      ⚠️ 清空頁面＋清空雲端紀錄（防呆）+備份（並選擇到貨日）
+      ⚠️ 結單並開啟新團購（自動備份本期資料）
     </button>
 
     <div class="muted">
-      說明：此按鈕會把「本批次」雲端資料備份至「上週訂購資料」（僅保留最近一次），並關閉本批次、建立新批次（到貨日由團主選擇）。
+      說明：按下後會先請您確認「本期」的歸檔日期，再設定「下期」的開啟日期。
     </div>
   </div>
 
@@ -255,7 +256,7 @@ input[type="text"]:required:invalid{border-color:#ff6b6b;background:#fff5f5;}
   <div class="section" id="records-section">
     <h2>團購清單（雲端即時）－本次到貨：<span id="delivery-date-text-2">（尚未設定）</span></h2>
     
-    <!-- 舊資料救援區 (保留，針對無批次編號的孤兒) -->
+    <!-- 舊資料救援區 -->
     <div id="legacy-data-alert" class="legacy-alert">
       <h3>⚠️ 發現無編號訂單：<span id="legacy-count">0</span> 筆</h3>
       <p style="font-size:0.9em;color:#666;margin:4px 0 0;">這些是未曾歸類的 V5 舊資料。</p>
@@ -307,17 +308,10 @@ input[type="text"]:required:invalid{border-color:#ff6b6b;background:#fff5f5;}
       <label style="margin:0;min-width:78px;font-weight:800;">選擇月份</label>
       <select id="monthly-month" class="btn" style="padding:10px 12px;"></select>
       
-      <!-- 重新整理按鈕，現在是純前端篩選，速度很快 -->
       <button class="btn" id="btn-month-refresh">顯示資料</button>
 
-      <!-- 新增：開發者刪除月資料功能 -->
-      <button class="btn danger" id="btn-delete-month" title="開發者功能：刪除選中月份的所有訂單">🗑️ 刪除此月份資料（開發用）</button>
-      
-      <!-- 隱藏功能 (保留 UI 但禁用，避免複雜權限問題) -->
-      <label class="btn" style="display:none; align-items:center;gap:6px; opacity:0.5;">
-        <input type="checkbox" id="chk-show-hidden" disabled />
-        顯示已隱藏月份
-      </label>
+      <!-- 開發者按鈕隱藏，避免誤觸 -->
+      <button class="btn danger" id="btn-toggle-fix" style="opacity:0.6; font-size:0.8em;">🛠️ 進階修正</button>
     </div>
 
     <div id="monthly-kpi" class="kpi"></div>
@@ -332,18 +326,18 @@ input[type="text"]:required:invalid{border-color:#ff6b6b;background:#fff5f5;}
     </div>
   </div>
 
-  <!-- V7.1 新增：進階日期修正工具 (針對已經歸檔但日期錯誤的資料) -->
-  <div class="fix-section">
+  <!-- V7.1 進階日期修正工具 (預設隱藏，點擊顯示) -->
+  <div class="fix-section" id="fix-section">
     <h2>🛠️ 進階：訂單日期修正工具</h2>
     <div class="muted" style="margin-bottom:10px">如果您發現月彙總裡有日期錯誤的資料（例如誤植為 2026-01-03），請在此輸入並批量修正。</div>
     <div class="fix-row">
       <div>
         <label for="wrong-date">原本錯誤日期 (YYYY-MM-DD)</label>
-        <input type="text" id="wrong-date" placeholder="例如：2026-01-03" value="2026-01-03">
+        <input type="text" id="wrong-date" placeholder="例如：2026-01-03">
       </div>
       <div>
         <label for="correct-date">修正後正確日期 (YYYY-MM-DD)</label>
-        <input type="text" id="correct-date" placeholder="例如：2025-12-26" value="2025-12-26">
+        <input type="text" id="correct-date" placeholder="例如：2025-12-26">
       </div>
       <button class="btn fix-btn" id="btn-fix-date">執行修正</button>
     </div>
@@ -629,7 +623,7 @@ function setBatchUI(batch){
     if(batch.status === 'open') btnAdd.textContent = '填寫完成/加入至統計表（送雲端）';
     else btnAdd.textContent = '本批次已關閉，無法送單';
     
-    btnClear.textContent = '⚠️ 清空頁面＋清空雲端紀錄（防呆）+備份（並選擇到貨日）';
+    btnClear.textContent = '⚠️ 結單並開啟新團購（自動備份本期資料）';
     warning.style.display = 'none';
   }
 }
@@ -644,9 +638,6 @@ function setBatchUI(batch){
     query, orderBy, onSnapshot, getDocs, where, doc, getDoc, setDoc, updateDoc, writeBatch
   } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
   
-  // V6.5 改回不強制使用 Auth，以相容 V5 環境
-  // import { getAuth, signInAnonymously, ... } from ...
-
   /* Firebase Config */
   const firebaseConfig = {
     apiKey: "AIzaSyBDtSRcMhjLUqzU_BS9p3bFaqT2nZc4lu8",
@@ -663,14 +654,10 @@ function setBatchUI(batch){
   const db  = getFirestore(app);
   console.log("Firebase 初始化完成，資料庫實例：", db);
 
-  // ========= Collections/Docs (V6.5 修改：將 meta 改存到 archives) =========
-  // 因為使用者回報 V5 可用，代表 orders 與 archives 權限是開的
-  // 我們把 batch 狀態存到 archives/_BATCH_STATUS_ 裡面
-  const currentBatchRef = doc(db, 'archives', '_BATCH_STATUS_');
+  // ========= Collections/Docs (V7.3 修改：將 meta 改存到 orders/_CONFIG_BATCH_ 以確保權限) =========
+  // V7.3 終極權限解法：使用 orders 集合來存設定，因為使用者有權限讀寫 orders
+  const currentBatchRef = doc(db, 'orders', '_CONFIG_BATCH_');
   
-  // 隱藏月份設定也改存 archives (暫時不用，因權限複雜，本版改為純前端顯示)
-  // const hiddenMonthsRef = doc(db, 'archives', '_HIDDEN_MONTHS_');
-
   // ========= 狀態：目前批次 =========
   let CURRENT_BATCH = null;
   let unsubscribeOrders = null;
@@ -688,7 +675,7 @@ function setBatchUI(batch){
     try {
       const snap = await getDoc(currentBatchRef);
       if(!snap.exists()){
-        console.warn("⚠️ 尚未找到批次設定 (archives/_BATCH_STATUS_)，進入 V5 相容模式。");
+        console.warn("⚠️ 尚未找到批次設定 (orders/_CONFIG_BATCH_)，進入 V5 相容模式。");
         CURRENT_BATCH = null;
         setBatchUI(null);
         return null;
@@ -749,7 +736,7 @@ function setBatchUI(batch){
     const newBillingMonth = ymFromYmd(newDate);
     
     try {
-        // 1. Update Meta (archives/_BATCH_STATUS_)
+        // 1. Update Meta
         await updateDoc(currentBatchRef, {
             delivery_date: newDate,
             billing_month: newBillingMonth,
@@ -842,8 +829,8 @@ function setBatchUI(batch){
       errorBox.style.display = 'none';
       const allRows = snap.docs.map(d=>({ id:d.id, ...d.data() }));
       
-      // 1. 過濾已刪除
-      const activeRows = allRows.filter(r => !r.deleted_at);
+      // 1. 過濾已刪除，並過濾掉設定檔 (_CONFIG_BATCH_)
+      const activeRows = allRows.filter(r => !r.deleted_at && r.id !== '_CONFIG_BATCH_');
       
       // V6.6: 將所有有效訂單存入全域變數，供「月彙總」使用
       ALL_FETCHED_ROWS = activeRows;
@@ -991,7 +978,14 @@ function setBatchUI(batch){
     }
   });
 
-  // V7.1: 新增錯誤資料修正工具 (針對已經歸檔但日期錯誤的資料)
+  // V7.1: 新增錯誤資料修正工具 (預設隱藏)
+  // 控制顯示按鈕
+  document.getElementById('btn-toggle-fix').addEventListener('click', ()=>{
+      const panel = document.getElementById('fix-section');
+      if(panel.style.display === 'block') panel.style.display = 'none';
+      else panel.style.display = 'block';
+  });
+
   document.getElementById('btn-fix-date').addEventListener('click', async () => {
     const wrongDate = document.getElementById('wrong-date').value.trim();
     const correctDate = document.getElementById('correct-date').value.trim();
@@ -1032,47 +1026,133 @@ function setBatchUI(batch){
     }
   });
 
-  // 新增：開發者刪除月資料功能
-  document.getElementById('btn-delete-month').addEventListener('click', async () => {
-    const sel = document.getElementById('monthly-month');
-    const bm = sel.value;
-    if(!bm) { alert("請先選擇一個月份"); return; }
-
-    const code = prompt(`⚠️ 危險操作！\n您即將刪除「${bm}」的所有訂單資料，且無法復原。\n\n請輸入開發者驗證碼：`);
-    if(code !== '4908') { alert('驗證碼錯誤'); return; }
-
-    // Filter rows to delete using existing global cache
-    const targetRows = ALL_FETCHED_ROWS.filter(row => {
-        let rowM = null;
-        if (row.billing_month) rowM = row.billing_month;
-        else if (row.delivery_date) rowM = ymFromYmd(row.delivery_date);
-        else if (row.ts) {
-            const match = row.ts.match(/^(\d{4})\/(\d{2})/);
-            if (match) rowM = `${match[1]}-${match[2]}`;
-        }
-        return rowM === bm;
-    });
-
-    if(targetRows.length === 0) { alert('此月份無資料'); return; }
-
-    if(!confirm(`確認刪除 ${targetRows.length} 筆資料？`)) return;
-
-    // Execute Delete
-    try {
-      // Chunking for batch delete limits (500)
-      const chunk = (arr, size) => Array.from({ length: Math.ceil(arr.length / size) }, (v, i) => arr.slice(i * size, i * size + size));
-      const chunks = chunk(targetRows, 450);
-
-      for (const c of chunks) {
-          const batch = writeBatch(db);
-          c.forEach(row => batch.delete(doc(db, 'orders', row.id)));
-          await batch.commit();
-      }
-      alert('✅ 刪除成功！');
-    } catch(e) {
-      alert('刪除失敗：' + e.message);
+  // V7.5: 雙重確認結單邏輯
+  async function closeAndOpenNewBatch() {
+    // 檢查是否有舊資料，若有，提醒使用者先整合
+    if (LEGACY_ROWS.length > 0) {
+      alert(`⚠️ 系統偵測到還有 ${LEGACY_ROWS.length} 筆「未歸類」的舊資料。\n建議您先按上方的「歸檔至此日期」按鈕進行整合，再來執行清空備份，以免資料遺失。`);
+      return;
     }
-  });
+
+    // 第一步：詢問確認
+    const word = prompt(
+      '⚠️ 此動作會：\n' +
+      '1) 備份「本批次」為上週訂購資料\n' +
+      '2) 關閉本批次並開啟新一期團購\n\n' +
+      '請輸入「全部確認」以繼續：'
+    );
+    if(word !== '全部確認'){
+      alert('已取消。');
+      return;
+    }
+
+    // 第二步：確認「目前這批」資料的正確到貨日
+    // 預設抓目前的設定，如果沒有就抓下週五
+    const currentDefault = CURRENT_BATCH?.delivery_date || nextFridayYmd();
+    
+    // 如果現在列表是空的，這一步可能比較沒意義，但為了保險還是問一下
+    const confirmCurrentDate = prompt(
+        `【步驟 1/2】請確認「即將結單歸檔」這批資料的正確到貨日？\n(我們會將目前列表上的訂單更新為此日期，確保歷史紀錄正確)`, 
+        currentDefault
+    );
+    
+    if (!confirmCurrentDate) return;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(confirmCurrentDate)) {
+      alert('日期格式錯誤'); return;
+    }
+
+    // 第三步：設定「新一期」的到貨日
+    const nextDefault = nextFridayYmd();
+    const newDeliveryDate = prompt(
+        `【步驟 2/2】請輸入「新一期」的預計到貨日？\n(這將會是清空後，新訂單的預設日期)`, 
+        nextDefault
+    );
+
+    if (!newDeliveryDate) return;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(newDeliveryDate)) {
+      alert('日期格式錯誤'); return;
+    }
+
+    const newBillingMonth = ymFromYmd(newDeliveryDate);
+    const currentBillingMonth = ymFromYmd(confirmCurrentDate);
+
+    try {
+        // A. 修正目前批次所有訂單的日期 (Batch Update)
+        if(CURRENT_BATCH && CURRENT_BATCH.batch_id){
+          const rows = await getBatchOrders(CURRENT_BATCH.batch_id);
+          
+          if(rows.length){
+            const batch = writeBatch(db);
+            rows.forEach(row => {
+                const ref = doc(db, 'orders', row.id);
+                batch.update(ref, {
+                    delivery_date: confirmCurrentDate,
+                    billing_month: currentBillingMonth
+                });
+            });
+            await batch.commit(); // 執行日期修正
+
+            // B. 建立備份 (Archive)
+            const ordersArray = rows.map(data => ({
+                buyer: data.buyer || '',
+                ts: data.ts || '',
+                items: data.items || [],
+                sum_2500: data.sum_2500 || 0,
+                sum_1050: data.sum_1050 || 0,
+                sum_330:  data.sum_330  || 0,
+                grand:     data.grand   || 0
+            }));
+            
+            // 計算總和
+            let sum2500=0, sum1050=0, sum330=0, grandTotal=0, totalQty=0, totalCount=0;
+            rows.forEach(data => {
+                sum2500 += (data.sum_2500 || 0);
+                sum1050 += (data.sum_1050 || 0);
+                sum330  += (data.sum_330  || 0);
+                grandTotal += (data.grand || 0);
+                (data.items||[]).forEach(it => totalQty += (it.qty||0));
+                totalCount++;
+            });
+
+            const archiveDoc = {
+              label: `${currentBillingMonth}（到貨 ${confirmCurrentDate}）備份 ${nowTS()}`,
+              created_at: serverTimestamp(),
+              created_ts: nowTS(),
+              batch_id: CURRENT_BATCH.batch_id,
+              delivery_date: confirmCurrentDate, // 使用確認後的日期
+              billing_month: currentBillingMonth,
+              meta: { totalCount, totalQty },
+              summary: { sum_2500, sum_1050, sum330, grand: grandTotal },
+              orders: ordersArray
+            };
+            await setDoc(doc(db, 'archives', 'last-week'), archiveDoc);
+          }
+        }
+
+        // C. 開啟新批次 (切換 Batch ID)
+        const newBatchId = 'batch_' + Date.now(); 
+
+        await setDoc(currentBatchRef, {
+          batch_id: newBatchId,
+          delivery_date: newDeliveryDate,
+          billing_month: newBillingMonth,
+          status: 'open',
+          updated_at: serverTimestamp()
+        });
+
+        // 清空頁面數量
+        document.querySelectorAll('.item input[type="number"]').forEach(i=>i.value=0);
+        recalc();
+
+        alert(`✅ 結單完成！\n\n舊訂單已歸檔至：${confirmCurrentDate}\n新一期團購已開啟：${newDeliveryDate}`);
+    
+    } catch(e) {
+        console.error(e);
+        alert("操作失敗：" + e.message);
+    }
+  }
+
+  document.getElementById('btn-clear-all').addEventListener('click', closeAndOpenNewBatch);
 
   // ========= 渲染：本批次清單 + 彙總 =========
   function renderRecordsCloud(rows){
@@ -1243,98 +1323,7 @@ function setBatchUI(batch){
     return snap.docs.map(d=>({ id:d.id, ...d.data() }));
   }
 
-  async function closeAndOpenNewBatch(){
-    const word = prompt(
-      '⚠️ 此動作會：\n' +
-      '1) 備份「本批次」為上週訂購資料（僅保留最近一次）\n' +
-      '2) 關閉本批次\n' +
-      '3) 建立新批次（你需輸入到貨日，建議週五）\n\n' +
-      '請輸入「全部確認」以繼續：'
-    );
-    if(word !== '全部確認'){
-      alert('已取消。');
-      return;
-    }
-
-    const defaultDd = nextFridayYmd();
-    const deliveryDate = (prompt('請輸入「新批次」到貨日（格式 YYYY-MM-DD，建議週五）：', defaultDd) || '').trim();
-    if(!/^\d{4}-\d{2}-\d{2}$/.test(deliveryDate)){
-      alert('到貨日格式錯誤，請使用 YYYY-MM-DD。已取消。');
-      return;
-    }
-    const billingMonth = ymFromYmd(deliveryDate);
-
-    try {
-        // 若有現行批次：先備份
-        if(CURRENT_BATCH && CURRENT_BATCH.batch_id){
-          const rows = await getBatchOrders(CURRENT_BATCH.batch_id);
-          if(rows.length){
-            const ordersArray = [];
-            let sum2500=0, sum1050=0, sum330=0, grandTotal=0, totalQty=0, totalCount=0;
-            rows.forEach(data => {
-              ordersArray.push({
-                buyer: data.buyer || '',
-                ts: data.ts || '',
-                items: data.items || [],
-                sum_2500: data.sum_2500 || 0,
-                sum_1050: data.sum_1050 || 0,
-                sum_330:  data.sum_330  || 0,
-                grand:     data.grand   || 0
-              });
-              sum2500 += (data.sum_2500 || 0);
-              sum1050 += (data.sum_1050 || 0);
-              sum330  += (data.sum_330  || 0);
-              grandTotal += (data.grand || 0);
-              (data.items||[]).forEach(it => totalQty += (it.qty||0));
-              totalCount++;
-            });
-
-            const now = new Date();
-            const defaultLabel = `${CURRENT_BATCH.billing_month || ''}（到貨 ${CURRENT_BATCH.delivery_date || ''}）備份 ${nowTS()}`;
-            // 簡化流程，不再跳第二次 prompt，直接存
-            const label = defaultLabel;
-
-            const archiveDoc = {
-              label,
-              created_at: serverTimestamp(),
-              created_ts: nowTS(),
-              batch_id: CURRENT_BATCH.batch_id,
-              delivery_date: CURRENT_BATCH.delivery_date || '',
-              billing_month: CURRENT_BATCH.billing_month || '',
-              meta: { totalCount, totalQty },
-              summary: { sum_2500: sum2500, sum_1050: sum1050, sum_330: sum330, grand: grandTotal },
-              orders: ordersArray
-            };
-            await setDoc(doc(db, 'archives', 'last-week'), archiveDoc);
-          }
-          // 不再寫入 batches collection (權限問題)，直接覆寫狀態即可
-        }
-
-        // 建立新 batch ID
-        const newBatchId = 'batch_' + Date.now(); // 簡單用時間戳當 ID
-
-        // 寫入 currentBatch (存到 archives/_BATCH_STATUS_)
-        await setDoc(currentBatchRef, {
-          batch_id: newBatchId,
-          delivery_date: deliveryDate,
-          billing_month: billingMonth,
-          status: 'open',
-          updated_at: serverTimestamp()
-        });
-
-        // 清空頁面數量
-        document.querySelectorAll('.item input[type="number"]').forEach(i=>i.value=0);
-        recalc();
-
-        alert(`✅ 新批次已建立：到貨日 ${deliveryDate}（${billingMonth}）\n本次訂單將歸屬該到貨日批次。`);
-    
-    } catch(e) {
-        console.error(e);
-        alert("操作失敗，可能是權限不足：" + e.message);
-    }
-  }
-
-  document.getElementById('btn-clear-all').addEventListener('click', closeAndOpenNewBatch);
+  // document.getElementById('btn-clear-all').addEventListener('click', closeAndOpenNewBatch); // 已在上方定義
 
   // ========= 月彙總 (V6.7 純前端計算，支援舊資料，只顯示最近 6 個月) =========
   function updateMonthlyDropdown() {
