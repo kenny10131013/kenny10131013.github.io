@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>每週豆漿團購登記 V6.3(權限修正版)</title>
+<title>每週豆漿團購登記 V6.4(舊資料直讀版)</title>
 
 <style>
 :root{
@@ -155,7 +155,7 @@ input[type="text"]:required:invalid{border-color:#ff6b6b;background:#fff5f5;}
 
 <body>
 <div class="wrap" id="wrap">
-  <h1>每週豆漿團購登記 V6.3(權限修正版)</h1>
+  <h1>每週豆漿團購登記 V6.4(舊資料直讀版)</h1>
 
   <!-- 本次到貨日/批次狀態 -->
   <div class="badgeLine">
@@ -824,10 +824,24 @@ function setBatchUI(batch){
       updateLegacyUI(legacyRows.length);
       
       if (CURRENT_BATCH && CURRENT_BATCH.batch_id) {
+         // 正常模式：顯示本批次資料
          renderRecordsCloud(currentRows);
       } else {
-         listEl.innerHTML = '<div class="muted">尚未建立本次到貨批次（請團主按下清空+備份並選擇到貨日）。</div>';
-         renderAggregateCloud([]);
+         // 尚未建立批次模式：顯示舊資料
+         if (legacyRows.length > 0) {
+             renderRecordsCloud(legacyRows);
+             // 插入提示 Banner
+             const banner = document.createElement('div');
+             banner.className = 'badge warn';
+             banner.style.cssText = 'margin-bottom:10px; width:100%; justify-content:center;';
+             banner.innerHTML = '⚠️ 目前顯示：資料庫中的未歸檔資料（V5舊資料）';
+             listEl.prepend(banner);
+             
+             document.getElementById('delivery-date-text-2').textContent = '未歸檔資料';
+         } else {
+             listEl.innerHTML = '<div class="muted">尚未建立本次到貨批次（請團主按下清空+備份並選擇到貨日）。</div>';
+             renderAggregateCloud([]);
+         }
       }
       
     }, err=>{
@@ -854,6 +868,7 @@ function setBatchUI(batch){
     const countSpan = document.getElementById('legacy-count');
     
     // 只有在「有批次」且「有舊資料」時才顯示修復按鈕
+    // 如果沒有批次，我們會直接顯示舊資料，所以不需要顯示「修復按鈕」以免混淆
     if (count > 0 && CURRENT_BATCH && CURRENT_BATCH.status === 'open') {
       alertBox.style.display = 'block';
       countSpan.textContent = count;
@@ -896,7 +911,14 @@ function setBatchUI(batch){
   function renderRecordsCloud(rows){
     const listEl = document.getElementById('records-list');
     if(!rows.length){
-      listEl.innerHTML = '<div class="muted">本批次尚無紀錄。</div>';
+      // 如果列表為空，且不是在 fallback 模式下
+      if (!CURRENT_BATCH || !CURRENT_BATCH.batch_id) {
+          // Fallback mode but no legacy rows? handled in subscribeOrdersGlobal
+          // This block runs if rows is empty passed from caller
+          listEl.innerHTML = '<div class="muted">目前無資料。</div>';
+      } else {
+          listEl.innerHTML = '<div class="muted">本批次尚無紀錄。</div>';
+      }
       renderAggregateCloud([]);
       return;
     }
