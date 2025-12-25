@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>每週豆漿團購登記 V7.5(雙重確認結單版)</title>
+<title>每週豆漿團購登記 V7.7(三階段流動版)</title>
 
 <style>
 :root{
@@ -172,7 +172,7 @@ input[type="text"]:required:invalid{border-color:#ff6b6b;background:#fff5f5;}
 
 <body>
 <div class="wrap" id="wrap">
-  <h1>每週豆漿團購登記 V7.5(雙重確認結單版)</h1>
+  <h1>每週豆漿團購登記 V7.7(三階段流動版)</h1>
 
   <!-- 本次到貨日/批次狀態 -->
   <div class="badgeLine">
@@ -248,7 +248,7 @@ input[type="text"]:required:invalid{border-color:#ff6b6b;background:#fff5f5;}
     </button>
 
     <div class="muted">
-      說明：按下後會先請您確認「本期」的歸檔日期，再設定「下期」的開啟日期。
+      說明：按下後會先請您確認「本期」的歸檔日期，將本期資料存入「上週訂購資料」，再設定「下期」的開啟日期。
     </div>
   </div>
 
@@ -297,7 +297,7 @@ input[type="text"]:required:invalid{border-color:#ff6b6b;background:#fff5f5;}
   <div class="section" id="archives-section">
     <h2 id="lastWeekTitle">上週訂購資料</h2>
     <div id="archives-list" class="records"></div>
-    <div class="muted">提示：此區只會顯示最近一次按「清空＋備份」時的本批次資料（包含每位訂購者姓名、明細與小計）。</div>
+    <div class="muted">提示：此區顯示的是您最近一次按下「結單」時備份的那一批資料。</div>
   </div>
 
   <!-- 月彙總（網頁呈現） -->
@@ -322,7 +322,7 @@ input[type="text"]:required:invalid{border-color:#ff6b6b;background:#fff5f5;}
     <div id="monthly-list"></div>
 
     <div class="muted">
-      說明：月彙總會自動根據所有訂單的到貨日（或填寫日期）進行分類統計，且選單僅顯示最近 6 個月。
+      說明：月彙總會自動根據所有訂單的到貨日（或填寫日期）進行分類統計，並會自動隱藏「目前批次」與「上週備份」的日期，避免重複顯示。
     </div>
   </div>
 
@@ -635,7 +635,7 @@ function setBatchUI(batch){
   import {
     getFirestore,
     collection, addDoc, serverTimestamp,
-    query, orderBy, onSnapshot, getDocs, where, doc, getDoc, setDoc, updateDoc, writeBatch
+    query, orderBy, onSnapshot, getDocs, where, doc, getDoc, setDoc, updateDoc, writeBatch, deleteDoc
   } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
   
   /* Firebase Config */
@@ -661,6 +661,7 @@ function setBatchUI(batch){
   // ========= 狀態：目前批次 =========
   let CURRENT_BATCH = null;
   let unsubscribeOrders = null;
+  let LAST_WEEK_DATE = null; // V7.7: 用於過濾月彙總的日期
   
   // 全域訂單快取 (V6.6 新增：用於前端彙總)
   let ALL_FETCHED_ROWS = [];
@@ -1178,6 +1179,8 @@ function setBatchUI(batch){
         </div>
         <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
           <button class="btn btn-toggle-detail">明細</button>
+          <!-- 恢復刪除按鈕 (V7.6) -->
+          <button class="btn bad btn-del-record" data-id="${rec.id}">刪除</button>
         </div>
         <div class="details">
           <table>
@@ -1194,6 +1197,19 @@ function setBatchUI(batch){
       });
 
       card.querySelector('.btn-toggle-detail').addEventListener('click',()=>card.classList.toggle('open'));
+      
+      // 刪除按鈕事件
+      card.querySelector('.btn-del-record').addEventListener('click', async (e) => {
+          if(confirm('確定要刪除這筆訂單嗎？(無法復原)')) {
+              try {
+                  await deleteDoc(doc(db, 'orders', rec.id));
+                  // UI 會自動更新
+              } catch(err) {
+                  alert('刪除失敗：' + err.message);
+              }
+          }
+      });
+
       listEl.appendChild(card);
     });
 
@@ -1264,6 +1280,10 @@ function setBatchUI(batch){
       return;
     }
     rows.forEach(arc => {
+      // V7.7: 更新全域變數
+      LAST_WEEK_DATE = arc.delivery_date;
+      refreshMonthly(); // 觸發過濾
+
       const card = document.createElement('div');
       card.className = 'record lastWeekItem';
       card.innerHTML = `
@@ -1390,8 +1410,18 @@ function setBatchUI(batch){
     const bm = sel.value;
     if(!bm) return;
 
-    // 前端過濾
+    // V7.7: 過濾邏輯更新 (排他性)
     const targetRows = ALL_FETCHED_ROWS.filter(row => {
+        // 1. 取得這筆資料的日期
+        const rowDate = row.delivery_date || (row.ts ? row.ts.split(' ')[0].replace(/\//g,'-') : '');
+        
+        // 2. 如果這筆資料屬於「本期」，則過濾掉
+        if (CURRENT_BATCH?.delivery_date && rowDate === CURRENT_BATCH.delivery_date) return false;
+        
+        // 3. 如果這筆資料屬於「上週備份」，則過濾掉
+        if (LAST_WEEK_DATE && rowDate === LAST_WEEK_DATE) return false;
+
+        // 4. 月份比對
         let rowM = null;
         if (row.billing_month) rowM = row.billing_month;
         else if (row.delivery_date) rowM = ymFromYmd(row.delivery_date);
@@ -1417,7 +1447,7 @@ function setBatchUI(batch){
     if(!rows.length){
       kpiEl.innerHTML = `<div class="k">月份 <strong>${billingMonth}</strong>：無資料</div>`;
       catsEl.innerHTML = '';
-      listEl.innerHTML = `<div class="muted">此月份尚無訂單。</div>`;
+      listEl.innerHTML = `<div class="muted">此月份尚無其他已歸檔訂單（可能正在本期或上週顯示中）。</div>`;
       return;
     }
 
