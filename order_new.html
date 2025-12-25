@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>每週豆漿團購登記 V9.1(資料流修正與姓名彙總版)</title>
+<title>每週豆漿團購登記 V9.2(精簡版)</title>
 
 <style>
 :root{
@@ -173,7 +173,7 @@ input[type="text"]:required:invalid{border-color:#ff6b6b;background:#fff5f5;}
 
 <body>
 <div class="wrap" id="wrap">
-  <h1>每週豆漿團購登記 V9.1(資料流修正與姓名彙總版)</h1>
+  <h1>每週豆漿團購登記 V9.2(精簡版)</h1>
 
   <!-- 本次到貨日/批次狀態 -->
   <div class="badgeLine">
@@ -238,12 +238,6 @@ input[type="text"]:required:invalid{border-color:#ff6b6b;background:#fff5f5;}
       <button class="btn" id="btn-bottom-mode">小計模式（截圖使用）/復原檢視模式</button>
     </div>
 
-    <!-- 搬移目前清單資料 -->
-    <button class="btn move-btn" id="btn-move-current" style="margin-top:8px; width:100%;">
-      📦 將目前清單歸檔為歷史資料（修正用）
-    </button>
-    <div class="muted" style="margin-bottom:8px;">說明：如果您發現舊資料混在「本次團購」中，請按此按鈕將它們移到正確的舊日期。</div>
-
     <button class="btn danger" id="btn-clear-all" title="結束本批次（備份為上週）並開啟新批次">
       ⚠️ 結單並開啟新團購（自動備份本期資料）
     </button>
@@ -298,9 +292,10 @@ input[type="text"]:required:invalid{border-color:#ff6b6b;background:#fff5f5;}
   <div class="section" id="archives-section">
     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
       <h2 id="lastWeekTitle" style="margin:0;">上週訂購資料</h2>
+      <button class="btn restore-btn" id="btn-restore-archive">♻️ 將此備份還原回資料庫（補上日期）</button>
     </div>
     <div class="muted" style="margin-top:5px; margin-bottom:10px;">
-       提示：此區顯示最近一次結單的備份資料。若為舊版資料，系統已自動嘗試將其歸檔至月彙總。
+       注意：如果這份資料是從舊版備份來的，它可能不在資料庫中。若想在「月彙總」看到它，請按右上角「還原」按鈕並輸入日期。
     </div>
     <div id="archives-list" class="records"></div>
   </div>
