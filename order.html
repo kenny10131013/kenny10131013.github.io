@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>每週豆漿團購登記 V5.0(2025/11/17更新)</title>
+<title>每週豆漿團購登記 V6.1(批次/到貨日/月彙總/隱藏月份)</title>
+
 <style>
 :root{
   --radius: 10px; --border:#ddd; --cat:#d9edf7; --hi:#fff7b1;
@@ -15,15 +16,29 @@
 *{box-sizing:border-box}
 body{margin:0;background:#fafafa;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",sans-serif;font-size:var(--fz-base);line-height:1.4;}
 .wrap{max-width:720px;margin:auto;padding:10px;background:#fff;border:2px solid #000;border-radius:12px;}
-h1{font-size:var(--fz-large);margin:4px 0 12px;text-align:center;}
+h1{font-size:var(--fz-large);margin:4px 0 8px;text-align:center;}
+
+.badgeLine{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin:6px 0 12px;}
+.badge{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:6px 10px;border:1px solid var(--border);border-radius:999px;
+  background:#fff;font-weight:700;
+}
+.badge strong{color:var(--primary)}
+.badge.warn{background:#fff7f7;border-color:#ffc9c9}
+.badge.ok{background:#f6fffa;border-color:#b7efc5}
+
 label{display:block;margin-bottom:6px;font-weight:600;}
 input[type="text"]{width:100%;padding:8px;font-size:var(--fz-large);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:10px;}
-/* 姓名必填的視覺提示 */
 input[type="text"]:required:invalid{border-color:#ff6b6b;background:#fff5f5;}
 
-.toolbar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;}
+.toolbar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;align-items:center;}
 .btn{padding:10px 12px;font-size:var(--fz-base);border:1px solid var(--border);background:#fff;border-radius:var(--radius);cursor:pointer;}
 .btn:active{transform:scale(.97)}
+.btn[disabled]{opacity:.55;cursor:not-allowed}
+.danger{background:#ffe8e8;border:1px solid #ffbdbd}
+.bad{color:#a00}
+.muted{color:#666;font-size:.9em}
 
 .cat-header{display:flex;justify-content:space-between;align-items:center;background:var(--cat);padding:6px 8px;border-radius:var(--radius);margin-top:10px;margin-bottom:6px;font-weight:700;}
 .cat-header .btn{flex:0 0 auto;}
@@ -41,11 +56,10 @@ input[type="text"]:required:invalid{border-color:#ff6b6b;background:#fff5f5;}
 .totals{margin-top:10px;padding:8px;background:#fff;border:1px solid var(--border);border-radius:var(--radius);font-size:var(--fz-large);}
 .totals div{margin-bottom:4px;}
 .accent{color:var(--accent);font-weight:700;}
-.muted{color:#666;font-size:.9em}
 .hide-empty .item:not(.highlight){display:none;}
 .collapsed{display:none;}
 
-/* 小計模式（截圖精簡清單） */
+/* 小計模式 */
 .summary{display:none;margin-top:10px;}
 .summary-mode #catalog{display:none;}
 .summary-mode .summary{display:block;}
@@ -57,8 +71,9 @@ input[type="text"]:required:invalid{border-color:#ff6b6b;background:#fff5f5;}
 .summary .badge{border:1px solid #e0e0e0;border-radius:6px;padding:2px 6px;background:#fff;}
 .summary .qty-badge{font-weight:900;background:#fff7b1;border:1px solid #f0df75;border-radius:6px;padding:2px 8px;}
 .summary .money{font-weight:800;}
+.sec-sub{padding:6px 8px;text-align:right;font-weight:900;color:#6b3f00}
 
-/* 團購清單 & 總彙總 */
+/* 區塊 */
 .section{margin-top:12px;padding:10px;border:1px solid var(--border);border-radius:var(--radius);background:#fff;}
 .section h2{margin:0 0 8px 0;font-size:1.1em}
 .record{border:1px solid #eee;border-radius:8px;padding:8px;margin-bottom:8px;background:#fafafa;}
@@ -69,15 +84,13 @@ input[type="text"]:required:invalid{border-color:#ff6b6b;background:#fff5f5;}
 .record table{width:100%;border-collapse:collapse;font-size:.95em}
 .record th, .record td{border-bottom:1px solid #eee;padding:4px;text-align:right}
 .record th:first-child, .record td:first-child{text-align:left}
+
 .table{width:100%;border-collapse:collapse}
 .table th,.table td{border-bottom:1px solid #eee;padding:6px;text-align:right}
 .table th:first-child,.table td:first-child{text-align:left}
 .table .group{background:#f7f7f7;font-weight:800;}
-.bad{color:#a00}
-.danger{background:#ffe8e8;border:1px solid #ffbdbd}
 
-/* ---------- 新增：低調分隔（上週訂購資料）樣式 ---------- */
-/* 外層灰底卡片（讓上方區塊明顯分離） */
+/* 上週訂購資料區 */
 #archives-section {
   background: #f7f7f7;
   border: 1px solid #e3e3e3;
@@ -85,8 +98,6 @@ input[type="text"]:required:invalid{border-color:#ff6b6b;background:#fff5f5;}
   border-radius: 10px;
   margin-top: 28px;
 }
-
-/* 標題風格（保留主色並加淡線） */
 #lastWeekTitle {
   font-size: 20px;
   font-weight: 700;
@@ -96,8 +107,6 @@ input[type="text"]:required:invalid{border-color:#ff6b6b;background:#fff5f5;}
   padding-bottom: 6px;
   display:inline-block;
 }
-
-/* 每筆備份：白底卡片 + 淺邊框（清晰但低調） */
 .lastWeekItem {
   background: #ffffff;
   padding: 12px 14px;
@@ -105,22 +114,23 @@ input[type="text"]:required:invalid{border-color:#ff6b6b;background:#fff5f5;}
   border-radius: 6px;
   border: 1px solid #e8e8e8;
 }
+.lastWeekItem .hdr div:last-child { color: #6b3f00; font-weight:800; }
 
-/* 讓卡片裡的右側總金額看起來更清楚（但保持低調） */
-.lastWeekItem .hdr div:last-child {
-  color: #6b3f00;
-  font-weight:800;
-}
+/* 月彙總（折疊群組） */
+.msec{border:1px solid var(--border);border-radius:var(--radius);background:#fff;margin:10px 0;overflow:hidden;}
+.msec .mhead{background:#f3f6ff;padding:8px 10px;font-weight:800;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;}
+.msec .mhead .meta{font-weight:600;color:#444}
+.msec .mbody{padding:8px 10px;display:none;}
+.msec.open .mbody{display:block;}
+.kpi{display:flex;gap:10px;flex-wrap:wrap;margin:6px 0;}
+.kpi .k{border:1px solid #eee;border-radius:999px;padding:6px 10px;background:#fff;font-weight:800;}
+.kpi .k strong{color:var(--accent)}
+.hr{height:1px;background:#eee;margin:10px 0;}
 
-/* 在列印時，去掉灰色背景以節省墨水並保留可讀性 */
 @media print{
   #archives-section { background: #fff !important; box-shadow: none !important; border: none !important; }
   .lastWeekItem { box-shadow:none !important; border: 1px solid #eee !important; }
   .btn, .toolbar { display: none !important; }
-}
- 
-/* 列印整體微調（維持原列印規則） */
-@media print{
   body{background:#fff}
   .wrap{border:2px solid #000;border-radius:12px}
   input[type="text"],input[type="number"]{border:none}
@@ -129,9 +139,20 @@ input[type="text"]:required:invalid{border-color:#ff6b6b;background:#fff5f5;}
 }
 </style>
 </head>
+
 <body>
 <div class="wrap" id="wrap">
-  <h1>每週豆漿團購登記 V5.0(2025/11/17更新)</h1>
+  <h1>每週豆漿團購登記 V6.1(114/12/25)</h1>
+
+  <!-- 本次到貨日/批次狀態 -->
+  <div class="badgeLine">
+    <div class="badge" id="badge-batch">
+      本次到貨日：<strong id="delivery-date-text">（尚未設定）</strong>
+    </div>
+    <div class="badge warn" id="badge-batch-status">
+      批次狀態：<strong id="batch-status-text">未建立</strong>
+    </div>
+  </div>
 
   <label for="buyer">訂購人姓名</label>
   <input type="text" id="buyer" placeholder="輸入姓名" required aria-required="true" />
@@ -145,10 +166,8 @@ input[type="text"]:required:invalid{border-color:#ff6b6b;background:#fff5f5;}
   <div id="catalog">
     <div class="cat-header">
       <span>2500cc 袋裝</span>
-      <!-- 預設改為收合：aria-expanded="false"，文字「展開」 -->
       <button class="btn btn-toggle-cat" data-target="cat-2500" aria-expanded="false">展開</button>
     </div>
-    <!-- 預設收合：加上 class="collapsed" -->
     <div id="cat-2500" class="collapsed"></div>
 
     <div class="cat-header">
@@ -170,6 +189,7 @@ input[type="text"]:required:invalid{border-color:#ff6b6b;background:#fff5f5;}
   <div class="totals">
     <div>訂購人：<span id="buyer-name"></span></div>
     <div class="muted">統計時間：<span id="ts"></span></div>
+
     <div>2,500cc 小計：$<span id="sub-2500" class="accent">0</span></div>
     <div>1,050cc 小計：$<span id="sub-1050" class="accent">0</span></div>
     <div>330cc 小計：$<span id="sub-330"  class="accent">0</span></div>
@@ -179,48 +199,79 @@ input[type="text"]:required:invalid{border-color:#ff6b6b;background:#fff5f5;}
       <button class="btn" id="btn-add-record">填寫完成/加入至統計表（送雲端）</button>
       <button class="btn" id="btn-bottom-mode">小計模式（截圖使用）/復原檢視模式</button>
     </div>
-    <button class="btn danger" id="btn-clear-all" title="清除所有紀錄與輸入">
-    ⚠️ 清空頁面＋清空雲端紀錄（防呆）+備份
+
+    <button class="btn danger" id="btn-clear-all" title="結束本批次（備份為上週）並開啟新批次">
+      ⚠️ 清空頁面＋清空雲端紀錄（防呆）+備份（並選擇到貨日）
     </button>
 
-    <div class="muted">說明：雲端資料已於按下上方清空按鈕時備份至「上週訂購資料」（僅保留最近一次）。</div>
+    <div class="muted">
+      說明：此按鈕會把「本批次」雲端資料備份至「上週訂購資料」（僅保留最近一次），並關閉本批次、建立新批次（到貨日由團主選擇）。本版本不再刪除全部訂單，改以批次管理，支援月彙總。
+    </div>
   </div>
 
-  <!-- 團購清單（雲端資料） -->
+  <!-- 團購清單（雲端即時，本批次） -->
   <div class="section" id="records-section">
-    <h2>團購清單（雲端即時）</h2>
+    <h2>團購清單（雲端即時）－本次到貨：<span id="delivery-date-text-2">（尚未設定）</span></h2>
     <div id="records-list" class="records"></div>
     <div class="muted">點「明細」可展開查看每位填寫者的品項與數量。</div>
   </div>
 
-  <!-- 總彙總（全部雲端紀錄） -->
+  <!-- 總彙總（本批次） -->
   <div class="section" id="aggregate-section">
-    <h2>目前總彙總（全部紀錄）</h2>
+    <h2>目前總彙總（本批次）</h2>
     <table class="table" id="agg-table">
       <thead>
         <tr><th>品項</th><th>單價</th><th>總數量</th><th>總金額</th></tr>
       </thead>
       <tbody id="agg-body"></tbody>
       <tfoot>
-        <tr><th>2,500cc 小計</th><td></td><td id="agg-q-2500" style="text-align:right"></td><td id="agg-s-2500" style="text-align:right"></td></tr>
-        <tr><th>1,050cc 小計</th><td></td><td id="agg-q-1050" style="text-align:right"></td><td id="agg-s-1050" style="text-align:right"></td></tr>
-        <tr><th>330cc 小計</th><td></td><td id="agg-q-330"  style="text-align:right"></td><td id="agg-s-330"  style="text-align:right"></td></tr>
-        <tr><th>總金額</th><td></td><td id="agg-q-all"  style="text-align:right"></td><td id="agg-s-all"  style="text-align:right"></td></tr>
+        <tr><th>2,500cc 小計</th><td></td><td id="agg-q-2500"></td><td id="agg-s-2500"></td></tr>
+        <tr><th>1,050cc 小計</th><td></td><td id="agg-q-1050"></td><td id="agg-s-1050"></td></tr>
+        <tr><th>330cc 小計</th><td></td><td id="agg-q-330"></td><td id="agg-s-330"></td></tr>
+        <tr><th>總計</th><td></td><td id="agg-q-all"></td><td id="agg-s-all"></td></tr>
       </tfoot>
     </table>
   </div>
 
   <!-- 上週訂購資料（僅保留最近一次備份） -->
-  <div class="section" id="archives-section" style="margin-top:12px;">
+  <div class="section" id="archives-section">
     <h2 id="lastWeekTitle">上週訂購資料</h2>
     <div id="archives-list" class="records"></div>
-    <div class="muted">提示：此區只會顯示最近一次按「清空＋備份」時的週資料（包含每位訂購者姓名、明細與小計）。</div>
+    <div class="muted">提示：此區只會顯示最近一次按「清空＋備份」時的本批次資料（包含每位訂購者姓名、明細與小計）。</div>
   </div>
 
+  <!-- 月彙總（網頁呈現） -->
+  <div class="section" id="monthly-section">
+    <h2>月彙總（依到貨日月份）</h2>
+
+    <div class="toolbar">
+      <label style="margin:0;min-width:78px;font-weight:800;">選擇月份</label>
+      <select id="monthly-month" class="btn" style="padding:10px 12px;"></select>
+      <button class="btn" id="btn-month-refresh">重新整理</button>
+
+      <button class="btn danger" id="btn-month-hide" title="輸入 4908 後隱藏該月份（不刪資料）">隱藏此月份（收款確認後）</button>
+      <button class="btn" id="btn-month-unhide" title="取消隱藏，讓月份重新顯示">取消隱藏</button>
+      <label class="btn" style="display:inline-flex;align-items:center;gap:6px;">
+        <input type="checkbox" id="chk-show-hidden" />
+        顯示已隱藏月份
+      </label>
+    </div>
+
+    <div id="monthly-kpi" class="kpi"></div>
+    <div id="monthly-cats" class="kpi"></div>
+
+    <div class="hr"></div>
+
+    <div id="monthly-list"></div>
+
+    <div class="muted">
+      說明：月彙總會顯示該月份（以到貨日歸屬）所有批次的訂購明細與加總；「隱藏」只是不顯示月份與資料。
+    </div>
+  </div>
 </div>
 
 <script>
-/* ---------- 資料 ---------- */
+/* ---------- 資料（品項） ---------- */
 const items2500 = [
   {cat:"2500", name:"微糖豆漿", price:45},
   {cat:"2500", name:"黑豆漿",   price:55},
@@ -263,12 +314,25 @@ const items=[...items2500,...items1050,...items330];
 
 const $ = s => document.querySelector(s);
 const $$ = s => document.querySelectorAll(s);
-const fmt = n => Number(n).toLocaleString('zh-Hant-TW');
+const fmt = n => Number(n||0).toLocaleString('zh-Hant-TW');
+
 function nowTS(){
   const d = new Date();
   const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0');
   const hh=String(d.getHours()).padStart(2,'0'), mm=String(d.getMinutes()).padStart(2,'0');
   return `${y}/${m}/${day} ${hh}:${mm}`;
+}
+function ymd(d){
+  const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+function ymFromYmd(ymdStr){ return (ymdStr || '').slice(0,7); }
+function nextFridayYmd(){
+  const d = new Date();
+  const day = d.getDay(); // 0 Sun ... 5 Fri
+  const diff = (5 - day + 7) % 7 || 7; // next Friday (if today Fri, pick next week)
+  d.setDate(d.getDate() + diff);
+  return ymd(d);
 }
 
 /* ---------- 產出 UI（品項卡） ---------- */
@@ -346,14 +410,14 @@ $('#btn-bottom-mode').addEventListener('click',()=>{
 });
 function enterSummaryMode(){
   ['cat-2500','cat-1050','cat-330'].forEach(id=>{
-    const el=document.getElementById(id); 
-    prevCollapsed[id]=el.classList.contains('collapsed'); 
+    const el=document.getElementById(id);
+    prevCollapsed[id]=el.classList.contains('collapsed');
     el.classList.remove('collapsed');
     const btn = document.querySelector(`.btn-toggle-cat[data-target="${id}"]`);
     if (btn){ btn.textContent='收合'; btn.setAttribute('aria-expanded','true'); }
   });
-  wrapBox.classList.add('summary-mode'); 
-  buildSummary(); 
+  wrapBox.classList.add('summary-mode');
+  buildSummary();
   updateTS();
 }
 function exitSummaryMode(){
@@ -418,15 +482,16 @@ $$('.btn-toggle-cat').forEach(btn=>{
   });
 });
 
-/* ---------- 建立提交資料 ---------- */
+/* ---------- 建立提交資料（加入 batch/delivery/billing） ---------- */
 function getQuantities(){
   const q=[]; $$('.item').forEach(card=>q.push(parseInt(card.querySelector('input[type="number"]').value||'0',10)||0));
   return q;
 }
-function buildRecord(){
+function buildRecordMeta(currentBatch){
   const quantities=getQuantities();
   const ts = nowTS();
-  const buyer = ($('#buyer')?.value ?? '').trim(); // 不再給「（未填姓名）」預設，改由驗證阻擋
+  const buyer = ($('#buyer')?.value ?? '').trim();
+
   const itemsPicked=[];
   let sum2500=0,sum1050=0,sum330=0, grand=0;
 
@@ -441,7 +506,32 @@ function buildRecord(){
     grand+=money;
   });
 
-  return { buyer, ts, items:itemsPicked, sum:{'2500':sum2500,'1050':sum1050,'330':sum330, grand} };
+  return {
+    buyer, ts, items:itemsPicked,
+    sum:{'2500':sum2500,'1050':sum1050,'330':sum330, grand},
+    batch: currentBatch || null
+  };
+}
+
+/* ---------- 批次顯示（由 Firestore 回填） ---------- */
+function setBatchUI(batch){
+  const dd = batch?.delivery_date ? batch.delivery_date : '（尚未設定）';
+  const st = batch?.status ? batch.status : '未建立';
+
+  $('#delivery-date-text').textContent = dd;
+  $('#delivery-date-text-2').textContent = dd;
+
+  const statusText = st === 'open' ? '開放中' : (st === 'closed' ? '已關閉' : st);
+  $('#batch-status-text').textContent = statusText;
+
+  const badgeStatus = $('#badge-batch-status');
+  badgeStatus.classList.remove('warn','ok');
+  if(st === 'open'){ badgeStatus.classList.add('ok'); }
+  else { badgeStatus.classList.add('warn'); }
+
+  // 沒批次就禁用送單（避免資料無法歸屬）
+  const btnAdd = $('#btn-add-record');
+  btnAdd.disabled = !(batch && batch.batch_id && batch.delivery_date && batch.status === 'open');
 }
 </script>
 
@@ -449,11 +539,12 @@ function buildRecord(){
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
   import {
-    getFirestore, collection, addDoc, serverTimestamp,
-    query, orderBy, onSnapshot, getDocs, deleteDoc, doc, writeBatch, setDoc
+    getFirestore,
+    collection, addDoc, serverTimestamp,
+    query, orderBy, onSnapshot, getDocs, where, doc, getDoc, setDoc, updateDoc
   } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
-  /* Firebase Config（你提供的） */
+  /* Firebase Config（沿用你原本的） */
   const firebaseConfig = {
     apiKey: "AIzaSyBDtSRcMhjLUqzU_BS9p3bFaqT2nZc4lu8",
     authDomain: "order-c9c29.firebaseapp.com",
@@ -467,7 +558,75 @@ function buildRecord(){
   const app = initializeApp(firebaseConfig);
   const db  = getFirestore(app);
 
-  /* 送單 */
+  // ========= Collections/Docs =========
+  // meta/currentBatch: { batch_id, delivery_date, billing_month, status }
+  const currentBatchRef = doc(db, 'meta', 'currentBatch');
+
+  // 隱藏月份設定（方案 B：寫到 Firestore，免 Functions）
+  // meta/hiddenMonths: { months: ["2025-12",...], updated_at: serverTimestamp() }
+  const hiddenMonthsRef = doc(db, 'meta', 'hiddenMonths');
+
+  // ========= 狀態：目前批次 =========
+  let CURRENT_BATCH = null;
+  let unsubscribeOrders = null;
+
+  // ========= 隱藏月份（Firestore） =========
+  let HIDDEN_MONTHS = new Set();
+  async function loadHiddenMonths() {
+    const snap = await getDoc(hiddenMonthsRef);
+    const arr = snap.exists() ? (snap.data()?.months || []) : [];
+    HIDDEN_MONTHS = new Set(arr.filter(m => /^\d{4}-\d{2}$/.test(m)));
+    return HIDDEN_MONTHS;
+  }
+  async function saveHiddenMonths() {
+    const months = Array.from(HIDDEN_MONTHS).sort();
+    await setDoc(hiddenMonthsRef, { months, updated_at: serverTimestamp() }, { merge: true });
+  }
+  function isHiddenMonth(m){ return HIDDEN_MONTHS.has(m); }
+
+  // ========= Current Batch =========
+  async function loadCurrentBatch(){
+    const snap = await getDoc(currentBatchRef);
+    if(!snap.exists()){
+      CURRENT_BATCH = null;
+      setBatchUI(null);
+      return null;
+    }
+    const d = snap.data();
+    CURRENT_BATCH = {
+      batch_id: d.batch_id || null,
+      delivery_date: d.delivery_date || null,
+      billing_month: d.billing_month || null,
+      status: d.status || 'open',
+    };
+    setBatchUI(CURRENT_BATCH);
+    return CURRENT_BATCH;
+  }
+
+  function listenCurrentBatch(){
+    return onSnapshot(currentBatchRef, (snap)=>{
+      if(!snap.exists()){
+        CURRENT_BATCH = null;
+        setBatchUI(null);
+        if(unsubscribeOrders){ unsubscribeOrders(); unsubscribeOrders=null; }
+        renderRecordsCloud([]);
+        return;
+      }
+      const d = snap.data();
+      CURRENT_BATCH = {
+        batch_id: d.batch_id || null,
+        delivery_date: d.delivery_date || null,
+        billing_month: d.billing_month || null,
+        status: d.status || 'open',
+      };
+      setBatchUI(CURRENT_BATCH);
+      subscribeOrdersForCurrentBatch();
+      // 讓月份下拉優先選到本批次月份
+      loadMonthsForSelector().then(refreshMonthly).catch(()=>{});
+    });
+  }
+
+  // ========= 送單（寫入 batch/delivery/billing） =========
   document.getElementById('btn-add-record').addEventListener('click', async ()=>{
     const buyerEl = document.getElementById('buyer');
     const buyerValue = buyerEl.value.trim();
@@ -476,8 +635,12 @@ function buildRecord(){
       buyerEl.focus();
       return;
     }
+    if(!CURRENT_BATCH || CURRENT_BATCH.status !== 'open'){
+      alert('目前尚未開啟本次到貨批次，請團主先按「清空+備份」並選擇到貨日。');
+      return;
+    }
 
-    const rec = buildRecord();
+    const rec = buildRecordMeta(CURRENT_BATCH);
     if(!rec.items.length){ alert('目前沒有填寫任何數量。'); return; }
 
     try{
@@ -489,9 +652,16 @@ function buildRecord(){
         sum_1050: rec.sum['1050'],
         sum_330:  rec.sum['330'],
         grand:    rec.sum.grand,
-        created_at: serverTimestamp()
+        created_at: serverTimestamp(),
+
+        batch_id: CURRENT_BATCH.batch_id,
+        delivery_date: CURRENT_BATCH.delivery_date,
+        billing_month: CURRENT_BATCH.billing_month,
+
+        deleted_at: null
       });
       alert('已提交到雲端！');
+
       // 清空頁面數量
       document.querySelectorAll('.item input[type="number"]').forEach(i=>i.value=0);
       recalc();
@@ -500,36 +670,57 @@ function buildRecord(){
     }
   });
 
-  /* 即時監聽 orders → 渲染列表與彙總 */
-  function subscribeOrders(callback){
-    const q = query(collection(db,'orders'), orderBy('created_at','desc'));
-    return onSnapshot(q, snap=>{
+  // ========= 即時監聽：本批次 orders =========
+  function subscribeOrdersForCurrentBatch(){
+    if(unsubscribeOrders){ unsubscribeOrders(); unsubscribeOrders=null; }
+
+    const listEl = document.getElementById('records-list');
+    if(!CURRENT_BATCH || !CURRENT_BATCH.batch_id){
+      listEl.innerHTML = '<div class="muted">尚未建立本次到貨批次（請團主按下清空+備份並選擇到貨日）。</div>';
+      renderAggregateCloud([]);
+      return;
+    }
+
+    const q = query(
+      collection(db,'orders'),
+      where('batch_id','==',CURRENT_BATCH.batch_id),
+      where('deleted_at','==',null),
+      orderBy('created_at','desc')
+    );
+
+    unsubscribeOrders = onSnapshot(q, snap=>{
       const rows = snap.docs.map(d=>({ id:d.id, ...d.data() }));
-      callback(rows);
+      renderRecordsCloud(rows);
+    }, err=>{
+      console.error(err);
+      listEl.innerHTML = '<div class="muted">讀取雲端資料失敗（可能需要建立 Firestore 索引）。</div>';
+      renderAggregateCloud([]);
     });
   }
 
+  // ========= 渲染：本批次清單 + 彙總（容量小計含數量+金額） =========
   function renderRecordsCloud(rows){
     const listEl = document.getElementById('records-list');
     if(!rows.length){
-      listEl.innerHTML = '<div class="muted">尚無紀錄，請先在上方輸入並按「填寫完成」。</div>';
-      renderAggregateCloud([]); 
+      listEl.innerHTML = '<div class="muted">本批次尚無紀錄。</div>';
+      renderAggregateCloud([]);
       return;
     }
     listEl.innerHTML = '';
 
     rows.forEach((rec)=>{
-      const card=document.createElement('div'); 
+      const card=document.createElement('div');
       card.className='record';
       card.innerHTML=`
         <div class="hdr">
           <div>${rec.buyer} <span class="meta">（${rec.ts||''}）</span></div>
           <div>總金額 $${fmt(rec.grand||0)}</div>
         </div>
-        <div class="muted">2,500cc小計 $${fmt(rec.sum_2500||0)} ｜ 1,050cc小計 $${fmt(rec.sum_1050||0)} ｜ 330cc小計 $${fmt(rec.sum_330||0)}</div>
+        <div class="muted">
+          2,500cc小計 $${fmt(rec.sum_2500||0)} ｜ 1,050cc小計 $${fmt(rec.sum_1050||0)} ｜ 330cc小計 $${fmt(rec.sum_330||0)}
+        </div>
         <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
           <button class="btn btn-toggle-detail">明細</button>
-          <button class="btn bad btn-del-record" data-id="${rec.id}">刪除此筆</button>
         </div>
         <div class="details">
           <table>
@@ -546,42 +737,32 @@ function buildRecord(){
       });
 
       card.querySelector('.btn-toggle-detail').addEventListener('click',()=>card.classList.toggle('open'));
-
-      card.querySelector('.btn-del-record').addEventListener('click', async (ev)=>{
-        const id = ev.currentTarget.getAttribute('data-id');
-        const word = prompt(`⚠️ 確定要刪除這筆紀錄嗎？\n請輸入「刪除」以確認：`);
-        if(word !== "刪除") {
-          alert("已取消刪除。");
-          return;
-        }
-        try {
-          await deleteDoc(doc(db, 'orders', id));
-          alert("✅ 已刪除！");
-        } catch(e){
-          alert('❌ 刪除失敗：' + e.message);
-        }
-      });
-
       listEl.appendChild(card);
     });
 
     renderAggregateCloud(rows);
   }
 
-
   function renderAggregateCloud(rows){
     const tbody = document.getElementById('agg-body'); if(!tbody) return;
     tbody.innerHTML='';
+
     const qByKey = {}; // key = cat::name::price
     const sumByCat = {'2500':0,'1050':0,'330':0};
+    const qtyByCat = {'2500':0,'1050':0,'330':0};
+
     let qtyAll=0,sumAll=0;
 
     rows.forEach(r=>{
       (r.items||[]).forEach(it=>{
         const key = `${it.cat}:::${it.name}:::${it.price}`;
-        qByKey[key] = (qByKey[key]||0) + it.qty;
-        sumByCat[it.cat] += it.money;
-        qtyAll += it.qty; sumAll += it.money;
+        qByKey[key] = (qByKey[key]||0) + (it.qty||0);
+
+        sumByCat[it.cat] += (it.money||0);
+        qtyByCat[it.cat] += (it.qty||0);
+
+        qtyAll += (it.qty||0);
+        sumAll += (it.money||0);
       });
     });
 
@@ -590,9 +771,11 @@ function buildRecord(){
       {id:'1050', title:'1,050cc 口栓袋'},
       {id:'330',  title:'330cc 杯裝'}
     ];
+
     cats.forEach(c=>{
       const th = document.createElement('tr'); th.className='group'; th.innerHTML=`<td colspan="4">${c.title}</td>`;
       tbody.appendChild(th);
+
       let hasAny=false;
       Object.entries(qByKey).forEach(([k,qty])=>{
         const [cat,name,price] = k.split(':::'); if(cat!==c.id || qty<=0) return;
@@ -609,123 +792,20 @@ function buildRecord(){
       }
     });
 
-    document.getElementById('agg-q-2500').textContent = '';
-    document.getElementById('agg-q-1050').textContent = '';
-    document.getElementById('agg-q-330').textContent  = '';
+    // ✅ 修正：容量小計同時顯示「總數量 + 總金額」
+    document.getElementById('agg-q-2500').textContent = fmt(qtyByCat['2500']);
+    document.getElementById('agg-q-1050').textContent = fmt(qtyByCat['1050']);
+    document.getElementById('agg-q-330').textContent  = fmt(qtyByCat['330']);
+
     document.getElementById('agg-s-2500').textContent = `$${fmt(sumByCat['2500'])}`;
     document.getElementById('agg-s-1050').textContent = `$${fmt(sumByCat['1050'])}`;
     document.getElementById('agg-s-330').textContent  = `$${fmt(sumByCat['330'])}`;
+
     document.getElementById('agg-q-all').textContent  = fmt(qtyAll);
     document.getElementById('agg-s-all').textContent  = `$${fmt(sumAll)}`;
   }
 
-  // 啟用即時監聽
-  subscribeOrders(renderRecordsCloud);
-
-  /* ---------- 清空本頁與備份（只保留最近一次） ----------
-     流程：
-     1) 確認（輸入「全部刪除」）
-     2) 讀出所有 orders（若空則只清頁面）
-     3) 建立 archive doc（寫入 archives/last-week 固定文件）
-     4) 確認成功後分批刪除 orders（batch commit）
-     5) 清空頁面輸入並 recalc()
-  */
-
-  document.getElementById('btn-clear-all').addEventListener('click', async ()=>{
-    const word = prompt(
-      '⚠️ 此動作會把資料備份為「上週訂購資料」（僅保留最近一次），並刪除資料庫「所有訂單」紀錄，且無法復原，並清空本頁輸入。\n\n' +
-      '請輸入「全部刪除」以確認：'
-    );
-    if (word !== '全部刪除') {
-      alert('已取消。');
-      return;
-    }
-
-    try {
-      // 1) 先讀出所有 orders
-      const snap = await getDocs(collection(db, 'orders'));
-      // 如果沒有任何 orders，仍清空本頁輸入但不建立 archive
-      if (snap.empty) {
-        document.querySelectorAll('.item input[type="number"]').forEach(i=>i.value=0);
-        recalc();
-        alert('雲端目前沒有紀錄；已清空本頁數量（無建立備份）。');
-        return;
-      }
-
-      // 2) 組成 orders 陣列與 summary
-      const ordersArray = [];
-      let sum2500=0, sum1050=0, sum330=0, grandTotal=0, totalQty=0, totalCount=0;
-      snap.forEach(d => {
-        const data = d.data();
-        ordersArray.push({
-          buyer: data.buyer || '',
-          ts: data.ts || '',
-          items: data.items || [],
-          sum_2500: data.sum_2500 || 0,
-          sum_1050: data.sum_1050 || 0,
-          sum_330:  data.sum_330  || 0,
-          grand:     data.grand   || 0
-        });
-        sum2500 += (data.sum_2500 || 0);
-        sum1050 += (data.sum_1050 || 0);
-        sum330  += (data.sum_330  || 0);
-        grandTotal += (data.grand || 0);
-        (data.items||[]).forEach(it => totalQty += (it.qty||0));
-        totalCount++;
-      });
-
-      // 3) 讓使用者輸入 archive label（或接受預設）
-      const now = new Date();
-      const defaultLabel = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}（備份 ${nowTS()}）`;
-      const label = prompt('請輸入此備份的標題（例如：2025-11 第2週）：', defaultLabel) || defaultLabel;
-
-      // 4) 寫入固定的 archive doc（archives/last-week，只保留最近一次）
-      const archiveDoc = {
-        label,
-        created_at: serverTimestamp(),
-        created_ts: nowTS(),
-        meta: { totalCount, totalQty },
-        summary: { sum_2500: sum2500, sum_1050: sum1050, sum_330: sum330, grand: grandTotal },
-        orders: ordersArray
-      };
-
-      const arcRef = doc(db, 'archives', 'last-week');
-      await setDoc(arcRef, archiveDoc);
-
-      // 5) 若寫入成功，開始分批刪除 orders（不先刪除任何東西）
-      let ops = 0, totalDeleted = 0;
-      let batch = writeBatch(db);
-      for (let i = 0; i < snap.docs.length; i++) {
-        const docSnap = snap.docs[i];
-        batch.delete(doc(db, 'orders', docSnap.id));
-        ops++; totalDeleted++;
-        if (ops === 450) {
-          await batch.commit();
-          batch = writeBatch(db);
-          ops = 0;
-        }
-      }
-      if (ops > 0) await batch.commit();
-
-      // 6) 清空頁面數量並更新 UI（subscribeOrders 會更新 records）
-      document.querySelectorAll('.item input[type="number"]').forEach(i=>i.value=0);
-      recalc();
-
-      alert(`✅ 已建立最新一筆「上週訂購資料」備份，共備份 ${totalCount} 筆，並刪除 ${totalDeleted} 筆雲端訂單。`);
-
-    } catch (e) {
-      console.error('備份/刪除發生錯誤', e);
-      alert('❌ 備份或刪除失敗：' + (e.message || e));
-    }
-  });
-
-  // 初始顯示
-  document.getElementById('ts').textContent = nowTS();
-  const buyerInputEl=document.getElementById('buyer'); 
-  document.getElementById('buyer-name').textContent = buyerInputEl.value || '';
-  recalc();
-
-  /* ---------- Archives（僅保留最近一次，監聽 archives/last-week） ---------- */
+  // ========= 上週備份（archives/last-week） =========
   const archivesListEl = document.getElementById('archives-list');
 
   function renderArchives(rows) {
@@ -743,7 +823,9 @@ function buildRecord(){
           <div>${arc.label || '(無標題)'} <span class="meta">（${arc.created_ts || ''}）</span></div>
           <div>總計 $${fmt(arc.summary?.grand || 0)}</div>
         </div>
-        <div class="muted">2500cc $${fmt(arc.summary?.sum_2500||0)} ｜ 1050cc $${fmt(arc.summary?.sum_1050||0)} ｜ 330cc $${fmt(arc.summary?.sum_330||0)}</div>
+        <div class="muted">
+          到貨日：${arc.delivery_date || ''} ｜ 2500cc $${fmt(arc.summary?.sum_2500||0)} ｜ 1050cc $${fmt(arc.summary?.sum_1050||0)} ｜ 330cc $${fmt(arc.summary?.sum_330||0)}
+        </div>
         <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
           <button class="btn btn-toggle-archive">展開明細</button>
         </div>
@@ -755,27 +837,19 @@ function buildRecord(){
         </div>
       `;
       const tbody = card.querySelector('tbody');
+
+      const catLabelMap = {'2500':'2,500cc 袋裝','1050':'1,050cc 口栓袋','330':'330cc 杯裝'};
       (arc.orders || []).forEach(o => {
         const tr = document.createElement('tr');
-        // 大分類顯示用對照表
-        const catLabelMap = {
-          '2500': '2,500cc 袋裝',
-          '1050': '1,050cc 口栓袋',
-          '330':  '330cc 杯裝'
-        };
-
         const itemsStr = (o.items || []).map(it => {
           const catLabel = catLabelMap[it.cat] || '';
-          // 例：2,500cc 袋裝－微糖豆漿 x3
           return `${catLabel ? catLabel + '－' : ''}${it.name} x${it.qty}`;
         }).join('； ');
-
         tr.innerHTML = `
-          <td style="text-align:left">${o.buyer}</td>
+          <td style="text-align:left">${o.buyer||''}</td>
           <td>${o.ts||''}</td>
           <td>$${fmt(o.grand||0)}</td>
           <td style="text-align:left">${itemsStr}</td>`;
-
         tbody.appendChild(tr);
       });
 
@@ -787,15 +861,338 @@ function buildRecord(){
   function subscribeArchives() {
     const ref = doc(db, 'archives', 'last-week');
     return onSnapshot(ref, snap => {
-      if (!snap.exists()) {
-        renderArchives([]);
-      } else {
-        const row = { id: snap.id, ...snap.data() };
-        renderArchives([row]);
-      }
+      if (!snap.exists()) renderArchives([]);
+      else renderArchives([{ id: snap.id, ...snap.data() }]);
     });
   }
+
+  // ========= 清空 + 備份 + 選擇到貨日（批次切換） =========
+  async function getBatchOrders(batchId){
+    const q = query(
+      collection(db,'orders'),
+      where('batch_id','==',batchId),
+      where('deleted_at','==',null),
+      orderBy('created_at','desc')
+    );
+    const snap = await getDocs(q);
+    return snap.docs.map(d=>({ id:d.id, ...d.data() }));
+  }
+
+  async function closeAndOpenNewBatch(){
+    const word = prompt(
+      '⚠️ 此動作會：\n' +
+      '1) 備份「本批次」為上週訂購資料（僅保留最近一次）\n' +
+      '2) 關閉本批次\n' +
+      '3) 建立新批次（你需輸入到貨日，建議週五）\n\n' +
+      '請輸入「全部確認」以繼續：'
+    );
+    if(word !== '全部確認'){
+      alert('已取消。');
+      return;
+    }
+
+    const defaultDd = nextFridayYmd();
+    const deliveryDate = (prompt('請輸入「新批次」到貨日（格式 YYYY-MM-DD，建議週五）：', defaultDd) || '').trim();
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(deliveryDate)){
+      alert('到貨日格式錯誤，請使用 YYYY-MM-DD。已取消。');
+      return;
+    }
+    const billingMonth = ymFromYmd(deliveryDate);
+
+    // 若有現行批次：先備份並關閉
+    if(CURRENT_BATCH && CURRENT_BATCH.batch_id){
+      const rows = await getBatchOrders(CURRENT_BATCH.batch_id);
+
+      if(rows.length){
+        const ordersArray = [];
+        let sum2500=0, sum1050=0, sum330=0, grandTotal=0, totalQty=0, totalCount=0;
+
+        rows.forEach(data => {
+          ordersArray.push({
+            buyer: data.buyer || '',
+            ts: data.ts || '',
+            items: data.items || [],
+            sum_2500: data.sum_2500 || 0,
+            sum_1050: data.sum_1050 || 0,
+            sum_330:  data.sum_330  || 0,
+            grand:     data.grand   || 0
+          });
+          sum2500 += (data.sum_2500 || 0);
+          sum1050 += (data.sum_1050 || 0);
+          sum330  += (data.sum_330  || 0);
+          grandTotal += (data.grand || 0);
+          (data.items||[]).forEach(it => totalQty += (it.qty||0));
+          totalCount++;
+        });
+
+        const now = new Date();
+        const defaultLabel = `${CURRENT_BATCH.billing_month || ''}（到貨 ${CURRENT_BATCH.delivery_date || ''}）備份 ${nowTS()}`;
+        const label = prompt('請輸入此備份的標題（例如：2025-12 第3週/到貨 2025-12-19）：', defaultLabel) || defaultLabel;
+
+        const archiveDoc = {
+          label,
+          created_at: serverTimestamp(),
+          created_ts: nowTS(),
+          batch_id: CURRENT_BATCH.batch_id,
+          delivery_date: CURRENT_BATCH.delivery_date || '',
+          billing_month: CURRENT_BATCH.billing_month || '',
+          meta: { totalCount, totalQty },
+          summary: { sum_2500: sum2500, sum_1050: sum1050, sum_330: sum330, grand: grandTotal },
+          orders: ordersArray
+        };
+
+        await setDoc(doc(db, 'archives', 'last-week'), archiveDoc);
+      }
+
+      // 關閉舊 batch
+      await updateDoc(doc(db,'batches',CURRENT_BATCH.batch_id), {
+        status: 'closed',
+        closed_at: serverTimestamp(),
+        deleted_at: null
+      });
+    }
+
+    // 建立新 batch
+    const batchRef = doc(collection(db,'batches'));
+    await setDoc(batchRef, {
+      delivery_date: deliveryDate,
+      billing_month: billingMonth,
+      status: 'open',
+      created_at: serverTimestamp(),
+      deleted_at: null
+    });
+
+    // 寫入 currentBatch
+    await setDoc(currentBatchRef, {
+      batch_id: batchRef.id,
+      delivery_date: deliveryDate,
+      billing_month: billingMonth,
+      status: 'open',
+      updated_at: serverTimestamp()
+    });
+
+    // 清空頁面數量
+    document.querySelectorAll('.item input[type="number"]').forEach(i=>i.value=0);
+    recalc();
+
+    alert(`✅ 新批次已建立：到貨日 ${deliveryDate}（${billingMonth}）\n本次訂單將歸屬該到貨日批次。`);
+  }
+
+  document.getElementById('btn-clear-all').addEventListener('click', closeAndOpenNewBatch);
+
+  // ========= 月彙總（網頁呈現） =========
+  async function loadMonthsForSelector(){
+    const sel = document.getElementById('monthly-month');
+    const showHidden = document.getElementById('chk-show-hidden')?.checked ?? false;
+    sel.innerHTML = '';
+
+    await loadHiddenMonths();
+
+    // 從 batches 取得可用月份
+    const snap = await getDocs(query(collection(db,'batches'), where('deleted_at','==',null), orderBy('delivery_date','desc')));
+    const months = new Set();
+    snap.forEach(d=>{
+      const bm = d.data()?.billing_month;
+      if(bm) months.add(bm);
+    });
+
+    const fallback = (CURRENT_BATCH?.billing_month) || (new Date().toISOString().slice(0,7));
+    if(months.size === 0) months.add(fallback);
+
+    let list = Array.from(months).sort().reverse();
+    if(!showHidden) list = list.filter(m => !isHiddenMonth(m));
+    if(list.length === 0) list = [fallback];
+
+    list.forEach(m=>{
+      const opt = document.createElement('option');
+      opt.value = m;
+      opt.textContent = isHiddenMonth(m) ? `${m}（已隱藏）` : m;
+      sel.appendChild(opt);
+    });
+
+    if(CURRENT_BATCH?.billing_month && list.includes(CURRENT_BATCH.billing_month)) sel.value = CURRENT_BATCH.billing_month;
+    else sel.value = list[0];
+  }
+
+  async function getMonthlyOrders(billingMonth){
+    const q = query(
+      collection(db,'orders'),
+      where('billing_month','==',billingMonth),
+      where('deleted_at','==',null),
+      orderBy('buyer','asc'),
+      orderBy('created_at','asc')
+    );
+    const snap = await getDocs(q);
+    return snap.docs.map(d=>({ id:d.id, ...d.data() }));
+  }
+
+  function renderMonthly(billingMonth, rows){
+    const kpiEl = document.getElementById('monthly-kpi');
+    const catsEl = document.getElementById('monthly-cats');
+    const listEl = document.getElementById('monthly-list');
+
+    if(!rows.length){
+      kpiEl.innerHTML = `<div class="k">月份 <strong>${billingMonth}</strong>：無資料</div>`;
+      catsEl.innerHTML = '';
+      listEl.innerHTML = `<div class="muted">此月份尚無訂單（或目前篩選結果為空）。</div>`;
+      return;
+    }
+
+    // 全月加總 + 分類小計（數量+金額）
+    const sumByCat = {'2500':0,'1050':0,'330':0};
+    const qtyByCat = {'2500':0,'1050':0,'330':0};
+    let qtyAll=0, sumAll=0;
+
+    rows.forEach(r=>{
+      (r.items||[]).forEach(it=>{
+        qtyByCat[it.cat] += (it.qty||0);
+        sumByCat[it.cat] += (it.money||0);
+        qtyAll += (it.qty||0);
+        sumAll += (it.money||0);
+      });
+    });
+
+    kpiEl.innerHTML = `
+      <div class="k">月份：<strong>${billingMonth}</strong></div>
+      <div class="k">總數量：<strong>${fmt(qtyAll)}</strong></div>
+      <div class="k">總金額：<strong>$${fmt(sumAll)}</strong></div>
+    `;
+    catsEl.innerHTML = `
+      <div class="k">2,500cc：<strong>${fmt(qtyByCat['2500'])}</strong>｜<strong>$${fmt(sumByCat['2500'])}</strong></div>
+      <div class="k">1,050cc：<strong>${fmt(qtyByCat['1050'])}</strong>｜<strong>$${fmt(sumByCat['1050'])}</strong></div>
+      <div class="k">330cc：<strong>${fmt(qtyByCat['330'])}</strong>｜<strong>$${fmt(sumByCat['330'])}</strong></div>
+    `;
+
+    // 依訂購者分組（可展開明細）
+    const byBuyer = new Map();
+    rows.forEach(r=>{
+      const key = r.buyer || '(未填)';
+      if(!byBuyer.has(key)) byBuyer.set(key, []);
+      byBuyer.get(key).push(r);
+    });
+
+    listEl.innerHTML = '';
+    const catLabelMap = {'2500':'2,500cc 袋裝','1050':'1,050cc 口栓袋','330':'330cc 杯裝'};
+
+    Array.from(byBuyer.entries()).forEach(([buyer, list])=>{
+      let bQty=0, bSum=0;
+      list.forEach(r=>{
+        (r.items||[]).forEach(it=>{
+          bQty += (it.qty||0);
+          bSum += (it.money||0);
+        });
+      });
+
+      const sec = document.createElement('div');
+      sec.className = 'msec';
+      sec.innerHTML = `
+        <div class="mhead">
+          <div>${buyer} <span class="meta">（小計：數量 ${fmt(bQty)}｜金額 $${fmt(bSum)}）</span></div>
+          <button class="btn btn-m-toggle">展開</button>
+        </div>
+        <div class="mbody">
+          <table class="table">
+            <thead>
+              <tr><th>到貨日</th><th>品項</th><th>單價</th><th>數量</th><th>小計</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      `;
+      const btn = sec.querySelector('.btn-m-toggle');
+      btn.addEventListener('click', ()=>{
+        const open = sec.classList.toggle('open');
+        btn.textContent = open ? '收合' : '展開';
+      });
+
+      const tbody = sec.querySelector('tbody');
+      list.forEach(r=>{
+        (r.items||[]).forEach(it=>{
+          const tr = document.createElement('tr');
+          const name = `${catLabelMap[it.cat] ? catLabelMap[it.cat]+'－' : ''}${it.name}`;
+          tr.innerHTML = `
+            <td style="text-align:left">${r.delivery_date || ''}</td>
+            <td style="text-align:left">${name}</td>
+            <td>$${fmt(it.price)}</td>
+            <td>${fmt(it.qty)}</td>
+            <td>$${fmt(it.money)}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      });
+
+      listEl.appendChild(sec);
+    });
+  }
+
+  async function refreshMonthly(){
+    const sel = document.getElementById('monthly-month');
+    const bm = sel.value;
+    if(!bm) return;
+    const rows = await getMonthlyOrders(bm);
+    renderMonthly(bm, rows);
+  }
+
+  document.getElementById('btn-month-refresh').addEventListener('click', refreshMonthly);
+  document.getElementById('monthly-month').addEventListener('change', refreshMonthly);
+
+  // ========= 隱藏月份（輸入 4908） =========
+  document.getElementById('btn-month-hide').addEventListener('click', async ()=>{
+    const sel = document.getElementById('monthly-month');
+    const bm = sel.value;
+    if(!bm){ alert('請先選擇月份'); return; }
+
+    const code = prompt(`⚠️ 你將「隱藏」月份 ${bm}（不刪資料）。\n請輸入隱藏碼：`);
+    if(code === null) return;
+    if(String(code).trim() !== '4908'){
+      alert('隱藏碼錯誤，已取消。');
+      return;
+    }
+
+    HIDDEN_MONTHS.add(bm);
+    await saveHiddenMonths();
+
+    alert(`✅ 已隱藏月份 ${bm}\n（資料仍保留，可用「取消隱藏」恢復）`);
+    await loadMonthsForSelector();
+    await refreshMonthly();
+  });
+
+  document.getElementById('btn-month-unhide').addEventListener('click', async ()=>{
+    const sel = document.getElementById('monthly-month');
+    const bm = sel.value;
+    if(!bm){ alert('請先選擇月份'); return; }
+
+    if(!isHiddenMonth(bm)){
+      alert('此月份目前未被隱藏。');
+      return;
+    }
+
+    HIDDEN_MONTHS.delete(bm);
+    await saveHiddenMonths();
+
+    alert(`✅ 已取消隱藏月份 ${bm}`);
+    await loadMonthsForSelector();
+    await refreshMonthly();
+  });
+
+  document.getElementById('chk-show-hidden').addEventListener('change', async ()=>{
+    await loadMonthsForSelector();
+    await refreshMonthly();
+  });
+
+  // ========= 初始化 =========
+  document.getElementById('ts').textContent = nowTS();
+  document.getElementById('buyer-name').textContent = (document.getElementById('buyer')?.value || '');
+  recalc();
+
+  await loadCurrentBatch();
+  listenCurrentBatch();
+
   subscribeArchives();
+
+  await loadHiddenMonths();
+  await loadMonthsForSelector();
+  await refreshMonthly();
 
 </script>
 </body>
