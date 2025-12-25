@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>每週豆漿團購登記 V8.3(核心修復最終版)</title>
+<title>每週豆漿團購登記 V8.4(數值格式強固版)</title>
 
 <style>
 :root{
@@ -173,7 +173,7 @@ input[type="text"]:required:invalid{border-color:#ff6b6b;background:#fff5f5;}
 
 <body>
 <div class="wrap" id="wrap">
-  <h1>每週豆漿團購登記 V8.3(核心修復最終版)</h1>
+  <h1>每週豆漿團購登記 V8.4(數值格式強固版)</h1>
 
   <!-- 本次到貨日/批次狀態 -->
   <div class="badgeLine">
@@ -662,7 +662,7 @@ function setBatchUI(batch){
     measurementId: "G-Z3PHZMCGNW"
   };
 
-  console.log("正在初始化 Firebase (V8.3)...");
+  console.log("正在初始化 Firebase (V8.4)...");
   const app = initializeApp(firebaseConfig);
   const db  = getFirestore(app);
   console.log("Firebase 初始化完成，資料庫實例：", db);
@@ -1337,19 +1337,19 @@ function setBatchUI(batch){
                 buyer: data.buyer || '',
                 ts: data.ts || '',
                 items: data.items || [],
-                sum_2500: data.sum_2500 || 0,
-                sum_1050: data.sum_1050 || 0,
-                sum_330:  data.sum_330  || 0,
-                grand:     data.grand   || 0
+                sum_2500: Number(data.sum_2500 || 0),
+                sum_1050: Number(data.sum_1050 || 0),
+                sum_330:  Number(data.sum_330  || 0),
+                grand:    Number(data.grand   || 0)
             }));
             
             let sum2500=0, sum1050=0, sum330=0, grandTotal=0, totalQty=0, totalCount=0;
             rows.forEach(data => {
-                sum2500 += (data.sum_2500 || 0);
-                sum1050 += (data.sum_1050 || 0);
-                sum330  += (data.sum_330  || 0);
-                grandTotal += (data.grand || 0);
-                (data.items||[]).forEach(it => totalQty += (it.qty||0));
+                sum2500 += Number(data.sum_2500 || 0);
+                sum1050 += Number(data.sum_1050 || 0);
+                sum330  += Number(data.sum_330  || 0);
+                grandTotal += Number(data.grand || 0);
+                (data.items||[]).forEach(it => totalQty += Number(it.qty||0));
                 totalCount++;
             });
 
