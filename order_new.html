@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>每週豆漿團購登記 V8.1(完整修復版)</title>
+<title>每週豆漿團購登記 V8.3(核心修復最終版)</title>
 
 <style>
 :root{
@@ -173,7 +173,7 @@ input[type="text"]:required:invalid{border-color:#ff6b6b;background:#fff5f5;}
 
 <body>
 <div class="wrap" id="wrap">
-  <h1>每週豆漿團購登記 V8.1(完整修復版)</h1>
+  <h1>每週豆漿團購登記 V8.3(核心修復最終版)</h1>
 
   <!-- 本次到貨日/批次狀態 -->
   <div class="badgeLine">
@@ -411,7 +411,7 @@ function nextFridayYmd(){
   const d = new Date();
   const day = d.getDay(); // 0 Sun ... 5 Fri
   const diff = (5 - day + 7) % 7 || 7; // next Friday (if today Fri, pick next week)
-  d.setDate(d.getDate() + diff);
+  d.setDate(d.getDate() + 7);
   return ymd(d);
 }
 
@@ -662,7 +662,7 @@ function setBatchUI(batch){
     measurementId: "G-Z3PHZMCGNW"
   };
 
-  console.log("正在初始化 Firebase (V8.1)...");
+  console.log("正在初始化 Firebase (V8.3)...");
   const app = initializeApp(firebaseConfig);
   const db  = getFirestore(app);
   console.log("Firebase 初始化完成，資料庫實例：", db);
@@ -680,17 +680,17 @@ function setBatchUI(batch){
   
   // 舊資料暫存
   let LEGACY_ROWS = [];
-  // V7.0: 存取目前清單的所有資料
   let CURRENT_LIST_ROWS = [];
-  // V7.9: 存取上週備份的原始資料
   let ARCHIVE_ROWS_CACHE = [];
 
-  // ========= Current Batch =========
+  // ========= 1. 工具函式 (Core Functions) =========
+
+  // 取得 Current Batch
   async function loadCurrentBatch(){
     try {
       const snap = await getDoc(currentBatchRef);
       if(!snap.exists()){
-        console.warn("⚠️ 尚未找到批次設定 (orders/_CONFIG_BATCH_)，進入 V5 相容模式。");
+        console.warn("⚠️ 尚未找到批次設定...");
         CURRENT_BATCH = null;
         setBatchUI(null);
         return null;
@@ -710,6 +710,7 @@ function setBatchUI(batch){
     }
   }
 
+  // 監聽 Batch
   function listenCurrentBatch(){
     return onSnapshot(currentBatchRef, (snap)=>{
       if(!snap.exists()){
@@ -733,94 +734,9 @@ function setBatchUI(batch){
     });
   }
 
-  // 修正日期按鈕邏輯
-  document.getElementById('btn-edit-date').addEventListener('click', async () => {
-    if (!CURRENT_BATCH || CURRENT_BATCH.status !== 'open') {
-        alert("目前沒有開放中的批次，無法修改。");
-        return;
-    }
-    const oldDate = CURRENT_BATCH.delivery_date;
-    const newDate = prompt("請輸入修正後的到貨日 (YYYY-MM-DD)：", oldDate);
-    if (!newDate || newDate === oldDate) return;
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(newDate)) {
-        alert("格式錯誤，請使用 YYYY-MM-DD 格式"); return;
-    }
-    
-    const newBillingMonth = ymFromYmd(newDate);
-    
-    try {
-        await updateDoc(currentBatchRef, {
-            delivery_date: newDate,
-            billing_month: newBillingMonth,
-            updated_at: serverTimestamp()
-        });
-        
-        const rows = await getBatchOrders(CURRENT_BATCH.batch_id);
-        
-        if (rows.length > 0) {
-            const batch = writeBatch(db);
-            rows.forEach(row => {
-                const ref = doc(db, 'orders', row.id);
-                batch.update(ref, {
-                    delivery_date: newDate,
-                    billing_month: newBillingMonth
-                });
-            });
-            await batch.commit();
-        }
-        
-        alert(`✅ 已修正日期為 ${newDate}\n相關訂單也已同步更新。`);
-    } catch(e) {
-        alert("修正失敗：" + e.message);
-    }
-  });
-
-  // ========= 送單（寫入 orders） =========
-  document.getElementById('btn-add-record').addEventListener('click', async ()=>{
-    const buyerEl = document.getElementById('buyer');
-    const buyerValue = buyerEl.value.trim();
-    if(!buyerValue){
-      alert('請先填寫「訂購人姓名」。');
-      buyerEl.focus();
-      return;
-    }
-
-    const rec = buildRecordMeta(CURRENT_BATCH);
-    if(!rec.items.length){ alert('目前沒有填寫任何數量。'); return; }
-
-    try{
-      await addDoc(collection(db, 'orders'), {
-        buyer: rec.buyer,
-        ts: rec.ts,
-        items: rec.items,
-        sum_2500: rec.sum['2500'],
-        sum_1050: rec.sum['1050'],
-        sum_330:  rec.sum['330'],
-        grand:    rec.sum.grand,
-        created_at: serverTimestamp(),
-
-        batch_id: CURRENT_BATCH?.batch_id || null,
-        delivery_date: CURRENT_BATCH?.delivery_date || null,
-        billing_month: CURRENT_BATCH?.billing_month || null,
-
-        deleted_at: null
-      });
-      alert('已提交到雲端！');
-
-      document.querySelectorAll('.item input[type="number"]').forEach(i=>i.value=0);
-      recalc();
-    }catch(err){
-      console.error(err);
-      alert('提交失敗：' + err.message);
-    }
-  });
-
-  // ========= 全域監聽 =========
+  // 全域訂單監聽
   function subscribeOrdersGlobal(){
     if(unsubscribeOrders){ unsubscribeOrders(); unsubscribeOrders=null; }
-
-    const listEl = document.getElementById('records-list');
-    const errorBox = document.getElementById('index-error-msg');
     
     // 使用最簡單的查詢
     const q = query(
@@ -831,6 +747,8 @@ function setBatchUI(batch){
     console.log(`正在訂閱所有訂單...`);
 
     unsubscribeOrders = onSnapshot(q, snap=>{
+      const errorBox = document.getElementById('index-error-msg');
+      const listEl = document.getElementById('records-list');
       errorBox.style.display = 'none';
       const allRows = snap.docs.map(d=>({ id:d.id, ...d.data() }));
       
@@ -878,6 +796,8 @@ function setBatchUI(batch){
       
     }, err=>{
       console.error("Firestore 監聽錯誤：", err);
+      const errorBox = document.getElementById('index-error-msg');
+      const listEl = document.getElementById('records-list');
       if(err.message.includes("indexes")){
          const match = err.message.match(/https:\/\/console\.firebase\.google\.com[^\s]*/);
          if(match){
@@ -891,7 +811,20 @@ function setBatchUI(batch){
       renderAggregateCloud([]);
     });
   }
-  
+
+  // 取得 Batch 訂單 (For closing)
+  async function getBatchOrders(batchId){
+    const q = query(
+      collection(db,'orders'),
+      where('batch_id','==',batchId)
+    );
+    const snap = await getDocs(q);
+    let rows = snap.docs.map(d=>({ id:d.id, ...d.data() }));
+    rows = rows.filter(r => !r.deleted_at);
+    rows.sort((a,b) => (b.created_at?.seconds || 0) - (a.created_at?.seconds || 0));
+    return rows;
+  }
+
   function updateLegacyUI(count) {
     const alertBox = document.getElementById('legacy-data-alert');
     const countSpan = document.getElementById('legacy-count');
@@ -905,444 +838,9 @@ function setBatchUI(batch){
       alertBox.style.display = 'none';
     }
   }
+
+  // ========= 2. 畫面渲染函式 (UI Functions) =========
   
-  document.getElementById('btn-fix-legacy').addEventListener('click', async () => {
-    if (LEGACY_ROWS.length === 0) return;
-    
-    const inputDate = document.getElementById('legacy-date-input').value;
-    if (!inputDate) { alert("請選擇一個日期！"); return; }
-    
-    if (!confirm(`確定將這 ${LEGACY_ROWS.length} 筆舊資料歸檔至日期 ${inputDate} 嗎？\n(這不會影響目前開啟的批次)`)) return;
-    
-    const legacyBatchId = 'legacy_' + inputDate.replace(/-/g,'');
-    const legacyMonth = ymFromYmd(inputDate);
-    
-    try {
-      const batch = writeBatch(db);
-      LEGACY_ROWS.forEach(row => {
-        const ref = doc(db, 'orders', row.id);
-        batch.update(ref, {
-          batch_id: legacyBatchId,
-          delivery_date: inputDate,
-          billing_month: legacyMonth
-        });
-      });
-      await batch.commit();
-      alert("✅ 舊資料已成功歸檔！");
-    } catch(e) {
-      alert("歸檔失敗：" + e.message);
-    }
-  });
-
-  document.getElementById('btn-move-current').addEventListener('click', async () => {
-    if (CURRENT_LIST_ROWS.length === 0) { alert("目前清單中沒有任何資料可以搬移。"); return; }
-    
-    const inputDate = prompt(`⚠️ 注意：您即將把目前顯示的 ${CURRENT_LIST_ROWS.length} 筆訂單歸檔為歷史資料。\n\n請輸入這些資料的正確到貨日 (YYYY-MM-DD)：`);
-    if (!inputDate) return;
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(inputDate)) { alert("日期格式錯誤"); return; }
-    
-    const legacyBatchId = 'legacy_' + inputDate.replace(/-/g,'');
-    const legacyMonth = ymFromYmd(inputDate);
-    
-    try {
-      const batch = writeBatch(db);
-      CURRENT_LIST_ROWS.forEach(row => {
-        const ref = doc(db, 'orders', row.id);
-        batch.update(ref, {
-          batch_id: legacyBatchId,
-          delivery_date: inputDate,
-          billing_month: legacyMonth
-        });
-      });
-      await batch.commit();
-      alert(`✅ 成功搬移！目前清單已清空。`);
-    } catch(e) {
-      alert("搬移失敗：" + e.message);
-    }
-  });
-
-  document.getElementById('btn-toggle-fix').addEventListener('click', ()=>{
-      const panel = document.getElementById('fix-section');
-      if(panel.style.display === 'block') panel.style.display = 'none';
-      else panel.style.display = 'block';
-  });
-
-  document.getElementById('btn-fix-date').addEventListener('click', async () => {
-    const wrongDate = document.getElementById('wrong-date').value.trim();
-    const correctDate = document.getElementById('correct-date').value.trim();
-
-    if(!/^\d{4}-\d{2}-\d{2}$/.test(wrongDate) || !/^\d{4}-\d{2}-\d{2}$/.test(correctDate)){
-      alert('日期格式錯誤'); return;
-    }
-
-    const targetRows = ALL_FETCHED_ROWS.filter(r => r.delivery_date === wrongDate);
-
-    if(targetRows.length === 0){ alert(`找不到日期為 ${wrongDate} 的訂單。`); return; }
-
-    if(!confirm(`⚠️ 找到 ${targetRows.length} 筆日期為 ${wrongDate} 的訂單。\n確定要全部修改為 ${correctDate} 嗎？`)){ return; }
-
-    const newMonth = ymFromYmd(correctDate);
-    const newBatchId = 'legacy_' + correctDate.replace(/-/g,''); 
-
-    try {
-      const batch = writeBatch(db);
-      targetRows.forEach(row => {
-        const ref = doc(db, 'orders', row.id);
-        batch.update(ref, {
-          delivery_date: correctDate,
-          billing_month: newMonth,
-          batch_id: newBatchId 
-        });
-      });
-      await batch.commit();
-      alert('✅ 修正完成！');
-    } catch(e) {
-      alert('修正失敗：' + e.message);
-    }
-  });
-
-  // V8.0: 雙重確認 + 自動推算日期
-  async function closeAndOpenNewBatch() {
-    if (LEGACY_ROWS.length > 0) {
-      alert(`⚠️ 系統偵測到還有 ${LEGACY_ROWS.length} 筆「未歸類」的舊資料。請先歸檔。`);
-      return;
-    }
-
-    const word = prompt(
-      '⚠️ 此動作會：\n' +
-      '1) 備份「本批次」為上週訂購資料\n' +
-      '2) 關閉本批次並開啟新一期團購\n\n' +
-      '請輸入「確認」以繼續：'
-    );
-    if(word !== '確認'){
-      alert('已取消。');
-      return;
-    }
-
-    const currentDefault = CURRENT_BATCH?.delivery_date || nextFridayYmd();
-    
-    const confirmCurrentDate = prompt(
-        `【步驟 1/2】請確認「即將結單歸檔」這批資料的正確到貨日？\n(將更新目前列表上的訂單)`, 
-        currentDefault
-    );
-    
-    if (!confirmCurrentDate) return;
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(confirmCurrentDate)) { alert('日期格式錯誤'); return; }
-
-    // 自動推算下一期日期 (當前輸入日期 + 7天)
-    const nextDefault = add7Days(confirmCurrentDate);
-
-    const newDeliveryDate = prompt(
-        `【步驟 2/2】請輸入「新一期」的預計到貨日？`, 
-        nextDefault
-    );
-
-    if (!newDeliveryDate) return;
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(newDeliveryDate)) { alert('日期格式錯誤'); return; }
-
-    const newBillingMonth = ymFromYmd(newDeliveryDate);
-    const currentBillingMonth = ymFromYmd(confirmCurrentDate);
-
-    try {
-        if(CURRENT_BATCH && CURRENT_BATCH.batch_id){
-          const rows = await getBatchOrders(CURRENT_BATCH.batch_id);
-          
-          if(rows.length){
-            const batch = writeBatch(db);
-            rows.forEach(row => {
-                const ref = doc(db, 'orders', row.id);
-                batch.update(ref, {
-                    delivery_date: confirmCurrentDate,
-                    billing_month: currentBillingMonth
-                });
-            });
-            await batch.commit();
-
-            const ordersArray = rows.map(data => ({
-                buyer: data.buyer || '',
-                ts: data.ts || '',
-                items: data.items || [],
-                sum_2500: data.sum_2500 || 0,
-                sum_1050: data.sum_1050 || 0,
-                sum_330:  data.sum_330  || 0,
-                grand:     data.grand   || 0
-            }));
-            
-            let sum2500=0, sum1050=0, sum330=0, grandTotal=0, totalQty=0, totalCount=0;
-            rows.forEach(data => {
-                sum2500 += (data.sum_2500 || 0);
-                sum1050 += (data.sum_1050 || 0);
-                sum330  += (data.sum_330  || 0);
-                grandTotal += (data.grand || 0);
-                (data.items||[]).forEach(it => totalQty += (it.qty||0));
-                totalCount++;
-            });
-
-            const archiveDoc = {
-              label: `${currentBillingMonth}（到貨 ${confirmCurrentDate}）備份 ${nowTS()}`,
-              created_at: serverTimestamp(),
-              created_ts: nowTS(),
-              batch_id: CURRENT_BATCH.batch_id,
-              delivery_date: confirmCurrentDate,
-              billing_month: currentBillingMonth,
-              meta: { totalCount, totalQty },
-              summary: { sum_2500, sum_1050, sum330, grand: grandTotal },
-              orders: ordersArray
-            };
-            await setDoc(doc(db, 'archives', 'last-week'), archiveDoc);
-          }
-        }
-
-        const newBatchId = 'batch_' + Date.now(); 
-
-        await setDoc(currentBatchRef, {
-          batch_id: newBatchId,
-          delivery_date: newDeliveryDate,
-          billing_month: newBillingMonth,
-          status: 'open',
-          updated_at: serverTimestamp()
-        });
-
-        document.querySelectorAll('.item input[type="number"]').forEach(i=>i.value=0);
-        recalc();
-
-        alert(`✅ 結單完成！\n\n舊訂單已歸檔至：${confirmCurrentDate}\n新一期團購已開啟：${newDeliveryDate}`);
-    
-    } catch(e) {
-        console.error(e);
-        alert("操作失敗：" + e.message);
-    }
-  }
-
-  document.getElementById('btn-clear-all').addEventListener('click', closeAndOpenNewBatch);
-
-  async function getBatchOrders(batchId){
-    const q = query(
-      collection(db,'orders'),
-      where('batch_id','==',batchId)
-    );
-    const snap = await getDocs(q);
-    let rows = snap.docs.map(d=>({ id:d.id, ...d.data() }));
-    rows = rows.filter(r => !r.deleted_at);
-    rows.sort((a,b) => (b.created_at?.seconds || 0) - (a.created_at?.seconds || 0));
-    return rows;
-  }
-  
-  document.getElementById('btn-restore-archive').addEventListener('click', async () => {
-    if (!ARCHIVE_ROWS_CACHE || ARCHIVE_ROWS_CACHE.length === 0) {
-        alert("目前沒有可還原的備份資料。");
-        return;
-    }
-    
-    const restoreDate = prompt("請輸入這批備份資料的正確到貨日 (YYYY-MM-DD)：", LAST_WEEK_DATE || "");
-    if (!restoreDate) return;
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(restoreDate)) { alert("格式錯誤"); return; }
-    
-    const restoreMonth = ymFromYmd(restoreDate);
-    const restoreBatchId = 'restored_' + restoreDate.replace(/-/g,'');
-    
-    if(!confirm(`確定要將 ${ARCHIVE_ROWS_CACHE.length} 筆資料寫回資料庫嗎？\n(這會讓它們出現在「月彙總」中)`)) return;
-    
-    try {
-        const batch = writeBatch(db);
-        ARCHIVE_ROWS_CACHE.forEach(row => {
-            const newDocRef = doc(collection(db, 'orders'));
-            batch.set(newDocRef, {
-                buyer: row.buyer,
-                ts: row.ts,
-                items: row.items,
-                sum_2500: row.sum_2500,
-                sum_1050: row.sum_1050,
-                sum_330: row.sum_330,
-                grand: row.grand,
-                created_at: serverTimestamp(),
-                
-                batch_id: restoreBatchId,
-                delivery_date: restoreDate,
-                billing_month: restoreMonth,
-                deleted_at: null
-            });
-        });
-        await batch.commit();
-        alert("✅ 還原成功！請重新整理頁面查看月彙總。");
-    } catch(e) {
-        alert("還原失敗：" + e.message);
-    }
-  });
-
-  // ========= 渲染：本批次清單 + 彙總 =========
-  function renderRecordsCloud(rows){
-    const listEl = document.getElementById('records-list');
-    if(!rows.length){
-      if(!listEl.innerHTML.includes('warn')) listEl.innerHTML = '<div class="muted">無資料。</div>';
-      renderAggregateCloud([]);
-      return;
-    }
-    listEl.innerHTML = '';
-
-    rows.forEach((rec)=>{
-      const card=document.createElement('div');
-      card.className='record';
-      card.innerHTML=`
-        <div class="hdr">
-          <div>${rec.buyer} <span class="meta">（${rec.ts||''}）</span></div>
-          <div>總金額 $${fmt(rec.grand||0)}</div>
-        </div>
-        <div class="muted">
-          2,500cc小計 $${fmt(rec.sum_2500||0)} ｜ 1,050cc小計 $${fmt(rec.sum_1050||0)} ｜ 330cc小計 $${fmt(rec.sum_330||0)}
-        </div>
-        <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
-          <button class="btn btn-toggle-detail">明細</button>
-          <button class="btn bad btn-del-record" data-id="${rec.id}">刪除</button>
-        </div>
-        <div class="details">
-          <table>
-            <thead><tr><th>品項</th><th>單價</th><th>數量</th><th>小計</th></tr></thead>
-            <tbody></tbody>
-          </table>
-        </div>`;
-
-      const tbody = card.querySelector('tbody');
-      (rec.items||[]).forEach(it=>{
-        const tr=document.createElement('tr');
-        tr.innerHTML=`<td style="text-align:left">${it.name}</td><td>$${fmt(it.price)}</td><td>${fmt(it.qty)}</td><td>$${fmt(it.money)}</td>`;
-        tbody.appendChild(tr);
-      });
-
-      card.querySelector('.btn-toggle-detail').addEventListener('click',()=>card.classList.toggle('open'));
-      
-      card.querySelector('.btn-del-record').addEventListener('click', async (e) => {
-          if(confirm('確定要刪除這筆訂單嗎？(無法復原)')) {
-              try {
-                  await deleteDoc(doc(db, 'orders', rec.id));
-              } catch(err) {
-                  alert('刪除失敗：' + err.message);
-              }
-          }
-      });
-
-      listEl.appendChild(card);
-    });
-
-    renderAggregateCloud(rows);
-  }
-
-  function renderAggregateCloud(rows){
-    const tbody = document.getElementById('agg-body'); if(!tbody) return;
-    tbody.innerHTML='';
-
-    const qByKey = {}; 
-    const sumByCat = {'2500':0,'1050':0,'330':0};
-    const qtyByCat = {'2500':0,'1050':0,'330':0};
-    let qtyAll=0,sumAll=0;
-
-    rows.forEach(r=>{
-      (r.items||[]).forEach(it=>{
-        const key = `${it.cat}:::${it.name}:::${it.price}`;
-        qByKey[key] = (qByKey[key]||0) + (it.qty||0);
-        sumByCat[it.cat] += (it.money||0);
-        qtyByCat[it.cat] += (it.qty||0);
-        qtyAll += (it.qty||0);
-        sumAll += (it.money||0);
-      });
-    });
-
-    const cats = [
-      {id:'2500', title:'2,500cc 袋裝'},
-      {id:'1050', title:'1,050cc 口栓袋'},
-      {id:'330',  title:'330cc 杯裝'}
-    ];
-
-    cats.forEach(c=>{
-      const th = document.createElement('tr'); th.className='group'; th.innerHTML=`<td colspan="4">${c.title}</td>`;
-      tbody.appendChild(th);
-      let hasAny=false;
-      Object.entries(qByKey).forEach(([k,qty])=>{
-        const [cat,name,price] = k.split(':::'); if(cat!==c.id || qty<=0) return;
-        hasAny=true;
-        const money = qty * Number(price);
-        const tr=document.createElement('tr');
-        tr.innerHTML=`<td>${name}</td><td>$${fmt(price)}</td><td>${fmt(qty)}</td><td>$${fmt(money)}</td>`;
-        tbody.appendChild(tr);
-      });
-      if(!hasAny){
-        const tr=document.createElement('tr');
-        tr.innerHTML=`<td colspan="4" class="muted">（此分類目前無數量）</td>`;
-        tbody.appendChild(tr);
-      }
-    });
-
-    document.getElementById('agg-q-2500').textContent = fmt(qtyByCat['2500']);
-    document.getElementById('agg-q-1050').textContent = fmt(qtyByCat['1050']);
-    document.getElementById('agg-q-330').textContent  = fmt(qtyByCat['330']);
-    document.getElementById('agg-s-2500').textContent = `$${fmt(sumByCat['2500'])}`;
-    document.getElementById('agg-s-1050').textContent = `$${fmt(sumByCat['1050'])}`;
-    document.getElementById('agg-s-330').textContent  = `$${fmt(sumByCat['330'])}`;
-    document.getElementById('agg-q-all').textContent  = fmt(qtyAll);
-    document.getElementById('agg-s-all').textContent  = `$${fmt(sumAll)}`;
-  }
-
-  // ========= 上週備份 (archives) =========
-  const archivesListEl = document.getElementById('archives-list');
-  function renderArchives(rows) {
-    archivesListEl.innerHTML = '';
-    if(!rows.length) {
-      archivesListEl.innerHTML = '<div class="muted">尚無備份紀錄。</div>';
-      ARCHIVE_ROWS_CACHE = [];
-      return;
-    }
-    rows.forEach(arc => {
-      LAST_WEEK_DATE = arc.delivery_date;
-      ARCHIVE_ROWS_CACHE = arc.orders || [];
-      refreshMonthly();
-
-      const card = document.createElement('div');
-      card.className = 'record lastWeekItem';
-      card.innerHTML = `
-        <div class="hdr">
-          <div>${arc.label || '(無標題)'} <span class="meta">（${arc.created_ts || ''}）</span></div>
-          <div>總計 $${fmt(arc.summary?.grand || 0)}</div>
-        </div>
-        <div class="muted">
-          到貨日：${arc.delivery_date || ''} ｜ 2500cc $${fmt(arc.summary?.sum_2500||0)} ｜ 1050cc $${fmt(arc.summary?.sum_1050||0)} ｜ 330cc $${fmt(arc.summary?.sum_330||0)}
-        </div>
-        <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
-          <button class="btn btn-toggle-archive">展開明細</button>
-        </div>
-        <div class="details">
-          <table>
-            <thead><tr><th>姓名</th><th>時間</th><th>總額</th><th>明細</th></tr></thead>
-            <tbody></tbody>
-          </table>
-        </div>
-      `;
-      const tbody = card.querySelector('tbody');
-      (arc.orders || []).forEach(o => {
-        const tr = document.createElement('tr');
-        const itemsStr = (o.items || []).map(it => {
-          const catLabel = {'2500':'2,500cc 袋裝','1050':'1,050cc 口栓袋','330':'330cc 杯裝'}[it.cat] || '';
-          return `${catLabel ? catLabel + '－' : ''}${it.name} x${it.qty}`;
-        }).join('； ');
-        tr.innerHTML = `
-          <td style="text-align:left">${o.buyer||''}</td>
-          <td>${o.ts||''}</td>
-          <td>$${fmt(o.grand||0)}</td>
-          <td style="text-align:left">${itemsStr}</td>`;
-        tbody.appendChild(tr);
-      });
-      card.querySelector('.btn-toggle-archive').addEventListener('click', () => card.classList.toggle('open'));
-      archivesListEl.appendChild(card);
-    });
-  }
-  function subscribeArchives() {
-    const ref = doc(db, 'archives', 'last-week');
-    return onSnapshot(ref, snap => {
-      if (!snap.exists()) renderArchives([]);
-      else renderArchives([{ id: snap.id, ...snap.data() }]);
-    });
-  }
-
-  // ========= 月彙總 =========
   function updateMonthlyDropdown() {
     const sel = document.getElementById('monthly-month');
     const currentVal = sel.value;
@@ -1388,32 +886,6 @@ function setBatchUI(batch){
         sel.value = list[0];
     }
   }
-
-  function refreshMonthly() {
-    const sel = document.getElementById('monthly-month');
-    const bm = sel.value;
-    if(!bm) return;
-
-    const targetRows = ALL_FETCHED_ROWS.filter(row => {
-        const rowDate = row.delivery_date || (row.ts ? row.ts.split(' ')[0].replace(/\//g,'-') : '');
-        if (CURRENT_BATCH?.delivery_date && rowDate === CURRENT_BATCH.delivery_date) return false;
-        if (LAST_WEEK_DATE && rowDate === LAST_WEEK_DATE) return false;
-
-        let rowM = null;
-        if (row.billing_month) rowM = row.billing_month;
-        else if (row.delivery_date) rowM = ymFromYmd(row.delivery_date);
-        else if (row.ts) {
-            const match = row.ts.match(/^(\d{4})\/(\d{2})/);
-            if (match) rowM = `${match[1]}-${match[2]}`;
-        }
-        return rowM === bm;
-    });
-
-    renderMonthly(bm, targetRows);
-  }
-
-  document.getElementById('btn-month-refresh').addEventListener('click', refreshMonthly);
-  document.getElementById('monthly-month').addEventListener('change', refreshMonthly);
 
   function renderMonthly(billingMonth, rows){
     const kpiEl = document.getElementById('monthly-kpi');
@@ -1512,6 +984,457 @@ function setBatchUI(batch){
       listEl.appendChild(sec);
     });
   }
+
+  function refreshMonthly() {
+    const sel = document.getElementById('monthly-month');
+    const bm = sel.value;
+    if(!bm) return;
+
+    const targetRows = ALL_FETCHED_ROWS.filter(row => {
+        const rowDate = row.delivery_date || (row.ts ? row.ts.split(' ')[0].replace(/\//g,'-') : '');
+        if (CURRENT_BATCH?.delivery_date && rowDate === CURRENT_BATCH.delivery_date) return false;
+        if (LAST_WEEK_DATE && rowDate === LAST_WEEK_DATE) return false;
+
+        let rowM = null;
+        if (row.billing_month) rowM = row.billing_month;
+        else if (row.delivery_date) rowM = ymFromYmd(row.delivery_date);
+        else if (row.ts) {
+            const match = row.ts.match(/^(\d{4})\/(\d{2})/);
+            if (match) rowM = `${match[1]}-${match[2]}`;
+        }
+        return rowM === bm;
+    });
+
+    renderMonthly(bm, targetRows);
+  }
+
+  function renderAggregateCloud(rows){
+    const tbody = document.getElementById('agg-body'); if(!tbody) return;
+    tbody.innerHTML='';
+
+    const qByKey = {}; 
+    const sumByCat = {'2500':0,'1050':0,'330':0};
+    const qtyByCat = {'2500':0,'1050':0,'330':0};
+    let qtyAll=0,sumAll=0;
+
+    rows.forEach(r=>{
+      (r.items||[]).forEach(it=>{
+        const key = `${it.cat}:::${it.name}:::${it.price}`;
+        qByKey[key] = (qByKey[key]||0) + (it.qty||0);
+        sumByCat[it.cat] += (it.money||0);
+        qtyByCat[it.cat] += (it.qty||0);
+        qtyAll += (it.qty||0);
+        sumAll += (it.money||0);
+      });
+    });
+
+    const cats = [
+      {id:'2500', title:'2,500cc 袋裝'},
+      {id:'1050', title:'1,050cc 口栓袋'},
+      {id:'330',  title:'330cc 杯裝'}
+    ];
+
+    cats.forEach(c=>{
+      const th = document.createElement('tr'); th.className='group'; th.innerHTML=`<td colspan="4">${c.title}</td>`;
+      tbody.appendChild(th);
+      let hasAny=false;
+      Object.entries(qByKey).forEach(([k,qty])=>{
+        const [cat,name,price] = k.split(':::'); if(cat!==c.id || qty<=0) return;
+        hasAny=true;
+        const money = qty * Number(price);
+        const tr=document.createElement('tr');
+        tr.innerHTML=`<td>${name}</td><td>$${fmt(price)}</td><td>${fmt(qty)}</td><td>$${fmt(money)}</td>`;
+        tbody.appendChild(tr);
+      });
+      if(!hasAny){
+        const tr=document.createElement('tr');
+        tr.innerHTML=`<td colspan="4" class="muted">（此分類目前無數量）</td>`;
+        tbody.appendChild(tr);
+      }
+    });
+
+    document.getElementById('agg-q-2500').textContent = fmt(qtyByCat['2500']);
+    document.getElementById('agg-q-1050').textContent = fmt(qtyByCat['1050']);
+    document.getElementById('agg-q-330').textContent  = fmt(qtyByCat['330']);
+    document.getElementById('agg-s-2500').textContent = `$${fmt(sumByCat['2500'])}`;
+    document.getElementById('agg-s-1050').textContent = `$${fmt(sumByCat['1050'])}`;
+    document.getElementById('agg-s-330').textContent  = `$${fmt(sumByCat['330'])}`;
+    document.getElementById('agg-q-all').textContent  = fmt(qtyAll);
+    document.getElementById('agg-s-all').textContent  = `$${fmt(sumAll)}`;
+  }
+
+  function renderRecordsCloud(rows){
+    const listEl = document.getElementById('records-list');
+    if(!rows.length){
+      if(!listEl.innerHTML.includes('warn')) listEl.innerHTML = '<div class="muted">無資料。</div>';
+      renderAggregateCloud([]);
+      return;
+    }
+    listEl.innerHTML = '';
+
+    rows.forEach((rec)=>{
+      const card=document.createElement('div');
+      card.className='record';
+      card.innerHTML=`
+        <div class="hdr">
+          <div>${rec.buyer} <span class="meta">（${rec.ts||''}）</span></div>
+          <div>總金額 $${fmt(rec.grand||0)}</div>
+        </div>
+        <div class="muted">
+          2,500cc小計 $${fmt(rec.sum_2500||0)} ｜ 1,050cc小計 $${fmt(rec.sum_1050||0)} ｜ 330cc小計 $${fmt(rec.sum_330||0)}
+        </div>
+        <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn btn-toggle-detail">明細</button>
+          <button class="btn bad btn-del-record" data-id="${rec.id}">刪除</button>
+        </div>
+        <div class="details">
+          <table>
+            <thead><tr><th>品項</th><th>單價</th><th>數量</th><th>小計</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>`;
+
+      const tbody = card.querySelector('tbody');
+      (rec.items||[]).forEach(it=>{
+        const tr=document.createElement('tr');
+        tr.innerHTML=`<td style="text-align:left">${it.name}</td><td>$${fmt(it.price)}</td><td>${fmt(it.qty)}</td><td>$${fmt(it.money)}</td>`;
+        tbody.appendChild(tr);
+      });
+
+      card.querySelector('.btn-toggle-detail').addEventListener('click',()=>card.classList.toggle('open'));
+      
+      card.querySelector('.btn-del-record').addEventListener('click', async (e) => {
+          if(confirm('確定要刪除這筆訂單嗎？(無法復原)')) {
+              try {
+                  await deleteDoc(doc(db, 'orders', rec.id));
+              } catch(err) {
+                  alert('刪除失敗：' + err.message);
+              }
+          }
+      });
+
+      listEl.appendChild(card);
+    });
+
+    renderAggregateCloud(rows);
+  }
+
+  // 渲染上週備份
+  const archivesListEl = document.getElementById('archives-list');
+  function renderArchives(rows) {
+    archivesListEl.innerHTML = '';
+    if(!rows.length) {
+      archivesListEl.innerHTML = '<div class="muted">尚無備份紀錄。</div>';
+      ARCHIVE_ROWS_CACHE = [];
+      return;
+    }
+    rows.forEach(arc => {
+      LAST_WEEK_DATE = arc.delivery_date;
+      ARCHIVE_ROWS_CACHE = arc.orders || [];
+      refreshMonthly();
+
+      const card = document.createElement('div');
+      card.className = 'record lastWeekItem';
+      card.innerHTML = `
+        <div class="hdr">
+          <div>${arc.label || '(無標題)'} <span class="meta">（${arc.created_ts || ''}）</span></div>
+          <div>總計 $${fmt(arc.summary?.grand || 0)}</div>
+        </div>
+        <div class="muted">
+          到貨日：${arc.delivery_date || ''} ｜ 2500cc $${fmt(arc.summary?.sum_2500||0)} ｜ 1050cc $${fmt(arc.summary?.sum_1050||0)} ｜ 330cc $${fmt(arc.summary?.sum_330||0)}
+        </div>
+        <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn btn-toggle-archive">展開明細</button>
+        </div>
+        <div class="details">
+          <table>
+            <thead><tr><th>姓名</th><th>時間</th><th>總額</th><th>明細</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      `;
+      const tbody = card.querySelector('tbody');
+      const catLabelMap = {'2500':'2,500cc 袋裝','1050':'1,050cc 口栓袋','330':'330cc 杯裝'};
+      (arc.orders || []).forEach(o => {
+        const tr = document.createElement('tr');
+        const itemsStr = (o.items || []).map(it => {
+          const catLabel = {'2500':'2,500cc 袋裝','1050':'1,050cc 口栓袋','330':'330cc 杯裝'}[it.cat] || '';
+          return `${catLabel ? catLabel + '－' : ''}${it.name} x${it.qty}`;
+        }).join('； ');
+        tr.innerHTML = `
+          <td style="text-align:left">${o.buyer||''}</td>
+          <td>${o.ts||''}</td>
+          <td>$${fmt(o.grand||0)}</td>
+          <td style="text-align:left">${itemsStr}</td>`;
+        tbody.appendChild(tr);
+      });
+      card.querySelector('.btn-toggle-archive').addEventListener('click', () => card.classList.toggle('open'));
+      archivesListEl.appendChild(card);
+    });
+  }
+
+  function subscribeArchives() {
+    const ref = doc(db, 'archives', 'last-week');
+    return onSnapshot(ref, snap => {
+      if (!snap.exists()) renderArchives([]);
+      else renderArchives([{ id: snap.id, ...snap.data() }]);
+    });
+  }
+
+  // ========= 3. 事件監聽 (Event Listeners) =========
+
+  document.getElementById('btn-fix-legacy').addEventListener('click', async () => {
+    if (LEGACY_ROWS.length === 0) return;
+    
+    const inputDate = document.getElementById('legacy-date-input').value;
+    if (!inputDate) { alert("請選擇一個日期！"); return; }
+    
+    if (!confirm(`確定將這 ${LEGACY_ROWS.length} 筆舊資料歸檔至日期 ${inputDate} 嗎？\n(這不會影響目前開啟的批次)`)) return;
+    
+    const legacyBatchId = 'legacy_' + inputDate.replace(/-/g,'');
+    const legacyMonth = ymFromYmd(inputDate);
+    
+    try {
+      const batch = writeBatch(db);
+      LEGACY_ROWS.forEach(row => {
+        const ref = doc(db, 'orders', row.id);
+        batch.update(ref, {
+          batch_id: legacyBatchId,
+          delivery_date: inputDate,
+          billing_month: legacyMonth
+        });
+      });
+      await batch.commit();
+      alert("✅ 舊資料已成功歸檔！");
+    } catch(e) {
+      alert("歸檔失敗：" + e.message);
+    }
+  });
+
+  document.getElementById('btn-move-current').addEventListener('click', async () => {
+    if (CURRENT_LIST_ROWS.length === 0) { alert("目前清單中沒有任何資料可以搬移。"); return; }
+    
+    const inputDate = prompt(`⚠️ 注意：您即將把目前顯示的 ${CURRENT_LIST_ROWS.length} 筆訂單歸檔為歷史資料。\n\n請輸入這些資料的正確到貨日 (YYYY-MM-DD)：`);
+    if (!inputDate) return;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(inputDate)) { alert("日期格式錯誤"); return; }
+    
+    const legacyBatchId = 'legacy_' + inputDate.replace(/-/g,'');
+    const legacyMonth = ymFromYmd(inputDate);
+    
+    try {
+      const batch = writeBatch(db);
+      CURRENT_LIST_ROWS.forEach(row => {
+        const ref = doc(db, 'orders', row.id);
+        batch.update(ref, {
+          batch_id: legacyBatchId,
+          delivery_date: inputDate,
+          billing_month: legacyMonth
+        });
+      });
+      await batch.commit();
+      alert(`✅ 成功搬移！目前清單已清空。`);
+    } catch(e) {
+      alert("搬移失敗：" + e.message);
+    }
+  });
+
+  document.getElementById('btn-toggle-fix').addEventListener('click', ()=>{
+      const panel = document.getElementById('fix-section');
+      if(panel.style.display === 'block') panel.style.display = 'none';
+      else panel.style.display = 'block';
+  });
+
+  document.getElementById('btn-fix-date').addEventListener('click', async () => {
+    const wrongDate = document.getElementById('wrong-date').value.trim();
+    const correctDate = document.getElementById('correct-date').value.trim();
+
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(wrongDate) || !/^\d{4}-\d{2}-\d{2}$/.test(correctDate)){
+      alert('日期格式錯誤'); return;
+    }
+
+    const targetRows = ALL_FETCHED_ROWS.filter(r => r.delivery_date === wrongDate);
+
+    if(targetRows.length === 0){ alert(`找不到日期為 ${wrongDate} 的訂單。`); return; }
+
+    if(!confirm(`⚠️ 找到 ${targetRows.length} 筆日期為 ${wrongDate} 的訂單。\n確定要全部修改為 ${correctDate} 嗎？`)){ return; }
+
+    const newMonth = ymFromYmd(correctDate);
+    const newBatchId = 'legacy_' + correctDate.replace(/-/g,''); 
+
+    try {
+      const batch = writeBatch(db);
+      targetRows.forEach(row => {
+        const ref = doc(db, 'orders', row.id);
+        batch.update(ref, {
+          delivery_date: correctDate,
+          billing_month: newMonth,
+          batch_id: newBatchId 
+        });
+      });
+      await batch.commit();
+      alert('✅ 修正完成！');
+    } catch(e) {
+      alert('修正失敗：' + e.message);
+    }
+  });
+
+  async function closeAndOpenNewBatch() {
+    if (LEGACY_ROWS.length > 0) {
+      alert(`⚠️ 系統偵測到還有 ${LEGACY_ROWS.length} 筆「未歸類」的舊資料。請先歸檔。`);
+      return;
+    }
+
+    const word = prompt(
+      '⚠️ 此動作會：\n' +
+      '1) 備份「本批次」為上週訂購資料\n' +
+      '2) 關閉本批次並開啟新一期團購\n\n' +
+      '請輸入「確認」以繼續：'
+    );
+    if(word !== '確認'){
+      alert('已取消。');
+      return;
+    }
+
+    const currentDefault = CURRENT_BATCH?.delivery_date || nextFridayYmd();
+    
+    const confirmCurrentDate = prompt(
+        `【步驟 1/2】請確認「即將結單歸檔」這批資料的正確到貨日？\n(將更新目前列表上的訂單)`, 
+        currentDefault
+    );
+    
+    if (!confirmCurrentDate) return;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(confirmCurrentDate)) { alert('日期格式錯誤'); return; }
+
+    const nextDefault = add7Days(confirmCurrentDate);
+
+    const newDeliveryDate = prompt(
+        `【步驟 2/2】請輸入「新一期」的預計到貨日？`, 
+        nextDefault
+    );
+
+    if (!newDeliveryDate) return;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(newDeliveryDate)) { alert('日期格式錯誤'); return; }
+
+    const newBillingMonth = ymFromYmd(newDeliveryDate);
+    const currentBillingMonth = ymFromYmd(confirmCurrentDate);
+
+    try {
+        if(CURRENT_BATCH && CURRENT_BATCH.batch_id){
+          const rows = await getBatchOrders(CURRENT_BATCH.batch_id);
+          
+          if(rows.length){
+            const batch = writeBatch(db);
+            rows.forEach(row => {
+                const ref = doc(db, 'orders', row.id);
+                batch.update(ref, {
+                    delivery_date: confirmCurrentDate,
+                    billing_month: currentBillingMonth
+                });
+            });
+            await batch.commit();
+
+            const ordersArray = rows.map(data => ({
+                buyer: data.buyer || '',
+                ts: data.ts || '',
+                items: data.items || [],
+                sum_2500: data.sum_2500 || 0,
+                sum_1050: data.sum_1050 || 0,
+                sum_330:  data.sum_330  || 0,
+                grand:     data.grand   || 0
+            }));
+            
+            let sum2500=0, sum1050=0, sum330=0, grandTotal=0, totalQty=0, totalCount=0;
+            rows.forEach(data => {
+                sum2500 += (data.sum_2500 || 0);
+                sum1050 += (data.sum_1050 || 0);
+                sum330  += (data.sum_330  || 0);
+                grandTotal += (data.grand || 0);
+                (data.items||[]).forEach(it => totalQty += (it.qty||0));
+                totalCount++;
+            });
+
+            const archiveDoc = {
+              label: `${currentBillingMonth}（到貨 ${confirmCurrentDate}）備份 ${nowTS()}`,
+              created_at: serverTimestamp(),
+              created_ts: nowTS(),
+              batch_id: CURRENT_BATCH.batch_id,
+              delivery_date: confirmCurrentDate,
+              billing_month: currentBillingMonth,
+              meta: { totalCount, totalQty },
+              summary: { sum_2500, sum_1050, sum330, grand: grandTotal },
+              orders: ordersArray
+            };
+            await setDoc(doc(db, 'archives', 'last-week'), archiveDoc);
+          }
+        }
+
+        const newBatchId = 'batch_' + Date.now(); 
+
+        await setDoc(currentBatchRef, {
+          batch_id: newBatchId,
+          delivery_date: newDeliveryDate,
+          billing_month: newBillingMonth,
+          status: 'open',
+          updated_at: serverTimestamp()
+        });
+
+        document.querySelectorAll('.item input[type="number"]').forEach(i=>i.value=0);
+        recalc();
+
+        alert(`✅ 結單完成！\n\n舊訂單已歸檔至：${confirmCurrentDate}\n新一期團購已開啟：${newDeliveryDate}`);
+    
+    } catch(e) {
+        console.error(e);
+        alert("操作失敗：" + e.message);
+    }
+  }
+
+  document.getElementById('btn-clear-all').addEventListener('click', closeAndOpenNewBatch);
+  
+  document.getElementById('btn-restore-archive').addEventListener('click', async () => {
+    if (!ARCHIVE_ROWS_CACHE || ARCHIVE_ROWS_CACHE.length === 0) {
+        alert("目前沒有可還原的備份資料。");
+        return;
+    }
+    
+    const restoreDate = prompt("請輸入這批備份資料的正確到貨日 (YYYY-MM-DD)：", LAST_WEEK_DATE || "");
+    if (!restoreDate) return;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(restoreDate)) { alert("格式錯誤"); return; }
+    
+    const restoreMonth = ymFromYmd(restoreDate);
+    const restoreBatchId = 'restored_' + restoreDate.replace(/-/g,'');
+    
+    if(!confirm(`確定要將 ${ARCHIVE_ROWS_CACHE.length} 筆資料寫回資料庫嗎？\n(這會讓它們出現在「月彙總」中)`)) return;
+    
+    try {
+        const batch = writeBatch(db);
+        ARCHIVE_ROWS_CACHE.forEach(row => {
+            const newDocRef = doc(collection(db, 'orders'));
+            batch.set(newDocRef, {
+                buyer: row.buyer,
+                ts: row.ts,
+                items: row.items,
+                sum_2500: row.sum_2500,
+                sum_1050: row.sum_1050,
+                sum_330: row.sum_330,
+                grand: row.grand,
+                created_at: serverTimestamp(),
+                
+                batch_id: restoreBatchId,
+                delivery_date: restoreDate,
+                billing_month: restoreMonth,
+                deleted_at: null
+            });
+        });
+        await batch.commit();
+        alert("✅ 還原成功！請重新整理頁面查看月彙總。");
+    } catch(e) {
+        alert("還原失敗：" + e.message);
+    }
+  });
+
+  document.getElementById('btn-month-refresh').addEventListener('click', refreshMonthly);
+  document.getElementById('monthly-month').addEventListener('change', refreshMonthly);
 
   // ========= 初始化 =========
   document.getElementById('ts').textContent = nowTS();
