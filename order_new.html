@@ -1,0 +1,1199 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>每週豆漿團購登記 V6.1(批次/到貨日/月彙總/隱藏月份)</title>
+
+<style>
+:root{
+  --radius: 10px; --border:#ddd; --cat:#d9edf7; --hi:#fff7b1;
+  --fz-base: clamp(16px, 3vw, 20px);
+  --fz-large: clamp(18px, 4vw, 24px);
+  --primary:#3f51b5;
+  --accent:#d2691e;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#fafafa;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",sans-serif;font-size:var(--fz-base);line-height:1.4;}
+.wrap{max-width:720px;margin:auto;padding:10px;background:#fff;border:2px solid #000;border-radius:12px;}
+h1{font-size:var(--fz-large);margin:4px 0 8px;text-align:center;}
+
+.badgeLine{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin:6px 0 12px;}
+.badge{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:6px 10px;border:1px solid var(--border);border-radius:999px;
+  background:#fff;font-weight:700;
+}
+.badge strong{color:var(--primary)}
+.badge.warn{background:#fff7f7;border-color:#ffc9c9}
+.badge.ok{background:#f6fffa;border-color:#b7efc5}
+
+label{display:block;margin-bottom:6px;font-weight:600;}
+input[type="text"]{width:100%;padding:8px;font-size:var(--fz-large);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:10px;}
+input[type="text"]:required:invalid{border-color:#ff6b6b;background:#fff5f5;}
+
+.toolbar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;align-items:center;}
+.btn{padding:10px 12px;font-size:var(--fz-base);border:1px solid var(--border);background:#fff;border-radius:var(--radius);cursor:pointer;}
+.btn:active{transform:scale(.97)}
+.btn[disabled]{opacity:.55;cursor:not-allowed}
+.danger{background:#ffe8e8;border:1px solid #ffbdbd}
+.bad{color:#a00}
+.muted{color:#666;font-size:.9em}
+
+.cat-header{display:flex;justify-content:space-between;align-items:center;background:var(--cat);padding:6px 8px;border-radius:var(--radius);margin-top:10px;margin-bottom:6px;font-weight:700;}
+.cat-header .btn{flex:0 0 auto;}
+
+.item{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:6px;margin-bottom:4px;transition:background .15s;}
+.item.highlight{background:var(--hi);}
+.name{font-weight:700;margin-bottom:2px;}
+.price{margin-bottom:4px;}
+.qty{display:flex;align-items:center;gap:6px;}
+.qty input{width:70px;padding:6px;font-size:var(--fz-large);text-align:center;border:1px solid var(--border);border-radius:8px;-moz-appearance:textfield;}
+.qty input::-webkit-inner-spin-button,.qty input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0;}
+.step{padding:6px 10px;font-size:var(--fz-large);border:1px solid var(--border);background:#fff;border-radius:8px;cursor:pointer;}
+.subtotal{text-align:right;font-weight:700;margin-top:2px;}
+
+.totals{margin-top:10px;padding:8px;background:#fff;border:1px solid var(--border);border-radius:var(--radius);font-size:var(--fz-large);}
+.totals div{margin-bottom:4px;}
+.accent{color:var(--accent);font-weight:700;}
+.hide-empty .item:not(.highlight){display:none;}
+.collapsed{display:none;}
+
+/* 小計模式 */
+.summary{display:none;margin-top:10px;}
+.summary-mode #catalog{display:none;}
+.summary-mode .summary{display:block;}
+.summary .sec{border:1px solid var(--border);border-radius:var(--radius);background:#fff;margin-bottom:8px;overflow:hidden;}
+.summary .sec-title{background:var(--cat);padding:6px 8px;font-weight:700;}
+.summary .row{display:flex;gap:8px;justify-content:space-between;align-items:center;padding:6px 8px;border-top:1px dashed #e6e6e6;}
+.summary .left{display:flex;gap:8px;align-items:center;min-width:0;flex-wrap:wrap;}
+.summary .name{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:260px;}
+.summary .badge{border:1px solid #e0e0e0;border-radius:6px;padding:2px 6px;background:#fff;}
+.summary .qty-badge{font-weight:900;background:#fff7b1;border:1px solid #f0df75;border-radius:6px;padding:2px 8px;}
+.summary .money{font-weight:800;}
+.sec-sub{padding:6px 8px;text-align:right;font-weight:900;color:#6b3f00}
+
+/* 區塊 */
+.section{margin-top:12px;padding:10px;border:1px solid var(--border);border-radius:var(--radius);background:#fff;}
+.section h2{margin:0 0 8px 0;font-size:1.1em}
+.record{border:1px solid #eee;border-radius:8px;padding:8px;margin-bottom:8px;background:#fafafa;}
+.record .hdr{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-weight:700;}
+.record .meta{font-weight:400}
+.record .details{margin-top:6px;border-top:1px dashed #e6e6e6;padding-top:6px;display:none}
+.record.open .details{display:block}
+.record table{width:100%;border-collapse:collapse;font-size:.95em}
+.record th, .record td{border-bottom:1px solid #eee;padding:4px;text-align:right}
+.record th:first-child, .record td:first-child{text-align:left}
+
+.table{width:100%;border-collapse:collapse}
+.table th,.table td{border-bottom:1px solid #eee;padding:6px;text-align:right}
+.table th:first-child,.table td:first-child{text-align:left}
+.table .group{background:#f7f7f7;font-weight:800;}
+
+/* 上週訂購資料區 */
+#archives-section {
+  background: #f7f7f7;
+  border: 1px solid #e3e3e3;
+  padding: 18px;
+  border-radius: 10px;
+  margin-top: 28px;
+}
+#lastWeekTitle {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 12px;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 6px;
+  display:inline-block;
+}
+.lastWeekItem {
+  background: #ffffff;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  border-radius: 6px;
+  border: 1px solid #e8e8e8;
+}
+.lastWeekItem .hdr div:last-child { color: #6b3f00; font-weight:800; }
+
+/* 月彙總（折疊群組） */
+.msec{border:1px solid var(--border);border-radius:var(--radius);background:#fff;margin:10px 0;overflow:hidden;}
+.msec .mhead{background:#f3f6ff;padding:8px 10px;font-weight:800;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;}
+.msec .mhead .meta{font-weight:600;color:#444}
+.msec .mbody{padding:8px 10px;display:none;}
+.msec.open .mbody{display:block;}
+.kpi{display:flex;gap:10px;flex-wrap:wrap;margin:6px 0;}
+.kpi .k{border:1px solid #eee;border-radius:999px;padding:6px 10px;background:#fff;font-weight:800;}
+.kpi .k strong{color:var(--accent)}
+.hr{height:1px;background:#eee;margin:10px 0;}
+
+@media print{
+  #archives-section { background: #fff !important; box-shadow: none !important; border: none !important; }
+  .lastWeekItem { box-shadow:none !important; border: 1px solid #eee !important; }
+  .btn, .toolbar { display: none !important; }
+  body{background:#fff}
+  .wrap{border:2px solid #000;border-radius:12px}
+  input[type="text"],input[type="number"]{border:none}
+  .item{page-break-inside:avoid}
+  .section{page-break-inside:avoid}
+}
+</style>
+</head>
+
+<body>
+<div class="wrap" id="wrap">
+  <h1>每週豆漿團購登記 V6.1(114/12/25)</h1>
+
+  <!-- 本次到貨日/批次狀態 -->
+  <div class="badgeLine">
+    <div class="badge" id="badge-batch">
+      本次到貨日：<strong id="delivery-date-text">（尚未設定）</strong>
+    </div>
+    <div class="badge warn" id="badge-batch-status">
+      批次狀態：<strong id="batch-status-text">未建立</strong>
+    </div>
+  </div>
+
+  <label for="buyer">訂購人姓名</label>
+  <input type="text" id="buyer" placeholder="輸入姓名" required aria-required="true" />
+
+  <div class="toolbar">
+    <button class="btn" id="btn-clear-inputs">清空頁面數量</button>
+    <button class="btn" id="btn-toggle">檢視模式</button>
+  </div>
+
+  <!-- 目錄 -->
+  <div id="catalog">
+    <div class="cat-header">
+      <span>2500cc 袋裝</span>
+      <button class="btn btn-toggle-cat" data-target="cat-2500" aria-expanded="false">展開</button>
+    </div>
+    <div id="cat-2500" class="collapsed"></div>
+
+    <div class="cat-header">
+      <span>1050cc 口栓袋</span>
+      <button class="btn btn-toggle-cat" data-target="cat-1050" aria-expanded="false">展開</button>
+    </div>
+    <div id="cat-1050" class="collapsed"></div>
+
+    <div class="cat-header">
+      <span>330cc 杯裝</span>
+      <button class="btn btn-toggle-cat" data-target="cat-330" aria-expanded="false">展開</button>
+    </div>
+    <div id="cat-330" class="collapsed"></div>
+  </div>
+
+  <!-- 小計清單 -->
+  <div id="summary" class="summary"></div>
+
+  <div class="totals">
+    <div>訂購人：<span id="buyer-name"></span></div>
+    <div class="muted">統計時間：<span id="ts"></span></div>
+
+    <div>2,500cc 小計：$<span id="sub-2500" class="accent">0</span></div>
+    <div>1,050cc 小計：$<span id="sub-1050" class="accent">0</span></div>
+    <div>330cc 小計：$<span id="sub-330"  class="accent">0</span></div>
+    <div>總金額：$<span id="grand-total" class="accent">0</span></div>
+
+    <div class="toolbar" style="margin-top:8px">
+      <button class="btn" id="btn-add-record">填寫完成/加入至統計表（送雲端）</button>
+      <button class="btn" id="btn-bottom-mode">小計模式（截圖使用）/復原檢視模式</button>
+    </div>
+
+    <button class="btn danger" id="btn-clear-all" title="結束本批次（備份為上週）並開啟新批次">
+      ⚠️ 清空頁面＋清空雲端紀錄（防呆）+備份（並選擇到貨日）
+    </button>
+
+    <div class="muted">
+      說明：此按鈕會把「本批次」雲端資料備份至「上週訂購資料」（僅保留最近一次），並關閉本批次、建立新批次（到貨日由團主選擇）。本版本不再刪除全部訂單，改以批次管理，支援月彙總。
+    </div>
+  </div>
+
+  <!-- 團購清單（雲端即時，本批次） -->
+  <div class="section" id="records-section">
+    <h2>團購清單（雲端即時）－本次到貨：<span id="delivery-date-text-2">（尚未設定）</span></h2>
+    <div id="records-list" class="records"></div>
+    <div class="muted">點「明細」可展開查看每位填寫者的品項與數量。</div>
+  </div>
+
+  <!-- 總彙總（本批次） -->
+  <div class="section" id="aggregate-section">
+    <h2>目前總彙總（本批次）</h2>
+    <table class="table" id="agg-table">
+      <thead>
+        <tr><th>品項</th><th>單價</th><th>總數量</th><th>總金額</th></tr>
+      </thead>
+      <tbody id="agg-body"></tbody>
+      <tfoot>
+        <tr><th>2,500cc 小計</th><td></td><td id="agg-q-2500"></td><td id="agg-s-2500"></td></tr>
+        <tr><th>1,050cc 小計</th><td></td><td id="agg-q-1050"></td><td id="agg-s-1050"></td></tr>
+        <tr><th>330cc 小計</th><td></td><td id="agg-q-330"></td><td id="agg-s-330"></td></tr>
+        <tr><th>總計</th><td></td><td id="agg-q-all"></td><td id="agg-s-all"></td></tr>
+      </tfoot>
+    </table>
+  </div>
+
+  <!-- 上週訂購資料（僅保留最近一次備份） -->
+  <div class="section" id="archives-section">
+    <h2 id="lastWeekTitle">上週訂購資料</h2>
+    <div id="archives-list" class="records"></div>
+    <div class="muted">提示：此區只會顯示最近一次按「清空＋備份」時的本批次資料（包含每位訂購者姓名、明細與小計）。</div>
+  </div>
+
+  <!-- 月彙總（網頁呈現） -->
+  <div class="section" id="monthly-section">
+    <h2>月彙總（依到貨日月份）</h2>
+
+    <div class="toolbar">
+      <label style="margin:0;min-width:78px;font-weight:800;">選擇月份</label>
+      <select id="monthly-month" class="btn" style="padding:10px 12px;"></select>
+      <button class="btn" id="btn-month-refresh">重新整理</button>
+
+      <button class="btn danger" id="btn-month-hide" title="輸入 4908 後隱藏該月份（不刪資料）">隱藏此月份（收款確認後）</button>
+      <button class="btn" id="btn-month-unhide" title="取消隱藏，讓月份重新顯示">取消隱藏</button>
+      <label class="btn" style="display:inline-flex;align-items:center;gap:6px;">
+        <input type="checkbox" id="chk-show-hidden" />
+        顯示已隱藏月份
+      </label>
+    </div>
+
+    <div id="monthly-kpi" class="kpi"></div>
+    <div id="monthly-cats" class="kpi"></div>
+
+    <div class="hr"></div>
+
+    <div id="monthly-list"></div>
+
+    <div class="muted">
+      說明：月彙總會顯示該月份（以到貨日歸屬）所有批次的訂購明細與加總；「隱藏」只是不顯示月份與資料。
+    </div>
+  </div>
+</div>
+
+<script>
+/* ---------- 資料（品項） ---------- */
+const items2500 = [
+  {cat:"2500", name:"微糖豆漿", price:45},
+  {cat:"2500", name:"黑豆漿",   price:55},
+  {cat:"2500", name:"薏仁漿",   price:50},
+  {cat:"2500", name:"米漿",     price:65},
+  {cat:"2500", name:"高濃豆漿", price:40},
+  {cat:"2500", name:"新/舊無糖", price:45},
+];
+const items1050 = [
+  {cat:"1050", name:"小非基",   price:28},
+  {cat:"1050", name:"小無糖",   price:28},
+  {cat:"1050", name:"小芝麻",   price:36},
+  {cat:"1050", name:"小杏仁",   price:51},
+  {cat:"1050", name:"小薏麥",   price:31},
+  {cat:"1050", name:"小米漿",   price:36},
+  {cat:"1050", name:"小南瓜",   price:48},
+  {cat:"1050", name:"小黑牛",   price:40},
+  {cat:"1050", name:"小芝微",   price:36},
+  {cat:"1050", name:"小杏微",   price:51},
+  {cat:"1050", name:"小厚豆",   price:33},
+  {cat:"1050", name:"小厚豆(無糖)", price:33},
+];
+const items330 = [
+  {cat:"330", name:"豆漿（有糖）（非基改）", price:13},
+  {cat:"330", name:"豆漿（無糖）（非基改）", price:13},
+  {cat:"330", name:"5.2 厚豆乳（有糖）（非基改）", price:17},
+  {cat:"330", name:"燕麥薏仁（有糖）",           price:17},
+  {cat:"330", name:"黑芝麻燕麥（有糖）",         price:17},
+  {cat:"330", name:"黑芝麻堅果（減糖）",         price:17},
+  {cat:"330", name:"黑芝麻豆漿（減糖）",         price:17},
+  {cat:"330", name:"糙米漿（有糖）",             price:17},
+  {cat:"330", name:"杏仁漿（有糖）",             price:18},
+  {cat:"330", name:"杏仁漿（減糖）",             price:18},
+  {cat:"330", name:"南瓜豆漿（有糖）（非基改）",   price:18},
+  {cat:"330", name:"紅豆薏仁（有糖）",           price:18},
+  {cat:"330", name:"黑芝麻牛奶（有糖）",         price:18},
+  {cat:"330", name:"黑豆堅果（減糖）",           price:18},
+];
+const items=[...items2500,...items1050,...items330];
+
+const $ = s => document.querySelector(s);
+const $$ = s => document.querySelectorAll(s);
+const fmt = n => Number(n||0).toLocaleString('zh-Hant-TW');
+
+function nowTS(){
+  const d = new Date();
+  const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0');
+  const hh=String(d.getHours()).padStart(2,'0'), mm=String(d.getMinutes()).padStart(2,'0');
+  return `${y}/${m}/${day} ${hh}:${mm}`;
+}
+function ymd(d){
+  const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+function ymFromYmd(ymdStr){ return (ymdStr || '').slice(0,7); }
+function nextFridayYmd(){
+  const d = new Date();
+  const day = d.getDay(); // 0 Sun ... 5 Fri
+  const diff = (5 - day + 7) % 7 || 7; // next Friday (if today Fri, pick next week)
+  d.setDate(d.getDate() + diff);
+  return ymd(d);
+}
+
+/* ---------- 產出 UI（品項卡） ---------- */
+function renderItems(list,wrapId,offset){
+  const wrap=document.getElementById(wrapId);
+  list.forEach((item,i)=>{
+    const idx = offset + i;
+    const el=document.createElement('div');
+    el.className='item';
+    el.dataset.index=idx;
+    el.innerHTML=`
+      <div class="name">${item.name}</div>
+      <div class="price">單價：$${fmt(item.price)}</div>
+      <div class="qty">
+        <button class="step" data-step="-1">−</button>
+        <input type="number" min="0" value="0">
+        <button class="step" data-step="1">＋</button>
+      </div>
+      <div class="subtotal">$<span class="subtotal-num">0</span></div>`;
+    wrap.appendChild(el);
+  });
+}
+renderItems(items2500,'cat-2500',0);
+renderItems(items1050,'cat-1050',items2500.length);
+renderItems(items330,'cat-330',items2500.length+items1050.length);
+
+/* ---------- 計算（頁面） ---------- */
+const sub2500=$('#sub-2500'), sub1050=$('#sub-1050'), sub330=$('#sub-330'), grand=$('#grand-total');
+const buyerInput=$('#buyer'), buyerName=$('#buyer-name'), tsSpan=$('#ts'), wrapBox=$('#wrap'), summaryBox=$('#summary');
+
+buyerInput.addEventListener('input',()=>buyerName.textContent=buyerInput.value);
+function updateTS(){ tsSpan.textContent = nowTS(); }
+
+function recalc(){
+  let t2500=0,t1050=0,t330=0;
+  $$('.item').forEach(card=>{
+    const idx=+card.dataset.index;
+    const qty=Math.max(0,parseInt(card.querySelector('input').value||'0',10));
+    const subtotal=qty*items[idx].price;
+    card.querySelector('.subtotal-num').textContent=fmt(subtotal);
+    card.classList.toggle('highlight',qty>0);
+    if(items[idx].cat==='2500')t2500+=subtotal;
+    else if(items[idx].cat==='1050')t1050+=subtotal;
+    else t330+=subtotal;
+  });
+  sub2500.textContent=fmt(t2500);
+  sub1050.textContent=fmt(t1050);
+  sub330.textContent=fmt(t330);
+  grand.textContent=fmt(t2500+t1050+t330);
+
+  if (wrapBox.classList.contains('summary-mode')) buildSummary();
+  updateTS();
+}
+document.body.addEventListener('input',e=>{
+  if(e.target.matches('.item input[type="number"]'))recalc();
+});
+document.body.addEventListener('click',e=>{
+  if(e.target.matches('.step')){
+    const input=e.target.parentElement.querySelector('input');
+    input.value=Math.max(0,(+input.value||0)+(+e.target.dataset.step));
+    recalc();
+  }
+});
+$('#btn-clear-inputs').addEventListener('click',()=>{
+  $$('.item input[type="number"]').forEach(i=>i.value=0);
+  recalc();
+});
+$('#btn-toggle').addEventListener('click',()=>wrapBox.classList.toggle('hide-empty'));
+
+/* ---------- 小計模式（精簡清單） ---------- */
+let prevCollapsed = {};
+$('#btn-bottom-mode').addEventListener('click',()=>{
+  if (wrapBox.classList.contains('summary-mode')) exitSummaryMode();
+  else enterSummaryMode();
+});
+function enterSummaryMode(){
+  ['cat-2500','cat-1050','cat-330'].forEach(id=>{
+    const el=document.getElementById(id);
+    prevCollapsed[id]=el.classList.contains('collapsed');
+    el.classList.remove('collapsed');
+    const btn = document.querySelector(`.btn-toggle-cat[data-target="${id}"]`);
+    if (btn){ btn.textContent='收合'; btn.setAttribute('aria-expanded','true'); }
+  });
+  wrapBox.classList.add('summary-mode');
+  buildSummary();
+  updateTS();
+}
+function exitSummaryMode(){
+  wrapBox.classList.remove('summary-mode');
+  Object.entries(prevCollapsed).forEach(([id,flag])=>{
+    document.getElementById(id).classList.toggle('collapsed',!!flag);
+    const btn = document.querySelector(`.btn-toggle-cat[data-target="${id}"]`);
+    if (btn){
+      btn.textContent = flag ? '展開' : '收合';
+      btn.setAttribute('aria-expanded', flag ? 'false' : 'true');
+    }
+  });
+  updateTS();
+}
+function buildSummary(){
+  const cats=[{id:'2500',title:'2500cc 袋裝'},{id:'1050',title:'1050cc 口栓袋'},{id:'330',title:'330cc 杯裝'}];
+  summaryBox.innerHTML='';
+  cats.forEach(c=>{
+    const list=[]; let catSum=0;
+    $$('.item').forEach(card=>{
+      const idx=+card.dataset.index, qty=parseInt(card.querySelector('input').value||'0',10);
+      if(items[idx].cat!==c.id || qty<=0) return;
+      const price=items[idx].price, money=qty*price; catSum+=money;
+      list.push({name:items[idx].name, price, qty, money});
+    });
+    if(!list.length) return;
+    const sec=document.createElement('div'); sec.className='sec';
+    sec.innerHTML=`<div class="sec-title">${c.title}</div>`;
+    list.forEach(r=>{
+      const row=document.createElement('div'); row.className='row';
+      row.innerHTML=`
+        <div class="left">
+          <span class="name">${r.name}</span>
+          <span class="badge">單價 $${fmt(r.price)}</span>
+          <span class="qty-badge">數量 ${r.qty}</span>
+        </div>
+        <div class="money">$${fmt(r.money)}</div>`;
+      sec.appendChild(row);
+    });
+    const sub=document.createElement('div'); sub.className='sec-sub'; sub.textContent=`小計 $${fmt(catSum)}`; sec.appendChild(sub);
+    summaryBox.appendChild(sec);
+  });
+}
+
+/* ---------- 展開/收合 ---------- */
+function setCollapsed(targetId, collapsed){
+  const panel = document.getElementById(targetId);
+  if (!panel) return;
+  panel.classList.toggle('collapsed', !!collapsed);
+  const btn = document.querySelector(`.btn-toggle-cat[data-target="${targetId}"]`);
+  if (btn){
+    btn.textContent = collapsed ? '展開' : '收合';
+    btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+  }
+}
+$$('.btn-toggle-cat').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    if (wrapBox.classList.contains('summary-mode')) exitSummaryMode();
+    const id = btn.dataset.target;
+    const willCollapse = !document.getElementById(id).classList.contains('collapsed');
+    setCollapsed(id, willCollapse);
+  });
+});
+
+/* ---------- 建立提交資料（加入 batch/delivery/billing） ---------- */
+function getQuantities(){
+  const q=[]; $$('.item').forEach(card=>q.push(parseInt(card.querySelector('input[type="number"]').value||'0',10)||0));
+  return q;
+}
+function buildRecordMeta(currentBatch){
+  const quantities=getQuantities();
+  const ts = nowTS();
+  const buyer = ($('#buyer')?.value ?? '').trim();
+
+  const itemsPicked=[];
+  let sum2500=0,sum1050=0,sum330=0, grand=0;
+
+  quantities.forEach((qty,idx)=>{
+    if(qty<=0) return;
+    const it=items[idx];
+    const money=qty*it.price;
+    itemsPicked.push({idx, name:it.name, cat:it.cat, price:it.price, qty, money});
+    if(it.cat==='2500') sum2500+=money;
+    else if(it.cat==='1050') sum1050+=money;
+    else sum330+=money;
+    grand+=money;
+  });
+
+  return {
+    buyer, ts, items:itemsPicked,
+    sum:{'2500':sum2500,'1050':sum1050,'330':sum330, grand},
+    batch: currentBatch || null
+  };
+}
+
+/* ---------- 批次顯示（由 Firestore 回填） ---------- */
+function setBatchUI(batch){
+  const dd = batch?.delivery_date ? batch.delivery_date : '（尚未設定）';
+  const st = batch?.status ? batch.status : '未建立';
+
+  $('#delivery-date-text').textContent = dd;
+  $('#delivery-date-text-2').textContent = dd;
+
+  const statusText = st === 'open' ? '開放中' : (st === 'closed' ? '已關閉' : st);
+  $('#batch-status-text').textContent = statusText;
+
+  const badgeStatus = $('#badge-batch-status');
+  badgeStatus.classList.remove('warn','ok');
+  if(st === 'open'){ badgeStatus.classList.add('ok'); }
+  else { badgeStatus.classList.add('warn'); }
+
+  // 沒批次就禁用送單（避免資料無法歸屬）
+  const btnAdd = $('#btn-add-record');
+  btnAdd.disabled = !(batch && batch.batch_id && batch.delivery_date && batch.status === 'open');
+}
+</script>
+
+<!-- ===== Firebase（以 <script type="module"> 匯入） ===== -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+  import {
+    getFirestore,
+    collection, addDoc, serverTimestamp,
+    query, orderBy, onSnapshot, getDocs, where, doc, getDoc, setDoc, updateDoc
+  } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+  /* Firebase Config（沿用你原本的） */
+  const firebaseConfig = {
+    apiKey: "AIzaSyBDtSRcMhjLUqzU_BS9p3bFaqT2nZc4lu8",
+    authDomain: "order-c9c29.firebaseapp.com",
+    projectId: "order-c9c29",
+    storageBucket: "order-c9c29.firebasestorage.app",
+    messagingSenderId: "596005686391",
+    appId: "1:596005686391:web:2795ea118834b749214a72",
+    measurementId: "G-Z3PHZMCGNW"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db  = getFirestore(app);
+
+  // ========= Collections/Docs =========
+  // meta/currentBatch: { batch_id, delivery_date, billing_month, status }
+  const currentBatchRef = doc(db, 'meta', 'currentBatch');
+
+  // 隱藏月份設定（方案 B：寫到 Firestore，免 Functions）
+  // meta/hiddenMonths: { months: ["2025-12",...], updated_at: serverTimestamp() }
+  const hiddenMonthsRef = doc(db, 'meta', 'hiddenMonths');
+
+  // ========= 狀態：目前批次 =========
+  let CURRENT_BATCH = null;
+  let unsubscribeOrders = null;
+
+  // ========= 隱藏月份（Firestore） =========
+  let HIDDEN_MONTHS = new Set();
+  async function loadHiddenMonths() {
+    const snap = await getDoc(hiddenMonthsRef);
+    const arr = snap.exists() ? (snap.data()?.months || []) : [];
+    HIDDEN_MONTHS = new Set(arr.filter(m => /^\d{4}-\d{2}$/.test(m)));
+    return HIDDEN_MONTHS;
+  }
+  async function saveHiddenMonths() {
+    const months = Array.from(HIDDEN_MONTHS).sort();
+    await setDoc(hiddenMonthsRef, { months, updated_at: serverTimestamp() }, { merge: true });
+  }
+  function isHiddenMonth(m){ return HIDDEN_MONTHS.has(m); }
+
+  // ========= Current Batch =========
+  async function loadCurrentBatch(){
+    const snap = await getDoc(currentBatchRef);
+    if(!snap.exists()){
+      CURRENT_BATCH = null;
+      setBatchUI(null);
+      return null;
+    }
+    const d = snap.data();
+    CURRENT_BATCH = {
+      batch_id: d.batch_id || null,
+      delivery_date: d.delivery_date || null,
+      billing_month: d.billing_month || null,
+      status: d.status || 'open',
+    };
+    setBatchUI(CURRENT_BATCH);
+    return CURRENT_BATCH;
+  }
+
+  function listenCurrentBatch(){
+    return onSnapshot(currentBatchRef, (snap)=>{
+      if(!snap.exists()){
+        CURRENT_BATCH = null;
+        setBatchUI(null);
+        if(unsubscribeOrders){ unsubscribeOrders(); unsubscribeOrders=null; }
+        renderRecordsCloud([]);
+        return;
+      }
+      const d = snap.data();
+      CURRENT_BATCH = {
+        batch_id: d.batch_id || null,
+        delivery_date: d.delivery_date || null,
+        billing_month: d.billing_month || null,
+        status: d.status || 'open',
+      };
+      setBatchUI(CURRENT_BATCH);
+      subscribeOrdersForCurrentBatch();
+      // 讓月份下拉優先選到本批次月份
+      loadMonthsForSelector().then(refreshMonthly).catch(()=>{});
+    });
+  }
+
+  // ========= 送單（寫入 batch/delivery/billing） =========
+  document.getElementById('btn-add-record').addEventListener('click', async ()=>{
+    const buyerEl = document.getElementById('buyer');
+    const buyerValue = buyerEl.value.trim();
+    if(!buyerValue){
+      alert('請先填寫「訂購人姓名」。');
+      buyerEl.focus();
+      return;
+    }
+    if(!CURRENT_BATCH || CURRENT_BATCH.status !== 'open'){
+      alert('目前尚未開啟本次到貨批次，請團主先按「清空+備份」並選擇到貨日。');
+      return;
+    }
+
+    const rec = buildRecordMeta(CURRENT_BATCH);
+    if(!rec.items.length){ alert('目前沒有填寫任何數量。'); return; }
+
+    try{
+      await addDoc(collection(db, 'orders'), {
+        buyer: rec.buyer,
+        ts: rec.ts,
+        items: rec.items,
+        sum_2500: rec.sum['2500'],
+        sum_1050: rec.sum['1050'],
+        sum_330:  rec.sum['330'],
+        grand:    rec.sum.grand,
+        created_at: serverTimestamp(),
+
+        batch_id: CURRENT_BATCH.batch_id,
+        delivery_date: CURRENT_BATCH.delivery_date,
+        billing_month: CURRENT_BATCH.billing_month,
+
+        deleted_at: null
+      });
+      alert('已提交到雲端！');
+
+      // 清空頁面數量
+      document.querySelectorAll('.item input[type="number"]').forEach(i=>i.value=0);
+      recalc();
+    }catch(err){
+      alert('提交失敗：' + err.message);
+    }
+  });
+
+  // ========= 即時監聽：本批次 orders =========
+  function subscribeOrdersForCurrentBatch(){
+    if(unsubscribeOrders){ unsubscribeOrders(); unsubscribeOrders=null; }
+
+    const listEl = document.getElementById('records-list');
+    if(!CURRENT_BATCH || !CURRENT_BATCH.batch_id){
+      listEl.innerHTML = '<div class="muted">尚未建立本次到貨批次（請團主按下清空+備份並選擇到貨日）。</div>';
+      renderAggregateCloud([]);
+      return;
+    }
+
+    const q = query(
+      collection(db,'orders'),
+      where('batch_id','==',CURRENT_BATCH.batch_id),
+      where('deleted_at','==',null),
+      orderBy('created_at','desc')
+    );
+
+    unsubscribeOrders = onSnapshot(q, snap=>{
+      const rows = snap.docs.map(d=>({ id:d.id, ...d.data() }));
+      renderRecordsCloud(rows);
+    }, err=>{
+      console.error(err);
+      listEl.innerHTML = '<div class="muted">讀取雲端資料失敗（可能需要建立 Firestore 索引）。</div>';
+      renderAggregateCloud([]);
+    });
+  }
+
+  // ========= 渲染：本批次清單 + 彙總（容量小計含數量+金額） =========
+  function renderRecordsCloud(rows){
+    const listEl = document.getElementById('records-list');
+    if(!rows.length){
+      listEl.innerHTML = '<div class="muted">本批次尚無紀錄。</div>';
+      renderAggregateCloud([]);
+      return;
+    }
+    listEl.innerHTML = '';
+
+    rows.forEach((rec)=>{
+      const card=document.createElement('div');
+      card.className='record';
+      card.innerHTML=`
+        <div class="hdr">
+          <div>${rec.buyer} <span class="meta">（${rec.ts||''}）</span></div>
+          <div>總金額 $${fmt(rec.grand||0)}</div>
+        </div>
+        <div class="muted">
+          2,500cc小計 $${fmt(rec.sum_2500||0)} ｜ 1,050cc小計 $${fmt(rec.sum_1050||0)} ｜ 330cc小計 $${fmt(rec.sum_330||0)}
+        </div>
+        <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn btn-toggle-detail">明細</button>
+        </div>
+        <div class="details">
+          <table>
+            <thead><tr><th>品項</th><th>單價</th><th>數量</th><th>小計</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>`;
+
+      const tbody = card.querySelector('tbody');
+      (rec.items||[]).forEach(it=>{
+        const tr=document.createElement('tr');
+        tr.innerHTML=`<td style="text-align:left">${it.name}</td><td>$${fmt(it.price)}</td><td>${fmt(it.qty)}</td><td>$${fmt(it.money)}</td>`;
+        tbody.appendChild(tr);
+      });
+
+      card.querySelector('.btn-toggle-detail').addEventListener('click',()=>card.classList.toggle('open'));
+      listEl.appendChild(card);
+    });
+
+    renderAggregateCloud(rows);
+  }
+
+  function renderAggregateCloud(rows){
+    const tbody = document.getElementById('agg-body'); if(!tbody) return;
+    tbody.innerHTML='';
+
+    const qByKey = {}; // key = cat::name::price
+    const sumByCat = {'2500':0,'1050':0,'330':0};
+    const qtyByCat = {'2500':0,'1050':0,'330':0};
+
+    let qtyAll=0,sumAll=0;
+
+    rows.forEach(r=>{
+      (r.items||[]).forEach(it=>{
+        const key = `${it.cat}:::${it.name}:::${it.price}`;
+        qByKey[key] = (qByKey[key]||0) + (it.qty||0);
+
+        sumByCat[it.cat] += (it.money||0);
+        qtyByCat[it.cat] += (it.qty||0);
+
+        qtyAll += (it.qty||0);
+        sumAll += (it.money||0);
+      });
+    });
+
+    const cats = [
+      {id:'2500', title:'2,500cc 袋裝'},
+      {id:'1050', title:'1,050cc 口栓袋'},
+      {id:'330',  title:'330cc 杯裝'}
+    ];
+
+    cats.forEach(c=>{
+      const th = document.createElement('tr'); th.className='group'; th.innerHTML=`<td colspan="4">${c.title}</td>`;
+      tbody.appendChild(th);
+
+      let hasAny=false;
+      Object.entries(qByKey).forEach(([k,qty])=>{
+        const [cat,name,price] = k.split(':::'); if(cat!==c.id || qty<=0) return;
+        hasAny=true;
+        const money = qty * Number(price);
+        const tr=document.createElement('tr');
+        tr.innerHTML=`<td>${name}</td><td>$${fmt(price)}</td><td>${fmt(qty)}</td><td>$${fmt(money)}</td>`;
+        tbody.appendChild(tr);
+      });
+      if(!hasAny){
+        const tr=document.createElement('tr');
+        tr.innerHTML=`<td colspan="4" class="muted">（此分類目前無數量）</td>`;
+        tbody.appendChild(tr);
+      }
+    });
+
+    // ✅ 修正：容量小計同時顯示「總數量 + 總金額」
+    document.getElementById('agg-q-2500').textContent = fmt(qtyByCat['2500']);
+    document.getElementById('agg-q-1050').textContent = fmt(qtyByCat['1050']);
+    document.getElementById('agg-q-330').textContent  = fmt(qtyByCat['330']);
+
+    document.getElementById('agg-s-2500').textContent = `$${fmt(sumByCat['2500'])}`;
+    document.getElementById('agg-s-1050').textContent = `$${fmt(sumByCat['1050'])}`;
+    document.getElementById('agg-s-330').textContent  = `$${fmt(sumByCat['330'])}`;
+
+    document.getElementById('agg-q-all').textContent  = fmt(qtyAll);
+    document.getElementById('agg-s-all').textContent  = `$${fmt(sumAll)}`;
+  }
+
+  // ========= 上週備份（archives/last-week） =========
+  const archivesListEl = document.getElementById('archives-list');
+
+  function renderArchives(rows) {
+    archivesListEl.innerHTML = '';
+    if(!rows.length) {
+      archivesListEl.innerHTML = '<div class="muted">尚無備份紀錄。</div>';
+      return;
+    }
+
+    rows.forEach(arc => {
+      const card = document.createElement('div');
+      card.className = 'record lastWeekItem';
+      card.innerHTML = `
+        <div class="hdr">
+          <div>${arc.label || '(無標題)'} <span class="meta">（${arc.created_ts || ''}）</span></div>
+          <div>總計 $${fmt(arc.summary?.grand || 0)}</div>
+        </div>
+        <div class="muted">
+          到貨日：${arc.delivery_date || ''} ｜ 2500cc $${fmt(arc.summary?.sum_2500||0)} ｜ 1050cc $${fmt(arc.summary?.sum_1050||0)} ｜ 330cc $${fmt(arc.summary?.sum_330||0)}
+        </div>
+        <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn btn-toggle-archive">展開明細</button>
+        </div>
+        <div class="details">
+          <table>
+            <thead><tr><th>姓名</th><th>時間</th><th>總額</th><th>明細</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      `;
+      const tbody = card.querySelector('tbody');
+
+      const catLabelMap = {'2500':'2,500cc 袋裝','1050':'1,050cc 口栓袋','330':'330cc 杯裝'};
+      (arc.orders || []).forEach(o => {
+        const tr = document.createElement('tr');
+        const itemsStr = (o.items || []).map(it => {
+          const catLabel = catLabelMap[it.cat] || '';
+          return `${catLabel ? catLabel + '－' : ''}${it.name} x${it.qty}`;
+        }).join('； ');
+        tr.innerHTML = `
+          <td style="text-align:left">${o.buyer||''}</td>
+          <td>${o.ts||''}</td>
+          <td>$${fmt(o.grand||0)}</td>
+          <td style="text-align:left">${itemsStr}</td>`;
+        tbody.appendChild(tr);
+      });
+
+      card.querySelector('.btn-toggle-archive').addEventListener('click', () => card.classList.toggle('open'));
+      archivesListEl.appendChild(card);
+    });
+  }
+
+  function subscribeArchives() {
+    const ref = doc(db, 'archives', 'last-week');
+    return onSnapshot(ref, snap => {
+      if (!snap.exists()) renderArchives([]);
+      else renderArchives([{ id: snap.id, ...snap.data() }]);
+    });
+  }
+
+  // ========= 清空 + 備份 + 選擇到貨日（批次切換） =========
+  async function getBatchOrders(batchId){
+    const q = query(
+      collection(db,'orders'),
+      where('batch_id','==',batchId),
+      where('deleted_at','==',null),
+      orderBy('created_at','desc')
+    );
+    const snap = await getDocs(q);
+    return snap.docs.map(d=>({ id:d.id, ...d.data() }));
+  }
+
+  async function closeAndOpenNewBatch(){
+    const word = prompt(
+      '⚠️ 此動作會：\n' +
+      '1) 備份「本批次」為上週訂購資料（僅保留最近一次）\n' +
+      '2) 關閉本批次\n' +
+      '3) 建立新批次（你需輸入到貨日，建議週五）\n\n' +
+      '請輸入「全部確認」以繼續：'
+    );
+    if(word !== '全部確認'){
+      alert('已取消。');
+      return;
+    }
+
+    const defaultDd = nextFridayYmd();
+    const deliveryDate = (prompt('請輸入「新批次」到貨日（格式 YYYY-MM-DD，建議週五）：', defaultDd) || '').trim();
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(deliveryDate)){
+      alert('到貨日格式錯誤，請使用 YYYY-MM-DD。已取消。');
+      return;
+    }
+    const billingMonth = ymFromYmd(deliveryDate);
+
+    // 若有現行批次：先備份並關閉
+    if(CURRENT_BATCH && CURRENT_BATCH.batch_id){
+      const rows = await getBatchOrders(CURRENT_BATCH.batch_id);
+
+      if(rows.length){
+        const ordersArray = [];
+        let sum2500=0, sum1050=0, sum330=0, grandTotal=0, totalQty=0, totalCount=0;
+
+        rows.forEach(data => {
+          ordersArray.push({
+            buyer: data.buyer || '',
+            ts: data.ts || '',
+            items: data.items || [],
+            sum_2500: data.sum_2500 || 0,
+            sum_1050: data.sum_1050 || 0,
+            sum_330:  data.sum_330  || 0,
+            grand:     data.grand   || 0
+          });
+          sum2500 += (data.sum_2500 || 0);
+          sum1050 += (data.sum_1050 || 0);
+          sum330  += (data.sum_330  || 0);
+          grandTotal += (data.grand || 0);
+          (data.items||[]).forEach(it => totalQty += (it.qty||0));
+          totalCount++;
+        });
+
+        const now = new Date();
+        const defaultLabel = `${CURRENT_BATCH.billing_month || ''}（到貨 ${CURRENT_BATCH.delivery_date || ''}）備份 ${nowTS()}`;
+        const label = prompt('請輸入此備份的標題（例如：2025-12 第3週/到貨 2025-12-19）：', defaultLabel) || defaultLabel;
+
+        const archiveDoc = {
+          label,
+          created_at: serverTimestamp(),
+          created_ts: nowTS(),
+          batch_id: CURRENT_BATCH.batch_id,
+          delivery_date: CURRENT_BATCH.delivery_date || '',
+          billing_month: CURRENT_BATCH.billing_month || '',
+          meta: { totalCount, totalQty },
+          summary: { sum_2500: sum2500, sum_1050: sum1050, sum_330: sum330, grand: grandTotal },
+          orders: ordersArray
+        };
+
+        await setDoc(doc(db, 'archives', 'last-week'), archiveDoc);
+      }
+
+      // 關閉舊 batch
+      await updateDoc(doc(db,'batches',CURRENT_BATCH.batch_id), {
+        status: 'closed',
+        closed_at: serverTimestamp(),
+        deleted_at: null
+      });
+    }
+
+    // 建立新 batch
+    const batchRef = doc(collection(db,'batches'));
+    await setDoc(batchRef, {
+      delivery_date: deliveryDate,
+      billing_month: billingMonth,
+      status: 'open',
+      created_at: serverTimestamp(),
+      deleted_at: null
+    });
+
+    // 寫入 currentBatch
+    await setDoc(currentBatchRef, {
+      batch_id: batchRef.id,
+      delivery_date: deliveryDate,
+      billing_month: billingMonth,
+      status: 'open',
+      updated_at: serverTimestamp()
+    });
+
+    // 清空頁面數量
+    document.querySelectorAll('.item input[type="number"]').forEach(i=>i.value=0);
+    recalc();
+
+    alert(`✅ 新批次已建立：到貨日 ${deliveryDate}（${billingMonth}）\n本次訂單將歸屬該到貨日批次。`);
+  }
+
+  document.getElementById('btn-clear-all').addEventListener('click', closeAndOpenNewBatch);
+
+  // ========= 月彙總（網頁呈現） =========
+  async function loadMonthsForSelector(){
+    const sel = document.getElementById('monthly-month');
+    const showHidden = document.getElementById('chk-show-hidden')?.checked ?? false;
+    sel.innerHTML = '';
+
+    await loadHiddenMonths();
+
+    // 從 batches 取得可用月份
+    const snap = await getDocs(query(collection(db,'batches'), where('deleted_at','==',null), orderBy('delivery_date','desc')));
+    const months = new Set();
+    snap.forEach(d=>{
+      const bm = d.data()?.billing_month;
+      if(bm) months.add(bm);
+    });
+
+    const fallback = (CURRENT_BATCH?.billing_month) || (new Date().toISOString().slice(0,7));
+    if(months.size === 0) months.add(fallback);
+
+    let list = Array.from(months).sort().reverse();
+    if(!showHidden) list = list.filter(m => !isHiddenMonth(m));
+    if(list.length === 0) list = [fallback];
+
+    list.forEach(m=>{
+      const opt = document.createElement('option');
+      opt.value = m;
+      opt.textContent = isHiddenMonth(m) ? `${m}（已隱藏）` : m;
+      sel.appendChild(opt);
+    });
+
+    if(CURRENT_BATCH?.billing_month && list.includes(CURRENT_BATCH.billing_month)) sel.value = CURRENT_BATCH.billing_month;
+    else sel.value = list[0];
+  }
+
+  async function getMonthlyOrders(billingMonth){
+    const q = query(
+      collection(db,'orders'),
+      where('billing_month','==',billingMonth),
+      where('deleted_at','==',null),
+      orderBy('buyer','asc'),
+      orderBy('created_at','asc')
+    );
+    const snap = await getDocs(q);
+    return snap.docs.map(d=>({ id:d.id, ...d.data() }));
+  }
+
+  function renderMonthly(billingMonth, rows){
+    const kpiEl = document.getElementById('monthly-kpi');
+    const catsEl = document.getElementById('monthly-cats');
+    const listEl = document.getElementById('monthly-list');
+
+    if(!rows.length){
+      kpiEl.innerHTML = `<div class="k">月份 <strong>${billingMonth}</strong>：無資料</div>`;
+      catsEl.innerHTML = '';
+      listEl.innerHTML = `<div class="muted">此月份尚無訂單（或目前篩選結果為空）。</div>`;
+      return;
+    }
+
+    // 全月加總 + 分類小計（數量+金額）
+    const sumByCat = {'2500':0,'1050':0,'330':0};
+    const qtyByCat = {'2500':0,'1050':0,'330':0};
+    let qtyAll=0, sumAll=0;
+
+    rows.forEach(r=>{
+      (r.items||[]).forEach(it=>{
+        qtyByCat[it.cat] += (it.qty||0);
+        sumByCat[it.cat] += (it.money||0);
+        qtyAll += (it.qty||0);
+        sumAll += (it.money||0);
+      });
+    });
+
+    kpiEl.innerHTML = `
+      <div class="k">月份：<strong>${billingMonth}</strong></div>
+      <div class="k">總數量：<strong>${fmt(qtyAll)}</strong></div>
+      <div class="k">總金額：<strong>$${fmt(sumAll)}</strong></div>
+    `;
+    catsEl.innerHTML = `
+      <div class="k">2,500cc：<strong>${fmt(qtyByCat['2500'])}</strong>｜<strong>$${fmt(sumByCat['2500'])}</strong></div>
+      <div class="k">1,050cc：<strong>${fmt(qtyByCat['1050'])}</strong>｜<strong>$${fmt(sumByCat['1050'])}</strong></div>
+      <div class="k">330cc：<strong>${fmt(qtyByCat['330'])}</strong>｜<strong>$${fmt(sumByCat['330'])}</strong></div>
+    `;
+
+    // 依訂購者分組（可展開明細）
+    const byBuyer = new Map();
+    rows.forEach(r=>{
+      const key = r.buyer || '(未填)';
+      if(!byBuyer.has(key)) byBuyer.set(key, []);
+      byBuyer.get(key).push(r);
+    });
+
+    listEl.innerHTML = '';
+    const catLabelMap = {'2500':'2,500cc 袋裝','1050':'1,050cc 口栓袋','330':'330cc 杯裝'};
+
+    Array.from(byBuyer.entries()).forEach(([buyer, list])=>{
+      let bQty=0, bSum=0;
+      list.forEach(r=>{
+        (r.items||[]).forEach(it=>{
+          bQty += (it.qty||0);
+          bSum += (it.money||0);
+        });
+      });
+
+      const sec = document.createElement('div');
+      sec.className = 'msec';
+      sec.innerHTML = `
+        <div class="mhead">
+          <div>${buyer} <span class="meta">（小計：數量 ${fmt(bQty)}｜金額 $${fmt(bSum)}）</span></div>
+          <button class="btn btn-m-toggle">展開</button>
+        </div>
+        <div class="mbody">
+          <table class="table">
+            <thead>
+              <tr><th>到貨日</th><th>品項</th><th>單價</th><th>數量</th><th>小計</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      `;
+      const btn = sec.querySelector('.btn-m-toggle');
+      btn.addEventListener('click', ()=>{
+        const open = sec.classList.toggle('open');
+        btn.textContent = open ? '收合' : '展開';
+      });
+
+      const tbody = sec.querySelector('tbody');
+      list.forEach(r=>{
+        (r.items||[]).forEach(it=>{
+          const tr = document.createElement('tr');
+          const name = `${catLabelMap[it.cat] ? catLabelMap[it.cat]+'－' : ''}${it.name}`;
+          tr.innerHTML = `
+            <td style="text-align:left">${r.delivery_date || ''}</td>
+            <td style="text-align:left">${name}</td>
+            <td>$${fmt(it.price)}</td>
+            <td>${fmt(it.qty)}</td>
+            <td>$${fmt(it.money)}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      });
+
+      listEl.appendChild(sec);
+    });
+  }
+
+  async function refreshMonthly(){
+    const sel = document.getElementById('monthly-month');
+    const bm = sel.value;
+    if(!bm) return;
+    const rows = await getMonthlyOrders(bm);
+    renderMonthly(bm, rows);
+  }
+
+  document.getElementById('btn-month-refresh').addEventListener('click', refreshMonthly);
+  document.getElementById('monthly-month').addEventListener('change', refreshMonthly);
+
+  // ========= 隱藏月份（輸入 4908） =========
+  document.getElementById('btn-month-hide').addEventListener('click', async ()=>{
+    const sel = document.getElementById('monthly-month');
+    const bm = sel.value;
+    if(!bm){ alert('請先選擇月份'); return; }
+
+    const code = prompt(`⚠️ 你將「隱藏」月份 ${bm}（不刪資料）。\n請輸入隱藏碼：`);
+    if(code === null) return;
+    if(String(code).trim() !== '4908'){
+      alert('隱藏碼錯誤，已取消。');
+      return;
+    }
+
+    HIDDEN_MONTHS.add(bm);
+    await saveHiddenMonths();
+
+    alert(`✅ 已隱藏月份 ${bm}\n（資料仍保留，可用「取消隱藏」恢復）`);
+    await loadMonthsForSelector();
+    await refreshMonthly();
+  });
+
+  document.getElementById('btn-month-unhide').addEventListener('click', async ()=>{
+    const sel = document.getElementById('monthly-month');
+    const bm = sel.value;
+    if(!bm){ alert('請先選擇月份'); return; }
+
+    if(!isHiddenMonth(bm)){
+      alert('此月份目前未被隱藏。');
+      return;
+    }
+
+    HIDDEN_MONTHS.delete(bm);
+    await saveHiddenMonths();
+
+    alert(`✅ 已取消隱藏月份 ${bm}`);
+    await loadMonthsForSelector();
+    await refreshMonthly();
+  });
+
+  document.getElementById('chk-show-hidden').addEventListener('change', async ()=>{
+    await loadMonthsForSelector();
+    await refreshMonthly();
+  });
+
+  // ========= 初始化 =========
+  document.getElementById('ts').textContent = nowTS();
+  document.getElementById('buyer-name').textContent = (document.getElementById('buyer')?.value || '');
+  recalc();
+
+  await loadCurrentBatch();
+  listenCurrentBatch();
+
+  subscribeArchives();
+
+  await loadHiddenMonths();
+  await loadMonthsForSelector();
+  await refreshMonthly();
+
+</script>
+</body>
+</html>
