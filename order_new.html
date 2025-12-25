@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>每週豆漿團購登記 V8.9(邏輯獨立與同步寫入版)</title>
+<title>每週豆漿團購登記 V9.0(混合雙模版)</title>
 
 <style>
 :root{
@@ -173,23 +173,23 @@ input[type="text"]:required:invalid{border-color:#ff6b6b;background:#fff5f5;}
 
 <body>
 <div class="wrap" id="wrap">
-  <h1>每週豆漿團購登記 V8.9(邏輯獨立與同步寫入版)</h1>
+  <h1>每週豆漿團購登記 V9.0(混合雙模版)</h1>
 
   <!-- 本次到貨日/批次狀態 -->
   <div class="badgeLine">
     <div class="badge" id="badge-batch">
-      本次到貨日：<strong id="delivery-date-text">（尚未設定）</strong>
+      本次到貨日：<strong id="delivery-date-text">（檢查中...）</strong>
       <button id="btn-edit-date" type="button" style="margin-left:5px; border:none; background:none; cursor:pointer; padding:0; font-size:1.1em;" title="點此修正日期">✏️</button>
     </div>
     <div class="badge warn" id="badge-batch-status">
-      批次狀態：<strong id="batch-status-text">未建立</strong>
+      批次狀態：<strong id="batch-status-text">...</strong>
     </div>
   </div>
   
   <div id="init-warning" style="display:none; text-align:center; padding:10px; background:#fff3cd; border:1px solid #ffeeba; border-radius:8px; margin-bottom:10px; color:#856404;">
     <strong>👋 歡迎使用新版！</strong><br>
-    目前尚未建立任何「批次」，請滑到最下方按下<br>
-    「🚀 系統初始化：建立第一個批次」按鈕以開始使用。
+    目前尚未建立任何「批次」，但您仍可直接送單（V5兼容模式）。<br>
+    若要使用完整管理功能，請滑到最下方按下「🚀 系統初始化」。
   </div>
 
   <label for="buyer">訂購人姓名</label>
@@ -416,6 +416,7 @@ function nextFridayYmd(){
 
 // 輔助函式：計算 N 天後的日期
 function add7Days(dateStr) {
+    if(!dateStr) return nextFridayYmd();
     const parts = dateStr.split('-');
     const d = new Date(+parts[0], +parts[1] - 1, +parts[2]); // local time
     d.setDate(d.getDate() + 7);
@@ -622,7 +623,7 @@ function setBatchUI(batch){
   const btnAdd = $('#btn-add-record');
 
   if (!batch || !batch.batch_id) {
-    // 尚未初始化
+    // 尚未初始化 (V5兼容)
     btnAdd.disabled = false;
     btnAdd.textContent = '填寫完成/加入至統計表（V5兼容模式）';
     
@@ -639,6 +640,11 @@ function setBatchUI(batch){
     warning.style.display = 'none';
   }
 }
+
+// 監聽全域錯誤，防止靜默失敗
+window.onerror = function(message, source, lineno, colno, error) {
+  alert(`系統發生錯誤：${message}\n(Line: ${lineno})`);
+};
 </script>
 
 <!-- ===== Firebase（以 <script type="module"> 匯入） ===== -->
@@ -661,7 +667,7 @@ function setBatchUI(batch){
     measurementId: "G-Z3PHZMCGNW"
   };
 
-  console.log("正在初始化 Firebase (V8.9)...");
+  console.log("正在初始化 Firebase (V9.0)...");
   const app = initializeApp(firebaseConfig);
   const db  = getFirestore(app);
   console.log("Firebase 初始化完成，資料庫實例：", db);
@@ -1102,6 +1108,7 @@ function setBatchUI(batch){
 
       card.querySelector('.btn-toggle-detail').addEventListener('click',()=>card.classList.toggle('open'));
       
+      // 直接綁定刪除事件
       card.querySelector('.btn-del-record').addEventListener('click', async (e) => {
           if(confirm('確定要刪除這筆訂單嗎？(無法復原)')) {
               try {
@@ -1153,7 +1160,6 @@ function setBatchUI(batch){
         </div>
       `;
       const tbody = card.querySelector('tbody');
-      const catLabelMap = {'2500':'2,500cc 袋裝','1050':'1,050cc 口栓袋','330':'330cc 杯裝'};
       (arc.orders || []).forEach(o => {
         const tr = document.createElement('tr');
         const itemsStr = (o.items || []).map(it => {
@@ -1326,40 +1332,6 @@ function setBatchUI(batch){
     const currentBillingMonth = ymFromYmd(confirmCurrentDate);
 
     try {
-        // --- V8.6 新增: 自動救援舊 Archive 到 Orders ---
-        // V8.9 修正：確保 ARCHIVE_ROWS_CACHE 存在且不為空才執行
-        if (typeof ARCHIVE_ROWS_CACHE !== 'undefined' && ARCHIVE_ROWS_CACHE && ARCHIVE_ROWS_CACHE.length > 0) {
-            const legacyItems = ARCHIVE_ROWS_CACHE.filter(item => !item.order_id);
-            if (legacyItems.length > 0) {
-                console.log(`自動救援 ${legacyItems.length} 筆舊資料...`);
-                const rescueBatch = writeBatch(db);
-                // 使用變數前的檢查
-                const rescueDate = LAST_WEEK_DATE || new Date().toISOString().slice(0,10);
-                const rescueMonth = ymFromYmd(rescueDate);
-                const rescueBatchId = 'rescued_legacy_' + rescueDate.replace(/-/g, '');
-
-                legacyItems.forEach(row => {
-                    const newDocRef = doc(collection(db, 'orders'));
-                    rescueBatch.set(newDocRef, {
-                        buyer: row.buyer,
-                        ts: row.ts,
-                        items: row.items,
-                        sum_2500: Number(row.sum_2500 || 0),
-                        sum_1050: Number(row.sum_1050 || 0),
-                        sum_330: Number(row.sum_330 || 0),
-                        grand: Number(row.grand || 0),
-                        created_at: serverTimestamp(),
-                        
-                        batch_id: rescueBatchId,
-                        delivery_date: rescueDate,
-                        billing_month: rescueMonth,
-                        deleted_at: null
-                    });
-                });
-                await rescueBatch.commit();
-            }
-        }
-
         if(CURRENT_BATCH && CURRENT_BATCH.batch_id){
           const rows = await getBatchOrders(CURRENT_BATCH.batch_id);
           
@@ -1438,65 +1410,146 @@ function setBatchUI(batch){
 
   safeAddListener('btn-clear-all', 'click', closeAndOpenNewBatch);
   
-  // V8.8 修正：移除已不存在的 btn-restore-archive 的監聽綁定
-  // 原本的 btn-restore-archive 已經在 V8.6 被移除，但這段 code 沒刪掉導致 null error
-  // 如果未來要加回來，請確保 HTML 有這個 ID
-  if(document.getElementById('btn-restore-archive')){
-      safeAddListener('btn-restore-archive', 'click', async () => {
-        // ... (保留原本邏輯，以防萬一 UI 加回來) ...
-        if (!ARCHIVE_ROWS_CACHE || ARCHIVE_ROWS_CACHE.length === 0) {
-            alert("目前沒有可還原的備份資料（可能已自動歸檔或無資料）。");
-            return;
-        }
-        
-        const restoreDate = prompt("請輸入這批備份資料的正確到貨日 (YYYY-MM-DD)：", LAST_WEEK_DATE || "");
-        if (!restoreDate) return;
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(restoreDate)) { alert("格式錯誤"); return; }
-        
-        const restoreMonth = ymFromYmd(restoreDate);
-        const restoreBatchId = 'restored_' + restoreDate.replace(/-/g,'');
-        
-        if(!confirm(`確定要將 ${ARCHIVE_ROWS_CACHE.length} 筆資料寫回資料庫嗎？\n(這會讓它們出現在「月彙總」中)`)) return;
-        
-        try {
-            const batch = writeBatch(db);
-            ARCHIVE_ROWS_CACHE.forEach(row => {
-                const newDocRef = doc(collection(db, 'orders'));
-                batch.set(newDocRef, {
-                    buyer: row.buyer,
-                    ts: row.ts,
-                    items: row.items,
-                    sum_2500: Number(row.sum_2500 || 0),
-                    sum_1050: Number(row.sum_1050 || 0),
-                    sum_330: Number(row.sum_330 || 0),
-                    grand: Number(row.grand || 0),
-                    created_at: serverTimestamp(),
-                    
-                    batch_id: restoreBatchId,
-                    delivery_date: restoreDate,
-                    billing_month: restoreMonth,
-                    deleted_at: null
-                });
+  safeAddListener('btn-restore-archive', 'click', async () => {
+    if (!ARCHIVE_ROWS_CACHE || ARCHIVE_ROWS_CACHE.length === 0) {
+        alert("目前沒有可還原的備份資料。");
+        return;
+    }
+    
+    const restoreDate = prompt("請輸入這批備份資料的正確到貨日 (YYYY-MM-DD)：", LAST_WEEK_DATE || "");
+    if (!restoreDate) return;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(restoreDate)) { alert("格式錯誤"); return; }
+    
+    const restoreMonth = ymFromYmd(restoreDate);
+    const restoreBatchId = 'restored_' + restoreDate.replace(/-/g,'');
+    
+    if(!confirm(`確定要將 ${ARCHIVE_ROWS_CACHE.length} 筆資料寫回資料庫嗎？\n(這會讓它們出現在「月彙總」中)`)) return;
+    
+    try {
+        const batch = writeBatch(db);
+        ARCHIVE_ROWS_CACHE.forEach(row => {
+            const newDocRef = doc(collection(db, 'orders'));
+            batch.set(newDocRef, {
+                buyer: row.buyer,
+                ts: row.ts,
+                items: row.items,
+                sum_2500: Number(row.sum_2500 || 0),
+                sum_1050: Number(row.sum_1050 || 0),
+                sum_330: Number(row.sum_330 || 0),
+                grand: Number(row.grand || 0),
+                created_at: serverTimestamp(),
+                
+                batch_id: restoreBatchId,
+                delivery_date: restoreDate,
+                billing_month: restoreMonth,
+                deleted_at: null
             });
-            await batch.commit();
-            alert("✅ 還原成功！請重新整理頁面查看月彙總。");
-        } catch(e) {
-            alert("還原失敗：" + e.message);
-        }
-      });
-  }
+        });
+        await batch.commit();
+        alert("✅ 還原成功！請重新整理頁面查看月彙總。");
+    } catch(e) {
+        alert("還原失敗：" + e.message);
+    }
+  });
 
   safeAddListener('btn-month-refresh', 'click', refreshMonthly);
   safeAddListener('monthly-month', 'change', refreshMonthly);
 
   // ========= 初始化 =========
+  // V9.0 Debug: Direct alert on start
+  // console.log("V9.0 Script Loaded");
+  
   document.getElementById('ts').textContent = nowTS();
   document.getElementById('buyer-name').textContent = (document.getElementById('buyer')?.value || '');
   recalc();
 
-  await loadCurrentBatch(); 
-  listenCurrentBatch();
-  subscribeArchives();
+  // Load Everything
+  (async () => {
+      try {
+        await loadCurrentBatch(); 
+        listenCurrentBatch();
+        subscribeArchives();
+      } catch(e) {
+          console.error("Critical Init Error:", e);
+          alert("系統初始化失敗：" + e.message);
+      }
+  })();
+
+  // 1. Alert user if clicked
+  safeAddListener('btn-add-record', 'click', async () => {
+    console.log("Submit button clicked!");
+    try {
+        const buyerEl = document.getElementById('buyer');
+        const buyerValue = buyerEl.value.trim();
+        if(!buyerValue){
+          alert('請先填寫「訂購人姓名」。');
+          buyerEl.focus();
+          return;
+        }
+
+        // V9.0 Hybrid Mode: Calculate fallback date if batch is missing
+        let useBatchId = CURRENT_BATCH?.batch_id;
+        let useDeliveryDate = CURRENT_BATCH?.delivery_date;
+        let useBillingMonth = CURRENT_BATCH?.billing_month;
+
+        if (!useBatchId) {
+            // Fallback to "V5 Mode" (Next Friday as default)
+            useDeliveryDate = nextFridayYmd();
+            useBillingMonth = ymFromYmd(useDeliveryDate);
+            useBatchId = 'fallback_' + useDeliveryDate; // Temp batch ID
+            console.log("Using Fallback Batch:", useBatchId);
+        }
+
+        const quantities = []; 
+        document.querySelectorAll('.item').forEach(card => 
+            quantities.push(parseInt(card.querySelector('input[type="number"]').value||'0',10)||0)
+        );
+
+        const itemsPicked = [];
+        let sum2500=0,sum1050=0,sum330=0, grand=0;
+
+        quantities.forEach((qty,idx)=>{
+            if(qty<=0) return;
+            const it=items[idx];
+            const money=qty*it.price;
+            itemsPicked.push({idx, name:it.name, cat:it.cat, price:it.price, qty, money});
+            if(it.cat==='2500') sum2500+=money;
+            else if(it.cat==='1050') sum1050+=money;
+            else sum330+=money;
+            grand+=money;
+        });
+
+        if(itemsPicked.length === 0) {
+            alert('目前沒有填寫任何數量。'); return;
+        }
+
+        const payload = {
+            buyer: buyerValue,
+            ts: nowTS(),
+            items: itemsPicked,
+            sum_2500: sum2500,
+            sum_1050: sum1050,
+            sum_330:  sum330,
+            grand:    grand,
+            created_at: serverTimestamp(),
+            batch_id: useBatchId,
+            delivery_date: useDeliveryDate,
+            billing_month: useBillingMonth,
+            deleted_at: null
+        };
+
+        console.log("Sending payload:", payload);
+        await addDoc(collection(db, 'orders'), payload);
+        alert('✅ 已提交到雲端！');
+
+        document.querySelectorAll('.item input[type="number"]').forEach(i=>i.value=0);
+        recalc();
+
+    } catch(err){
+      console.error(err);
+      alert('❌ 提交失敗：' + err.message);
+    }
+  });
 
 </script>
 </body>
