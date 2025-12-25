@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>每週豆漿團購登記 V8.4(數值格式強固版)</title>
+<title>每週豆漿團購登記 V8.5(變數命名修正版)</title>
 
 <style>
 :root{
@@ -173,7 +173,7 @@ input[type="text"]:required:invalid{border-color:#ff6b6b;background:#fff5f5;}
 
 <body>
 <div class="wrap" id="wrap">
-  <h1>每週豆漿團購登記 V8.4(數值格式強固版)</h1>
+  <h1>每週豆漿團購登記 V8.5(變數命名修正版)</h1>
 
   <!-- 本次到貨日/批次狀態 -->
   <div class="badgeLine">
@@ -662,7 +662,7 @@ function setBatchUI(batch){
     measurementId: "G-Z3PHZMCGNW"
   };
 
-  console.log("正在初始化 Firebase (V8.4)...");
+  console.log("正在初始化 Firebase (V8.5)...");
   const app = initializeApp(firebaseConfig);
   const db  = getFirestore(app);
   console.log("Firebase 初始化完成，資料庫實例：", db);
@@ -1353,6 +1353,7 @@ function setBatchUI(batch){
                 totalCount++;
             });
 
+            // V8.5 修正變數命名不一致導致的錯誤
             const archiveDoc = {
               label: `${currentBillingMonth}（到貨 ${confirmCurrentDate}）備份 ${nowTS()}`,
               created_at: serverTimestamp(),
@@ -1361,7 +1362,12 @@ function setBatchUI(batch){
               delivery_date: confirmCurrentDate,
               billing_month: currentBillingMonth,
               meta: { totalCount, totalQty },
-              summary: { sum_2500, sum_1050, sum330, grand: grandTotal },
+              summary: { 
+                  sum_2500: sum2500, 
+                  sum_1050: sum1050, 
+                  sum_330: sum330, 
+                  grand: grandTotal 
+              },
               orders: ordersArray
             };
             await setDoc(doc(db, 'archives', 'last-week'), archiveDoc);
