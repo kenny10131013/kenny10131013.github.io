@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>每週豆漿團購登記 V6.1(批次/到貨日/月彙總/隱藏月份)</title>
+<title>每週豆漿團購登記 V6.3(權限修正版)</title>
 
 <style>
 :root{
@@ -36,9 +36,22 @@ input[type="text"]:required:invalid{border-color:#ff6b6b;background:#fff5f5;}
 .btn{padding:10px 12px;font-size:var(--fz-base);border:1px solid var(--border);background:#fff;border-radius:var(--radius);cursor:pointer;}
 .btn:active{transform:scale(.97)}
 .btn[disabled]{opacity:.55;cursor:not-allowed}
-.danger{background:#ffe8e8;border:1px solid #ffbdbd}
+.danger{background:#ffe8e8;border:1px solid #ffbdbd;color:#a00;font-weight:700;}
 .bad{color:#a00}
 .muted{color:#666;font-size:.9em}
+
+/* 舊資料救援區塊 */
+.legacy-alert {
+  background:#fff3cd; border:2px solid #ffeeba; border-radius:8px;
+  padding:12px; margin-bottom:12px; display:none;
+}
+.legacy-alert h3 { margin:0 0 8px 0; color:#856404; font-size:1.1em; display:flex; align-items:center; gap:6px;}
+.legacy-alert .btn-fix {
+  background:#ffc107; color:#000; border:1px solid #d39e00; font-weight:bold; width:100%;
+}
+
+.index-error-box { background:#fff0f0; border:2px dashed #ff0000; padding:10px; margin:10px 0; color:#d00; font-weight:bold; display:none; }
+.index-error-box a { color: blue; text-decoration: underline; }
 
 .cat-header{display:flex;justify-content:space-between;align-items:center;background:var(--cat);padding:6px 8px;border-radius:var(--radius);margin-top:10px;margin-bottom:6px;font-weight:700;}
 .cat-header .btn{flex:0 0 auto;}
@@ -142,7 +155,7 @@ input[type="text"]:required:invalid{border-color:#ff6b6b;background:#fff5f5;}
 
 <body>
 <div class="wrap" id="wrap">
-  <h1>每週豆漿團購登記 V6.1(114/12/25)</h1>
+  <h1>每週豆漿團購登記 V6.3(權限修正版)</h1>
 
   <!-- 本次到貨日/批次狀態 -->
   <div class="badgeLine">
@@ -152,6 +165,12 @@ input[type="text"]:required:invalid{border-color:#ff6b6b;background:#fff5f5;}
     <div class="badge warn" id="badge-batch-status">
       批次狀態：<strong id="batch-status-text">未建立</strong>
     </div>
+  </div>
+  
+  <div id="init-warning" style="display:none; text-align:center; padding:10px; background:#fff3cd; border:1px solid #ffeeba; border-radius:8px; margin-bottom:10px; color:#856404;">
+    <strong>👋 歡迎使用新版！</strong><br>
+    目前尚未建立任何「批次」，請滑到最下方按下<br>
+    「🚀 系統初始化：建立第一個批次」按鈕以開始使用。
   </div>
 
   <label for="buyer">訂購人姓名</label>
@@ -205,13 +224,27 @@ input[type="text"]:required:invalid{border-color:#ff6b6b;background:#fff5f5;}
     </button>
 
     <div class="muted">
-      說明：此按鈕會把「本批次」雲端資料備份至「上週訂購資料」（僅保留最近一次），並關閉本批次、建立新批次（到貨日由團主選擇）。本版本不再刪除全部訂單，改以批次管理，支援月彙總。
+      說明：此按鈕會把「本批次」雲端資料備份至「上週訂購資料」（僅保留最近一次），並關閉本批次、建立新批次（到貨日由團主選擇）。
     </div>
   </div>
 
   <!-- 團購清單（雲端即時，本批次） -->
   <div class="section" id="records-section">
     <h2>團購清單（雲端即時）－本次到貨：<span id="delivery-date-text-2">（尚未設定）</span></h2>
+    
+    <!-- 舊資料救援區 -->
+    <div id="legacy-data-alert" class="legacy-alert">
+      <h3>⚠️ 發現未歸類（舊版 V5）訂單：<span id="legacy-count">0</span> 筆</h3>
+      <p style="font-size:0.9em;color:#666;margin:4px 0 10px;">這些訂單可能是升級前建立的，尚未歸屬到本次批次。請點擊下方按鈕將它們加入。</p>
+      <button class="btn btn-fix" id="btn-fix-legacy">🔄 一鍵將舊訂單加入本批次</button>
+    </div>
+
+    <!-- 索引錯誤提示框 -->
+    <div id="index-error-msg" class="index-error-box">
+      ⚠️ 偵測到 Firebase 索引錯誤！<br>
+      請<strong><a href="#" id="index-link" target="_blank">點擊這裡建立索引</a></strong>，建立後等待幾分鐘再重整網頁即可。
+    </div>
+
     <div id="records-list" class="records"></div>
     <div class="muted">點「明細」可展開查看每位填寫者的品項與數量。</div>
   </div>
@@ -529,9 +562,28 @@ function setBatchUI(batch){
   if(st === 'open'){ badgeStatus.classList.add('ok'); }
   else { badgeStatus.classList.add('warn'); }
 
-  // 沒批次就禁用送單（避免資料無法歸屬）
+  // 沒批次時的 UI 引導
+  const btnClear = $('#btn-clear-all');
+  const warning = $('#init-warning');
   const btnAdd = $('#btn-add-record');
-  btnAdd.disabled = !(batch && batch.batch_id && batch.delivery_date && batch.status === 'open');
+
+  if (!batch || !batch.batch_id) {
+    // 尚未初始化
+    btnAdd.disabled = true;
+    btnAdd.textContent = '❌ 請先建立批次（見下方紅按鈕）';
+    
+    // 修改危險按鈕文字，讓它看起來像初始化按鈕
+    btnClear.textContent = '🚀 系統初始化：建立第一個批次（請按此）';
+    warning.style.display = 'block';
+  } else {
+    // 正常運作
+    btnAdd.disabled = (batch.status !== 'open');
+    if(batch.status === 'open') btnAdd.textContent = '填寫完成/加入至統計表（送雲端）';
+    else btnAdd.textContent = '本批次已關閉，無法送單';
+    
+    btnClear.textContent = '⚠️ 清空頁面＋清空雲端紀錄（防呆）+備份（並選擇到貨日）';
+    warning.style.display = 'none';
+  }
 }
 </script>
 
@@ -541,10 +593,13 @@ function setBatchUI(batch){
   import {
     getFirestore,
     collection, addDoc, serverTimestamp,
-    query, orderBy, onSnapshot, getDocs, where, doc, getDoc, setDoc, updateDoc
+    query, orderBy, onSnapshot, getDocs, where, doc, getDoc, setDoc, updateDoc, writeBatch
   } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+  
+  // 新增 Authentication 模組
+  import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 
-  /* Firebase Config（沿用你原本的） */
+  /* Firebase Config */
   const firebaseConfig = {
     apiKey: "AIzaSyBDtSRcMhjLUqzU_BS9p3bFaqT2nZc4lu8",
     authDomain: "order-c9c29.firebaseapp.com",
@@ -555,28 +610,75 @@ function setBatchUI(batch){
     measurementId: "G-Z3PHZMCGNW"
   };
 
+  console.log("正在初始化 Firebase...");
   const app = initializeApp(firebaseConfig);
   const db  = getFirestore(app);
+  const auth = getAuth(app);
+  console.log("Firebase 初始化完成，資料庫實例：", db);
 
   // ========= Collections/Docs =========
-  // meta/currentBatch: { batch_id, delivery_date, billing_month, status }
   const currentBatchRef = doc(db, 'meta', 'currentBatch');
-
-  // 隱藏月份設定（方案 B：寫到 Firestore，免 Functions）
-  // meta/hiddenMonths: { months: ["2025-12",...], updated_at: serverTimestamp() }
   const hiddenMonthsRef = doc(db, 'meta', 'hiddenMonths');
 
   // ========= 狀態：目前批次 =========
   let CURRENT_BATCH = null;
   let unsubscribeOrders = null;
+  let isAppInitialized = false;
+  
+  // 舊資料暫存
+  let LEGACY_ROWS = [];
+
+  // ========= Auth 啟動邏輯 =========
+  const initAuth = async () => {
+    try {
+      if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+        await signInWithCustomToken(auth, __initial_auth_token);
+      } else {
+        await signInAnonymously(auth);
+      }
+    } catch (e) {
+      console.error("Auth init failed, retrying anonymously", e);
+      try { await signInAnonymously(auth); } catch(err){ console.error(err); }
+    }
+  };
+  initAuth();
+
+  // 監聽登入狀態，登入成功才開始載入資料
+  onAuthStateChanged(auth, async (user) => {
+    if (user) {
+      console.log("已登入 Firebase, UID:", user.uid);
+      if (!isAppInitialized) {
+        isAppInitialized = true;
+        // 開始執行主要邏輯
+        startApp();
+      }
+    } else {
+      console.log("尚未登入...");
+    }
+  });
+
+  async function startApp() {
+    await loadCurrentBatch();
+    listenCurrentBatch();
+    subscribeArchives();
+    await loadHiddenMonths();
+    await loadMonthsForSelector();
+    await refreshMonthly();
+  }
+
 
   // ========= 隱藏月份（Firestore） =========
   let HIDDEN_MONTHS = new Set();
   async function loadHiddenMonths() {
-    const snap = await getDoc(hiddenMonthsRef);
-    const arr = snap.exists() ? (snap.data()?.months || []) : [];
-    HIDDEN_MONTHS = new Set(arr.filter(m => /^\d{4}-\d{2}$/.test(m)));
-    return HIDDEN_MONTHS;
+    try {
+      const snap = await getDoc(hiddenMonthsRef);
+      const arr = snap.exists() ? (snap.data()?.months || []) : [];
+      HIDDEN_MONTHS = new Set(arr.filter(m => /^\d{4}-\d{2}$/.test(m)));
+      return HIDDEN_MONTHS;
+    } catch (e) {
+      console.error("讀取隱藏月份失敗", e);
+      return new Set();
+    }
   }
   async function saveHiddenMonths() {
     const months = Array.from(HIDDEN_MONTHS).sort();
@@ -586,31 +688,13 @@ function setBatchUI(batch){
 
   // ========= Current Batch =========
   async function loadCurrentBatch(){
-    const snap = await getDoc(currentBatchRef);
-    if(!snap.exists()){
-      CURRENT_BATCH = null;
-      setBatchUI(null);
-      return null;
-    }
-    const d = snap.data();
-    CURRENT_BATCH = {
-      batch_id: d.batch_id || null,
-      delivery_date: d.delivery_date || null,
-      billing_month: d.billing_month || null,
-      status: d.status || 'open',
-    };
-    setBatchUI(CURRENT_BATCH);
-    return CURRENT_BATCH;
-  }
-
-  function listenCurrentBatch(){
-    return onSnapshot(currentBatchRef, (snap)=>{
+    try {
+      const snap = await getDoc(currentBatchRef);
       if(!snap.exists()){
+        console.warn("⚠️ 注意：資料庫中沒有 meta/currentBatch 文件。這通常表示這是第一次執行 V6，請按「初始化/清空」按鈕來建立它。");
         CURRENT_BATCH = null;
         setBatchUI(null);
-        if(unsubscribeOrders){ unsubscribeOrders(); unsubscribeOrders=null; }
-        renderRecordsCloud([]);
-        return;
+        return null;
       }
       const d = snap.data();
       CURRENT_BATCH = {
@@ -620,7 +704,32 @@ function setBatchUI(batch){
         status: d.status || 'open',
       };
       setBatchUI(CURRENT_BATCH);
-      subscribeOrdersForCurrentBatch();
+      return CURRENT_BATCH;
+    } catch(e) {
+      console.error("讀取 meta/currentBatch 發生錯誤：", e);
+    }
+  }
+
+  function listenCurrentBatch(){
+    return onSnapshot(currentBatchRef, (snap)=>{
+      if(!snap.exists()){
+        console.log("監聽更新：meta/currentBatch 不存在（系統重置或初次執行）。");
+        CURRENT_BATCH = null;
+        setBatchUI(null);
+        // 即使沒批次，也要監聽看看有沒有舊資料
+        subscribeOrdersGlobal();
+        return;
+      }
+      const d = snap.data();
+      console.log("監聽更新：批次狀態變更", d);
+      CURRENT_BATCH = {
+        batch_id: d.batch_id || null,
+        delivery_date: d.delivery_date || null,
+        billing_month: d.billing_month || null,
+        status: d.status || 'open',
+      };
+      setBatchUI(CURRENT_BATCH);
+      subscribeOrdersGlobal();
       // 讓月份下拉優先選到本批次月份
       loadMonthsForSelector().then(refreshMonthly).catch(()=>{});
     });
@@ -666,37 +775,122 @@ function setBatchUI(batch){
       document.querySelectorAll('.item input[type="number"]').forEach(i=>i.value=0);
       recalc();
     }catch(err){
+      console.error(err);
       alert('提交失敗：' + err.message);
     }
   });
 
-  // ========= 即時監聽：本批次 orders =========
-  function subscribeOrdersForCurrentBatch(){
+  // ========= 全域監聽（抓取所有未刪除訂單，再由前端過濾） =========
+  function subscribeOrdersGlobal(){
     if(unsubscribeOrders){ unsubscribeOrders(); unsubscribeOrders=null; }
 
     const listEl = document.getElementById('records-list');
-    if(!CURRENT_BATCH || !CURRENT_BATCH.batch_id){
-      listEl.innerHTML = '<div class="muted">尚未建立本次到貨批次（請團主按下清空+備份並選擇到貨日）。</div>';
-      renderAggregateCloud([]);
-      return;
-    }
-
+    const errorBox = document.getElementById('index-error-msg');
+    
+    // 使用 V5 風格的寬鬆查詢（不需要複雜索引）
     const q = query(
       collection(db,'orders'),
-      where('batch_id','==',CURRENT_BATCH.batch_id),
-      where('deleted_at','==',null),
       orderBy('created_at','desc')
     );
 
+    console.log(`正在訂閱所有訂單 (V5相容模式)...`);
+
     unsubscribeOrders = onSnapshot(q, snap=>{
-      const rows = snap.docs.map(d=>({ id:d.id, ...d.data() }));
-      renderRecordsCloud(rows);
+      errorBox.style.display = 'none';
+      const allRows = snap.docs.map(d=>({ id:d.id, ...d.data() }));
+      
+      // 1. 過濾已刪除
+      const activeRows = allRows.filter(r => !r.deleted_at);
+      
+      // 2. 區分「本批次」與「孤兒資料(Legacy)」
+      const currentBatchId = CURRENT_BATCH?.batch_id;
+      
+      const currentRows = [];
+      const legacyRows = [];
+      
+      activeRows.forEach(r => {
+        if (currentBatchId && r.batch_id === currentBatchId) {
+          currentRows.push(r);
+        } else if (!r.batch_id) {
+          // 沒有 batch_id 的就是 V5 舊資料
+          legacyRows.push(r);
+        }
+        // 有 batch_id 但不等於 currentBatchId 的（歷史批次），這裡不顯示，在月彙總看
+      });
+
+      console.log(`讀取統計: 總筆數=${allRows.length}, 有效=${activeRows.length}, 本批次=${currentRows.length}, 舊資料=${legacyRows.length}`);
+      
+      LEGACY_ROWS = legacyRows; // 存起來給按鈕用
+      updateLegacyUI(legacyRows.length);
+      
+      if (CURRENT_BATCH && CURRENT_BATCH.batch_id) {
+         renderRecordsCloud(currentRows);
+      } else {
+         listEl.innerHTML = '<div class="muted">尚未建立本次到貨批次（請團主按下清空+備份並選擇到貨日）。</div>';
+         renderAggregateCloud([]);
+      }
+      
     }, err=>{
-      console.error(err);
-      listEl.innerHTML = '<div class="muted">讀取雲端資料失敗（可能需要建立 Firestore 索引）。</div>';
+      console.error("Firestore 監聽錯誤：", err);
+      // 偵測是否為 Index 錯誤 (雖然這個 Query 應該不需要 Index)
+      if(err.message.includes("indexes") || err.code === 'failed-precondition'){
+         const match = err.message.match(/https:\/\/console\.firebase\.google\.com[^\s]*/);
+         if(match){
+           const url = match[0];
+           document.getElementById('index-link').href = url;
+           errorBox.style.display = 'block';
+         }
+         listEl.innerHTML = '<div class="muted bad">讀取失敗：需要建立 Firestore 索引（請看上方紅色區塊）。</div>';
+      } else {
+         listEl.innerHTML = `<div class="muted bad">讀取雲端資料失敗：${err.message}</div>`;
+      }
       renderAggregateCloud([]);
     });
   }
+  
+  // 更新舊資料提示 UI
+  function updateLegacyUI(count) {
+    const alertBox = document.getElementById('legacy-data-alert');
+    const countSpan = document.getElementById('legacy-count');
+    
+    // 只有在「有批次」且「有舊資料」時才顯示修復按鈕
+    if (count > 0 && CURRENT_BATCH && CURRENT_BATCH.status === 'open') {
+      alertBox.style.display = 'block';
+      countSpan.textContent = count;
+    } else {
+      alertBox.style.display = 'none';
+    }
+  }
+  
+  // 舊資料一鍵修復按鈕
+  document.getElementById('btn-fix-legacy').addEventListener('click', async () => {
+    if (!CURRENT_BATCH || !CURRENT_BATCH.batch_id) {
+      alert("目前沒有開啟的批次，無法匯入。");
+      return;
+    }
+    if (LEGACY_ROWS.length === 0) return;
+    
+    const confirmMsg = `確定要將這 ${LEGACY_ROWS.length} 筆舊訂單加入到\n「${CURRENT_BATCH.delivery_date}」這個批次嗎？`;
+    if (!confirm(confirmMsg)) return;
+    
+    try {
+      const batch = writeBatch(db);
+      LEGACY_ROWS.forEach(row => {
+        const ref = doc(db, 'orders', row.id);
+        batch.update(ref, {
+          batch_id: CURRENT_BATCH.batch_id,
+          delivery_date: CURRENT_BATCH.delivery_date,
+          billing_month: CURRENT_BATCH.billing_month
+        });
+      });
+      await batch.commit();
+      alert("✅ 成功！舊資料已整合至本批次列表。");
+      // UI 會自動更新，因為我們在監聽
+    } catch(e) {
+      console.error(e);
+      alert("整合失敗：" + e.message);
+    }
+  });
 
   // ========= 渲染：本批次清單 + 彙總（容量小計含數量+金額） =========
   function renderRecordsCloud(rows){
@@ -879,6 +1073,12 @@ function setBatchUI(batch){
   }
 
   async function closeAndOpenNewBatch(){
+    // 檢查是否有舊資料，若有，提醒使用者先整合
+    if (LEGACY_ROWS.length > 0) {
+      alert(`⚠️ 系統偵測到還有 ${LEGACY_ROWS.length} 筆「未歸類」的舊資料。\n建議您先按上方的「🔄 一鍵將舊訂單加入本批次」按鈕進行整合，再來執行清空備份，以免資料遺失。`);
+      return;
+    }
+
     const word = prompt(
       '⚠️ 此動作會：\n' +
       '1) 備份「本批次」為上週訂購資料（僅保留最近一次）\n' +
@@ -1185,14 +1385,7 @@ function setBatchUI(batch){
   document.getElementById('buyer-name').textContent = (document.getElementById('buyer')?.value || '');
   recalc();
 
-  await loadCurrentBatch();
-  listenCurrentBatch();
-
-  subscribeArchives();
-
-  await loadHiddenMonths();
-  await loadMonthsForSelector();
-  await refreshMonthly();
+  // 注意：不再直接呼叫 loadCurrentBatch 等，改由 onAuthStateChanged 觸發
 
 </script>
 </body>
