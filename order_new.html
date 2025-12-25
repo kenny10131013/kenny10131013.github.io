@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>每週豆漿團購登記 V9.4(114/12/25介面簡潔版)</title>
+<title>每週豆漿團購登記 V9.5(114/12/25_版)</title>
 
 <style>
 :root{
@@ -173,7 +173,7 @@ input[type="text"]:required:invalid{border-color:#ff6b6b;background:#fff5f5;}
 
 <body>
 <div class="wrap" id="wrap">
-  <h1>每週豆漿團購登記 V9.4(114/12/25介面簡潔版)</h1>
+  <h1>每週豆漿團購登記 V9.5(114/12/25_版)</h1>
 
   <!-- 本次到貨日/批次狀態 -->
   <div class="badgeLine">
@@ -668,7 +668,7 @@ window.onerror = function(message, source, lineno, colno, error) {
     measurementId: "G-Z3PHZMCGNW"
   };
 
-  console.log("正在初始化 Firebase (V9.1)...");
+  console.log("正在初始化 Firebase (V9.5)...");
   const app = initializeApp(firebaseConfig);
   const db  = getFirestore(app);
   console.log("Firebase 初始化完成，資料庫實例：", db);
@@ -1421,6 +1421,7 @@ window.onerror = function(message, source, lineno, colno, error) {
                 totalCount++;
             });
 
+            // V8.5 修正變數命名不一致導致的錯誤
             const archiveDoc = {
               label: `${currentBillingMonth}（到貨 ${confirmCurrentDate}）備份 ${nowTS()}`,
               created_at: serverTimestamp(),
@@ -1516,13 +1517,100 @@ window.onerror = function(message, source, lineno, colno, error) {
   safeAddListener('monthly-month', 'change', refreshMonthly);
 
   // ========= 初始化 =========
+  // V9.0 Debug: Direct alert on start
+  // console.log("V9.0 Script Loaded");
+  
   document.getElementById('ts').textContent = nowTS();
   document.getElementById('buyer-name').textContent = (document.getElementById('buyer')?.value || '');
   recalc();
 
-  await loadCurrentBatch(); 
-  listenCurrentBatch();
-  subscribeArchives();
+  // Load Everything
+  (async () => {
+      try {
+        await loadCurrentBatch(); 
+        listenCurrentBatch();
+        subscribeArchives();
+      } catch(e) {
+          console.error("Critical Init Error:", e);
+          alert("系統初始化失敗：" + e.message);
+      }
+  })();
+
+  // 1. Alert user if clicked
+  safeAddListener('btn-add-record', 'click', async () => {
+    console.log("Submit button clicked!");
+    try {
+        const buyerEl = document.getElementById('buyer');
+        const buyerValue = buyerEl.value.trim();
+        if(!buyerValue){
+          alert('請先填寫「訂購人姓名」。');
+          buyerEl.focus();
+          return;
+        }
+
+        // V9.0 Hybrid Mode: Calculate fallback date if batch is missing
+        let useBatchId = CURRENT_BATCH?.batch_id;
+        let useDeliveryDate = CURRENT_BATCH?.delivery_date;
+        let useBillingMonth = CURRENT_BATCH?.billing_month;
+
+        if (!useBatchId) {
+            // Fallback to "V5 Mode" (Next Friday as default)
+            useDeliveryDate = nextFridayYmd();
+            useBillingMonth = ymFromYmd(useDeliveryDate);
+            useBatchId = 'fallback_' + useDeliveryDate; // Temp batch ID
+            console.log("Using Fallback Batch:", useBatchId);
+        }
+
+        const quantities = []; 
+        document.querySelectorAll('.item').forEach(card => 
+            quantities.push(parseInt(card.querySelector('input[type="number"]').value||'0',10)||0)
+        );
+
+        const itemsPicked = [];
+        let sum2500=0,sum1050=0,sum330=0, grand=0;
+
+        quantities.forEach((qty,idx)=>{
+            if(qty<=0) return;
+            const it=items[idx];
+            const money=qty*it.price;
+            itemsPicked.push({idx, name:it.name, cat:it.cat, price:it.price, qty, money});
+            if(it.cat==='2500') sum2500+=money;
+            else if(it.cat==='1050') sum1050+=money;
+            else sum330+=money;
+            grand+=money;
+        });
+
+        if(itemsPicked.length === 0) {
+            alert('目前沒有填寫任何數量。'); return;
+        }
+
+        const payload = {
+            buyer: buyerValue,
+            ts: nowTS(),
+            items: itemsPicked,
+            sum_2500: sum2500,
+            sum_1050: sum1050,
+            sum_330:  sum330,
+            grand:    grand,
+            created_at: serverTimestamp(),
+            batch_id: useBatchId,
+            delivery_date: useDeliveryDate,
+            billing_month: useBillingMonth,
+            deleted_at: null
+        };
+
+        console.log("Sending payload:", payload);
+        await addDoc(collection(db, 'orders'), payload);
+        alert('✅ 已提交到雲端！');
+
+        document.querySelectorAll('.item input[type="number"]').forEach(i=>i.value=0);
+        recalc();
+
+    } catch(err){
+      console.error(err);
+      alert('❌ 提交失敗：' + err.message);
+    }
+  });
 
 </script>
 </body>
