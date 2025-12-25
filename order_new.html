@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>每週豆漿團購登記 V7.1(錯誤資料修正版)</title>
+<title>每週豆漿團購登記 V7.2(開發者刪除功能版)</title>
 
 <style>
 :root{
@@ -171,7 +171,7 @@ input[type="text"]:required:invalid{border-color:#ff6b6b;background:#fff5f5;}
 
 <body>
 <div class="wrap" id="wrap">
-  <h1>每週豆漿團購登記 V7.1(錯誤資料修正版)</h1>
+  <h1>每週豆漿團購登記 V7.2(開發者刪除功能版)</h1>
 
   <!-- 本次到貨日/批次狀態 -->
   <div class="badgeLine">
@@ -310,9 +310,10 @@ input[type="text"]:required:invalid{border-color:#ff6b6b;background:#fff5f5;}
       <!-- 重新整理按鈕，現在是純前端篩選，速度很快 -->
       <button class="btn" id="btn-month-refresh">顯示資料</button>
 
+      <!-- 新增：開發者刪除月資料功能 -->
+      <button class="btn danger" id="btn-delete-month" title="開發者功能：刪除選中月份的所有訂單">🗑️ 刪除此月份資料（開發用）</button>
+      
       <!-- 隱藏功能 (保留 UI 但禁用，避免複雜權限問題) -->
-      <button class="btn danger" id="btn-month-hide" title="輸入 4908 後隱藏該月份（不刪資料）" disabled style="opacity:0.5;cursor:not-allowed;display:none;">隱藏此月份</button>
-      <button class="btn" id="btn-month-unhide" title="取消隱藏，讓月份重新顯示" disabled style="opacity:0.5;cursor:not-allowed;display:none;">取消隱藏</button>
       <label class="btn" style="display:none; align-items:center;gap:6px; opacity:0.5;">
         <input type="checkbox" id="chk-show-hidden" disabled />
         顯示已隱藏月份
@@ -1028,6 +1029,48 @@ function setBatchUI(batch){
       alert('✅ 修正完成！請查看月彙總確認。');
     } catch(e) {
       alert('修正失敗：' + e.message);
+    }
+  });
+
+  // 新增：開發者刪除月資料功能
+  document.getElementById('btn-delete-month').addEventListener('click', async () => {
+    const sel = document.getElementById('monthly-month');
+    const bm = sel.value;
+    if(!bm) { alert("請先選擇一個月份"); return; }
+
+    const code = prompt(`⚠️ 危險操作！\n您即將刪除「${bm}」的所有訂單資料，且無法復原。\n\n請輸入開發者驗證碼：`);
+    if(code !== '4908') { alert('驗證碼錯誤'); return; }
+
+    // Filter rows to delete using existing global cache
+    const targetRows = ALL_FETCHED_ROWS.filter(row => {
+        let rowM = null;
+        if (row.billing_month) rowM = row.billing_month;
+        else if (row.delivery_date) rowM = ymFromYmd(row.delivery_date);
+        else if (row.ts) {
+            const match = row.ts.match(/^(\d{4})\/(\d{2})/);
+            if (match) rowM = `${match[1]}-${match[2]}`;
+        }
+        return rowM === bm;
+    });
+
+    if(targetRows.length === 0) { alert('此月份無資料'); return; }
+
+    if(!confirm(`確認刪除 ${targetRows.length} 筆資料？`)) return;
+
+    // Execute Delete
+    try {
+      // Chunking for batch delete limits (500)
+      const chunk = (arr, size) => Array.from({ length: Math.ceil(arr.length / size) }, (v, i) => arr.slice(i * size, i * size + size));
+      const chunks = chunk(targetRows, 450);
+
+      for (const c of chunks) {
+          const batch = writeBatch(db);
+          c.forEach(row => batch.delete(doc(db, 'orders', row.id)));
+          await batch.commit();
+      }
+      alert('✅ 刪除成功！');
+    } catch(e) {
+      alert('刪除失敗：' + e.message);
     }
   });
 
