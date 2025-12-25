@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>每週豆漿團購登記 V6.5(相容修復版)</title>
+<title>每週豆漿團購登記 V7.0(資料搬移修正版)</title>
 
 <style>
 :root{
@@ -37,6 +37,7 @@ input[type="text"]:required:invalid{border-color:#ff6b6b;background:#fff5f5;}
 .btn:active{transform:scale(.97)}
 .btn[disabled]{opacity:.55;cursor:not-allowed}
 .danger{background:#ffe8e8;border:1px solid #ffbdbd;color:#a00;font-weight:700;}
+.move-btn{background:#e0f7fa;border:1px solid #b2ebf2;color:#006064;font-weight:700;}
 .bad{color:#a00}
 .muted{color:#666;font-size:.9em}
 
@@ -46,8 +47,14 @@ input[type="text"]:required:invalid{border-color:#ff6b6b;background:#fff5f5;}
   padding:12px; margin-bottom:12px; display:none;
 }
 .legacy-alert h3 { margin:0 0 8px 0; color:#856404; font-size:1.1em; display:flex; align-items:center; gap:6px;}
+.legacy-alert .control-group {
+  display:flex; gap:8px; align-items:center; margin-top:8px; flex-wrap:wrap;
+}
+.legacy-alert input[type="date"] {
+  padding:8px; border:1px solid #d39e00; border-radius:6px; font-size:1em;
+}
 .legacy-alert .btn-fix {
-  background:#ffc107; color:#000; border:1px solid #d39e00; font-weight:bold; width:100%;
+  background:#ffc107; color:#000; border:1px solid #d39e00; font-weight:bold; flex:1;
 }
 
 .index-error-box { background:#fff0f0; border:2px dashed #ff0000; padding:10px; margin:10px 0; color:#d00; font-weight:bold; display:none; }
@@ -155,12 +162,13 @@ input[type="text"]:required:invalid{border-color:#ff6b6b;background:#fff5f5;}
 
 <body>
 <div class="wrap" id="wrap">
-  <h1>每週豆漿團購登記 V6.5(相容修復版)</h1>
+  <h1>每週豆漿團購登記 V7.0(資料搬移修正版)</h1>
 
   <!-- 本次到貨日/批次狀態 -->
   <div class="badgeLine">
     <div class="badge" id="badge-batch">
       本次到貨日：<strong id="delivery-date-text">（尚未設定）</strong>
+      <button id="btn-edit-date" type="button" style="margin-left:5px; border:none; background:none; cursor:pointer; padding:0; font-size:1.1em;" title="點此修正日期">✏️</button>
     </div>
     <div class="badge warn" id="badge-batch-status">
       批次狀態：<strong id="batch-status-text">未建立</strong>
@@ -219,6 +227,12 @@ input[type="text"]:required:invalid{border-color:#ff6b6b;background:#fff5f5;}
       <button class="btn" id="btn-bottom-mode">小計模式（截圖使用）/復原檢視模式</button>
     </div>
 
+    <!-- 新增功能：搬移目前清單資料 -->
+    <button class="btn move-btn" id="btn-move-current" style="margin-top:8px; width:100%;">
+      📦 將目前清單歸檔為歷史資料（修正用）
+    </button>
+    <div class="muted" style="margin-bottom:8px;">說明：如果您發現舊資料混在「本次團購」中，請按此按鈕將它們移到正確的舊日期。</div>
+
     <button class="btn danger" id="btn-clear-all" title="結束本批次（備份為上週）並開啟新批次">
       ⚠️ 清空頁面＋清空雲端紀錄（防呆）+備份（並選擇到貨日）
     </button>
@@ -232,11 +246,14 @@ input[type="text"]:required:invalid{border-color:#ff6b6b;background:#fff5f5;}
   <div class="section" id="records-section">
     <h2>團購清單（雲端即時）－本次到貨：<span id="delivery-date-text-2">（尚未設定）</span></h2>
     
-    <!-- 舊資料救援區 -->
+    <!-- 舊資料救援區 (保留，針對無批次編號的孤兒) -->
     <div id="legacy-data-alert" class="legacy-alert">
-      <h3>⚠️ 發現未歸類（舊版 V5）訂單：<span id="legacy-count">0</span> 筆</h3>
-      <p style="font-size:0.9em;color:#666;margin:4px 0 10px;">這些訂單可能是升級前建立的，尚未歸屬到本次批次。請點擊下方按鈕將它們加入。</p>
-      <button class="btn btn-fix" id="btn-fix-legacy">🔄 一鍵將舊訂單加入本批次</button>
+      <h3>⚠️ 發現無編號訂單：<span id="legacy-count">0</span> 筆</h3>
+      <p style="font-size:0.9em;color:#666;margin:4px 0 0;">這些是未曾歸類的 V5 舊資料。</p>
+      <div class="control-group">
+        <input type="date" id="legacy-date-input" aria-label="舊訂單到貨日" />
+        <button class="btn btn-fix" id="btn-fix-legacy">歸檔至此日期</button>
+      </div>
     </div>
 
     <!-- 索引錯誤提示框 -->
@@ -280,12 +297,14 @@ input[type="text"]:required:invalid{border-color:#ff6b6b;background:#fff5f5;}
     <div class="toolbar">
       <label style="margin:0;min-width:78px;font-weight:800;">選擇月份</label>
       <select id="monthly-month" class="btn" style="padding:10px 12px;"></select>
-      <button class="btn" id="btn-month-refresh">重新整理</button>
+      
+      <!-- 重新整理按鈕，現在是純前端篩選，速度很快 -->
+      <button class="btn" id="btn-month-refresh">顯示資料</button>
 
-      <!-- 隱藏功能，因為現在無法寫入 meta，此功能可能失效，但保留 UI -->
-      <button class="btn danger" id="btn-month-hide" title="輸入 4908 後隱藏該月份（不刪資料）" disabled style="opacity:0.5;cursor:not-allowed">隱藏此月份（暫停用）</button>
-      <button class="btn" id="btn-month-unhide" title="取消隱藏，讓月份重新顯示" disabled style="opacity:0.5;cursor:not-allowed">取消隱藏</button>
-      <label class="btn" style="display:inline-flex;align-items:center;gap:6px; opacity:0.5;">
+      <!-- 隱藏功能 (保留 UI 但禁用，避免複雜權限問題) -->
+      <button class="btn danger" id="btn-month-hide" title="輸入 4908 後隱藏該月份（不刪資料）" disabled style="opacity:0.5;cursor:not-allowed;display:none;">隱藏此月份</button>
+      <button class="btn" id="btn-month-unhide" title="取消隱藏，讓月份重新顯示" disabled style="opacity:0.5;cursor:not-allowed;display:none;">取消隱藏</button>
+      <label class="btn" style="display:none; align-items:center;gap:6px; opacity:0.5;">
         <input type="checkbox" id="chk-show-hidden" disabled />
         顯示已隱藏月份
       </label>
@@ -299,7 +318,7 @@ input[type="text"]:required:invalid{border-color:#ff6b6b;background:#fff5f5;}
     <div id="monthly-list"></div>
 
     <div class="muted">
-      說明：月彙總會顯示該月份（以到貨日歸屬）所有批次的訂購明細與加總。
+      說明：月彙總會自動根據所有訂單的到貨日（或填寫日期）進行分類統計，且選單僅顯示最近 6 個月。
     </div>
   </div>
 </div>
@@ -621,38 +640,20 @@ function setBatchUI(batch){
   // 我們把 batch 狀態存到 archives/_BATCH_STATUS_ 裡面
   const currentBatchRef = doc(db, 'archives', '_BATCH_STATUS_');
   
-  // 隱藏月份設定也改存 archives
-  const hiddenMonthsRef = doc(db, 'archives', '_HIDDEN_MONTHS_');
+  // 隱藏月份設定也改存 archives (暫時不用，因權限複雜，本版改為純前端顯示)
+  // const hiddenMonthsRef = doc(db, 'archives', '_HIDDEN_MONTHS_');
 
   // ========= 狀態：目前批次 =========
   let CURRENT_BATCH = null;
   let unsubscribeOrders = null;
   
+  // 全域訂單快取 (V6.6 新增：用於前端彙總)
+  let ALL_FETCHED_ROWS = [];
+  
   // 舊資料暫存
   let LEGACY_ROWS = [];
-
-  // ========= 隱藏月份（Firestore） =========
-  let HIDDEN_MONTHS = new Set();
-  async function loadHiddenMonths() {
-    try {
-      const snap = await getDoc(hiddenMonthsRef);
-      const arr = snap.exists() ? (snap.data()?.months || []) : [];
-      HIDDEN_MONTHS = new Set(arr.filter(m => /^\d{4}-\d{2}$/.test(m)));
-      return HIDDEN_MONTHS;
-    } catch (e) {
-      console.error("讀取隱藏月份失敗(權限可能不足)", e);
-      return new Set();
-    }
-  }
-  async function saveHiddenMonths() {
-    try {
-      const months = Array.from(HIDDEN_MONTHS).sort();
-      await setDoc(hiddenMonthsRef, { months, updated_at: serverTimestamp() }, { merge: true });
-    } catch(e) {
-      alert("儲存設定失敗：" + e.message);
-    }
-  }
-  function isHiddenMonth(m){ return HIDDEN_MONTHS.has(m); }
+  // V7.0: 存取目前清單的所有資料 (包含已歸屬當前批次的)
+  let CURRENT_LIST_ROWS = [];
 
   // ========= Current Batch =========
   async function loadCurrentBatch(){
@@ -697,14 +698,57 @@ function setBatchUI(batch){
       };
       setBatchUI(CURRENT_BATCH);
       subscribeOrdersGlobal();
-      // 讓月份下拉優先選到本批次月份
-      loadMonthsForSelector().then(refreshMonthly).catch(()=>{});
     }, (err) => {
        console.error("監聽批次失敗", err);
        // 如果連 archives 都不能讀，就完全無法運作，但 V5 能跑代表可以
        subscribeOrdersGlobal(); 
     });
   }
+
+  // 修正日期按鈕邏輯
+  document.getElementById('btn-edit-date').addEventListener('click', async () => {
+    if (!CURRENT_BATCH || CURRENT_BATCH.status !== 'open') {
+        alert("目前沒有開放中的批次，無法修改。");
+        return;
+    }
+    const oldDate = CURRENT_BATCH.delivery_date;
+    const newDate = prompt("請輸入修正後的到貨日 (YYYY-MM-DD)：", oldDate);
+    if (!newDate || newDate === oldDate) return;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(newDate)) {
+        alert("格式錯誤，請使用 YYYY-MM-DD 格式"); return;
+    }
+    
+    const newBillingMonth = ymFromYmd(newDate);
+    
+    try {
+        // 1. Update Meta (archives/_BATCH_STATUS_)
+        await updateDoc(currentBatchRef, {
+            delivery_date: newDate,
+            billing_month: newBillingMonth,
+            updated_at: serverTimestamp()
+        });
+        
+        // 2. Update existing orders in this batch
+        // 使用簡單查詢抓取屬於此 batch_id 的訂單
+        const q = query(collection(db, 'orders'), where('batch_id', '==', CURRENT_BATCH.batch_id));
+        const snap = await getDocs(q);
+        
+        if (!snap.empty) {
+            const batch = writeBatch(db);
+            snap.forEach(doc => {
+                batch.update(doc.ref, {
+                    delivery_date: newDate,
+                    billing_month: newBillingMonth
+                });
+            });
+            await batch.commit();
+        }
+        
+        alert(`✅ 已修正日期為 ${newDate}\n相關訂單也已同步更新。`);
+    } catch(e) {
+        alert("修正失敗：" + e.message);
+    }
+  });
 
   // ========= 送單（寫入 orders） =========
   document.getElementById('btn-add-record').addEventListener('click', async ()=>{
@@ -751,7 +795,7 @@ function setBatchUI(batch){
     }
   });
 
-  // ========= 全域監聽 (V5 相容) =========
+  // ========= 全域監聽 (V5 相容 & V6.6 前端彙總核心) =========
   function subscribeOrdersGlobal(){
     if(unsubscribeOrders){ unsubscribeOrders(); unsubscribeOrders=null; }
 
@@ -773,6 +817,13 @@ function setBatchUI(batch){
       // 1. 過濾已刪除
       const activeRows = allRows.filter(r => !r.deleted_at);
       
+      // V6.6: 將所有有效訂單存入全域變數，供「月彙總」使用
+      ALL_FETCHED_ROWS = activeRows;
+      
+      // 更新月彙總的下拉選單 (因為我們已經有所有資料了)
+      updateMonthlyDropdown();
+      refreshMonthly(); // 預設顯示選中的月份資料
+
       // 2. 區分「本批次」與「舊資料」
       const currentBatchId = CURRENT_BATCH?.batch_id;
       
@@ -794,11 +845,12 @@ function setBatchUI(batch){
       
       if (CURRENT_BATCH && CURRENT_BATCH.batch_id) {
          // 有批次：只顯示本批次
+         CURRENT_LIST_ROWS = currentRows; // 存給搬移工具用
          renderRecordsCloud(currentRows);
       } else {
          // 無批次：全部顯示 (V5 相容)
-         // 這是您之前 "空白" 的解法：如果沒批次，就全秀出來
          if (legacyRows.length > 0) {
+             CURRENT_LIST_ROWS = legacyRows; // 存給搬移工具用
              renderRecordsCloud(legacyRows);
              const banner = document.createElement('div');
              banner.className = 'badge warn';
@@ -807,6 +859,7 @@ function setBatchUI(batch){
              listEl.prepend(banner);
              document.getElementById('delivery-date-text-2').textContent = '未設定';
          } else {
+             CURRENT_LIST_ROWS = [];
              listEl.innerHTML = '<div class="muted">目前無資料。請建立新批次或開始輸入。</div>';
              renderAggregateCloud([]);
          }
@@ -832,34 +885,81 @@ function setBatchUI(batch){
     const alertBox = document.getElementById('legacy-data-alert');
     const countSpan = document.getElementById('legacy-count');
     // 如果有批次且有舊資料，才顯示整合按鈕
-    if (count > 0 && CURRENT_BATCH && CURRENT_BATCH.status === 'open') {
+    // V6.9 修改: 即使沒有批次，如果有舊資料，也顯示修復區塊供使用者指定日期
+    if (count > 0) {
       alertBox.style.display = 'block';
       countSpan.textContent = count;
+      // 預設日期為今天
+      if(!document.getElementById('legacy-date-input').value) {
+          document.getElementById('legacy-date-input').value = new Date().toISOString().split('T')[0];
+      }
     } else {
       alertBox.style.display = 'none';
     }
   }
   
+  // V6.9: 修正舊資料歸檔邏輯 (獨立歸檔，不混入當前批次)
   document.getElementById('btn-fix-legacy').addEventListener('click', async () => {
-    if (!CURRENT_BATCH || !CURRENT_BATCH.batch_id) return;
     if (LEGACY_ROWS.length === 0) return;
     
-    if (!confirm(`將 ${LEGACY_ROWS.length} 筆舊資料加入本批次？`)) return;
+    const inputDate = document.getElementById('legacy-date-input').value;
+    if (!inputDate) {
+        alert("請選擇一個日期！");
+        return;
+    }
+    
+    if (!confirm(`確定將這 ${LEGACY_ROWS.length} 筆舊資料歸檔至日期 ${inputDate} 嗎？\n(這不會影響目前開啟的批次)`)) return;
+    
+    const legacyBatchId = 'legacy_' + inputDate.replace(/-/g,''); // 產生一個獨立的 ID
+    const legacyMonth = ymFromYmd(inputDate);
     
     try {
       const batch = writeBatch(db);
       LEGACY_ROWS.forEach(row => {
         const ref = doc(db, 'orders', row.id);
         batch.update(ref, {
-          batch_id: CURRENT_BATCH.batch_id,
-          delivery_date: CURRENT_BATCH.delivery_date,
-          billing_month: CURRENT_BATCH.billing_month
+          batch_id: legacyBatchId, // 使用獨立 ID，而非 CURRENT_BATCH.batch_id
+          delivery_date: inputDate,
+          billing_month: legacyMonth
         });
       });
       await batch.commit();
-      alert("✅ 成功整合！");
+      alert("✅ 舊資料已成功歸檔！");
     } catch(e) {
-      alert("整合失敗：" + e.message);
+      alert("歸檔失敗：" + e.message);
+    }
+  });
+
+  // V7.0: 全新「資料搬移」工具
+  document.getElementById('btn-move-current').addEventListener('click', async () => {
+    if (CURRENT_LIST_ROWS.length === 0) {
+        alert("目前清單中沒有任何資料可以搬移。");
+        return;
+    }
+    
+    const inputDate = prompt(`⚠️ 注意：您即將把目前顯示的 ${CURRENT_LIST_ROWS.length} 筆訂單\n「移出」此批次並歸檔到歷史資料。\n\n請輸入這些資料的正確到貨日 (YYYY-MM-DD)：`);
+    if (!inputDate) return;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(inputDate)) {
+        alert("日期格式錯誤，請使用 YYYY-MM-DD"); return;
+    }
+    
+    const legacyBatchId = 'legacy_' + inputDate.replace(/-/g,'');
+    const legacyMonth = ymFromYmd(inputDate);
+    
+    try {
+      const batch = writeBatch(db);
+      CURRENT_LIST_ROWS.forEach(row => {
+        const ref = doc(db, 'orders', row.id);
+        batch.update(ref, {
+          batch_id: legacyBatchId, // 賦予歷史批次 ID
+          delivery_date: inputDate,
+          billing_month: legacyMonth
+        });
+      });
+      await batch.commit();
+      alert(`✅ 成功搬移！\n目前清單已清空，資料已歸檔至 ${inputDate} 的月彙總中。`);
+    } catch(e) {
+      alert("搬移失敗：" + e.message);
     }
   });
 
@@ -1125,32 +1225,200 @@ function setBatchUI(batch){
 
   document.getElementById('btn-clear-all').addEventListener('click', closeAndOpenNewBatch);
 
-  // ========= 月彙總 =========
-  // (略過詳細載入月份邏輯，因為需要 query batches collection，可能權限不足)
-  // 簡化版：只載入當前批次的月份
-  async function loadMonthsForSelector(){
+  // ========= 月彙總 (V6.7 純前端計算，支援舊資料，只顯示最近 6 個月) =========
+  function updateMonthlyDropdown() {
     const sel = document.getElementById('monthly-month');
+    // 保留目前選項
+    const currentVal = sel.value;
     sel.innerHTML = '';
-    const m = CURRENT_BATCH?.billing_month || new Date().toISOString().slice(0,7);
-    const opt = document.createElement('option');
-    opt.value = m;
-    opt.textContent = m;
-    sel.appendChild(opt);
+
+    // 從 ALL_FETCHED_ROWS 算出所有出現過的月份
+    const monthSet = new Set();
+    
+    // 預設加入目前批次的月份
+    if (CURRENT_BATCH?.billing_month) {
+        monthSet.add(CURRENT_BATCH.billing_month);
+    } else {
+        // 如果沒有批次，至少加入這個月
+        monthSet.add(new Date().toISOString().slice(0,7));
+    }
+
+    ALL_FETCHED_ROWS.forEach(row => {
+        let m = null;
+        if (row.billing_month) {
+            m = row.billing_month;
+        } else if (row.delivery_date) {
+            m = ymFromYmd(row.delivery_date);
+        } else if (row.ts) {
+            // 從 "YYYY/MM/DD HH:mm" 解析
+            // 簡單用正規表示法
+            const match = row.ts.match(/^(\d{4})\/(\d{2})/);
+            if (match) {
+                m = `${match[1]}-${match[2]}`;
+            }
+        }
+        if (m) monthSet.add(m);
+    });
+
+    // 排序：最新的月份在最上面
+    let list = Array.from(monthSet).sort().reverse();
+
+    // --- 修改處：只取最近 6 個月 ---
+    if (list.length > 6) {
+        list = list.slice(0, 6);
+    }
+    
+    list.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m;
+        opt.textContent = m;
+        sel.appendChild(opt);
+    });
+
+    // 嘗試恢復選取
+    if (currentVal && list.includes(currentVal)) {
+        sel.value = currentVal;
+    } else if (CURRENT_BATCH?.billing_month && list.includes(CURRENT_BATCH.billing_month)) {
+        sel.value = CURRENT_BATCH.billing_month;
+    } else if (list.length > 0) {
+        sel.value = list[0];
+    }
   }
-  // (略過 getMonthlyOrders，因為它依賴 orders 查詢，應該可以用)
-  // ... (保留 monthly UI 邏輯)
+
+  function refreshMonthly() {
+    const sel = document.getElementById('monthly-month');
+    const bm = sel.value;
+    if(!bm) return;
+
+    // 前端過濾
+    const targetRows = ALL_FETCHED_ROWS.filter(row => {
+        let rowM = null;
+        if (row.billing_month) rowM = row.billing_month;
+        else if (row.delivery_date) rowM = ymFromYmd(row.delivery_date);
+        else if (row.ts) {
+            const match = row.ts.match(/^(\d{4})\/(\d{2})/);
+            if (match) rowM = `${match[1]}-${match[2]}`;
+        }
+        return rowM === bm;
+    });
+
+    renderMonthly(bm, targetRows);
+  }
+
+  document.getElementById('btn-month-refresh').addEventListener('click', refreshMonthly);
+  document.getElementById('monthly-month').addEventListener('change', refreshMonthly);
+
+  // 渲染月彙總內容
+  function renderMonthly(billingMonth, rows){
+    const kpiEl = document.getElementById('monthly-kpi');
+    const catsEl = document.getElementById('monthly-cats');
+    const listEl = document.getElementById('monthly-list');
+
+    if(!rows.length){
+      kpiEl.innerHTML = `<div class="k">月份 <strong>${billingMonth}</strong>：無資料</div>`;
+      catsEl.innerHTML = '';
+      listEl.innerHTML = `<div class="muted">此月份尚無訂單。</div>`;
+      return;
+    }
+
+    const sumByCat = {'2500':0,'1050':0,'330':0};
+    const qtyByCat = {'2500':0,'1050':0,'330':0};
+    let qtyAll=0, sumAll=0;
+
+    rows.forEach(r=>{
+      (r.items||[]).forEach(it=>{
+        qtyByCat[it.cat] += (it.qty||0);
+        sumByCat[it.cat] += (it.money||0);
+        qtyAll += (it.qty||0);
+        sumAll += (it.money||0);
+      });
+    });
+
+    kpiEl.innerHTML = `
+      <div class="k">月份：<strong>${billingMonth}</strong></div>
+      <div class="k">總數量：<strong>${fmt(qtyAll)}</strong></div>
+      <div class="k">總金額：<strong>$${fmt(sumAll)}</strong></div>
+    `;
+    catsEl.innerHTML = `
+      <div class="k">2,500cc：<strong>${fmt(qtyByCat['2500'])}</strong>｜<strong>$${fmt(sumByCat['2500'])}</strong></div>
+      <div class="k">1,050cc：<strong>${fmt(qtyByCat['1050'])}</strong>｜<strong>$${fmt(sumByCat['1050'])}</strong></div>
+      <div class="k">330cc：<strong>${fmt(qtyByCat['330'])}</strong>｜<strong>$${fmt(sumByCat['330'])}</strong></div>
+    `;
+
+    const byBuyer = new Map();
+    rows.forEach(r=>{
+      const key = r.buyer || '(未填)';
+      if(!byBuyer.has(key)) byBuyer.set(key, []);
+      byBuyer.get(key).push(r);
+    });
+
+    listEl.innerHTML = '';
+    const catLabelMap = {'2500':'2,500cc 袋裝','1050':'1,050cc 口栓袋','330':'330cc 杯裝'};
+
+    Array.from(byBuyer.entries()).forEach(([buyer, list])=>{
+      let bQty=0, bSum=0;
+      list.forEach(r=>{
+        (r.items||[]).forEach(it=>{
+          bQty += (it.qty||0);
+          bSum += (it.money||0);
+        });
+      });
+
+      const sec = document.createElement('div');
+      sec.className = 'msec';
+      sec.innerHTML = `
+        <div class="mhead">
+          <div>${buyer} <span class="meta">（小計：數量 ${fmt(bQty)}｜金額 $${fmt(bSum)}）</span></div>
+          <button class="btn btn-m-toggle">展開</button>
+        </div>
+        <div class="mbody">
+          <table class="table">
+            <thead>
+              <tr><th>時間</th><th>品項</th><th>單價</th><th>數量</th><th>小計</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      `;
+      const btn = sec.querySelector('.btn-m-toggle');
+      btn.addEventListener('click', ()=>{
+        const open = sec.classList.toggle('open');
+        btn.textContent = open ? '收合' : '展開';
+      });
+
+      const tbody = sec.querySelector('tbody');
+      list.forEach(r=>{
+        (r.items||[]).forEach(it=>{
+          const tr = document.createElement('tr');
+          const name = `${catLabelMap[it.cat] ? catLabelMap[it.cat]+'－' : ''}${it.name}`;
+          // 這裡顯示到貨日或填單時間
+          const timeDisplay = r.delivery_date || r.ts || '';
+          tr.innerHTML = `
+            <td style="text-align:left;font-size:0.9em">${timeDisplay}</td>
+            <td style="text-align:left">${name}</td>
+            <td>$${fmt(it.price)}</td>
+            <td>${fmt(it.qty)}</td>
+            <td>$${fmt(it.money)}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      });
+
+      listEl.appendChild(sec);
+    });
+  }
 
   // ========= 初始化 =========
   document.getElementById('ts').textContent = nowTS();
   document.getElementById('buyer-name').textContent = (document.getElementById('buyer')?.value || '');
   recalc();
 
-  await loadCurrentBatch(); // 改讀 archives/_BATCH_STATUS_
+  await loadCurrentBatch(); 
   listenCurrentBatch();
   subscribeArchives();
-  await loadHiddenMonths();
-  await loadMonthsForSelector();
-  // await refreshMonthly();
+  // 移除 loadHiddenMonths 呼叫以避免錯誤
+  // await loadHiddenMonths();
+  // loadMonthsForSelector 改為由 subscribeOrdersGlobal 觸發
 
 </script>
 </body>
