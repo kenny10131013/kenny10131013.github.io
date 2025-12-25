@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>每週豆漿團購登記 V9.0(混合雙模版)</title>
+<title>每週豆漿團購登記 V9.1(資料流修正與姓名彙總版)</title>
 
 <style>
 :root{
@@ -173,7 +173,7 @@ input[type="text"]:required:invalid{border-color:#ff6b6b;background:#fff5f5;}
 
 <body>
 <div class="wrap" id="wrap">
-  <h1>每週豆漿團購登記 V9.0(混合雙模版)</h1>
+  <h1>每週豆漿團購登記 V9.1(資料流修正與姓名彙總版)</h1>
 
   <!-- 本次到貨日/批次狀態 -->
   <div class="badgeLine">
@@ -667,7 +667,7 @@ window.onerror = function(message, source, lineno, colno, error) {
     measurementId: "G-Z3PHZMCGNW"
   };
 
-  console.log("正在初始化 Firebase (V9.0)...");
+  console.log("正在初始化 Firebase (V9.1)...");
   const app = initializeApp(firebaseConfig);
   const db  = getFirestore(app);
   console.log("Firebase 初始化完成，資料庫實例：", db);
@@ -892,6 +892,7 @@ window.onerror = function(message, source, lineno, colno, error) {
     }
   }
 
+  // V9.1 新增：姓名彙總邏輯
   function renderMonthly(billingMonth, rows){
     const kpiEl = document.getElementById('monthly-kpi');
     const catsEl = document.getElementById('monthly-cats');
@@ -900,10 +901,11 @@ window.onerror = function(message, source, lineno, colno, error) {
     if(!rows.length){
       kpiEl.innerHTML = `<div class="k">月份 <strong>${billingMonth}</strong>：無資料</div>`;
       catsEl.innerHTML = '';
-      listEl.innerHTML = `<div class="muted">此月份尚無其他已歸檔訂單（可能正在本期或上週顯示中）。</div>`;
+      listEl.innerHTML = `<div class="muted">此月份尚無其他已歸檔訂單（可能正在本期顯示中）。</div>`;
       return;
     }
 
+    // 1. 全月總計
     const sumByCat = {'2500':0,'1050':0,'330':0};
     const qtyByCat = {'2500':0,'1050':0,'330':0};
     let qtyAll=0, sumAll=0;
@@ -913,6 +915,7 @@ window.onerror = function(message, source, lineno, colno, error) {
         qtyByCat[it.cat] += (it.qty||0);
         sumByCat[it.cat] += (it.money||0);
         qtyByCat[it.cat] += (it.qty||0);
+        qtyAll += (it.qty||0);
         sumAll += (it.money||0);
       });
     });
@@ -928,9 +931,11 @@ window.onerror = function(message, source, lineno, colno, error) {
       <div class="k">330cc：<strong>${fmt(qtyByCat['330'])}</strong>｜<strong>$${fmt(sumByCat['330'])}</strong></div>
     `;
 
+    // 2. 姓名歸戶邏輯
     const byBuyer = new Map();
     rows.forEach(r=>{
-      const key = r.buyer || '(未填)';
+      // 正規化姓名：去除頭尾空白
+      const key = (r.buyer || '(未填)').trim();
       if(!byBuyer.has(key)) byBuyer.set(key, []);
       byBuyer.get(key).push(r);
     });
@@ -938,9 +943,15 @@ window.onerror = function(message, source, lineno, colno, error) {
     listEl.innerHTML = '';
     const catLabelMap = {'2500':'2,500cc 袋裝','1050':'1,050cc 口栓袋','330':'330cc 杯裝'};
 
-    Array.from(byBuyer.entries()).forEach(([buyer, list])=>{
+    // 依照姓名排序
+    const sortedBuyers = Array.from(byBuyer.keys()).sort();
+
+    sortedBuyers.forEach(buyerName => {
+      const orders = byBuyer.get(buyerName);
+      
+      // 計算該人的總計
       let bQty=0, bSum=0;
-      list.forEach(r=>{
+      orders.forEach(r=>{
         (r.items||[]).forEach(it=>{
           bQty += (it.qty||0);
           bSum += (it.money||0);
@@ -951,13 +962,13 @@ window.onerror = function(message, source, lineno, colno, error) {
       sec.className = 'msec';
       sec.innerHTML = `
         <div class="mhead">
-          <div>${buyer} <span class="meta">（小計：數量 ${fmt(bQty)}｜金額 $${fmt(bSum)}）</span></div>
+          <div>${buyerName} <span class="meta">（共 ${orders.length} 筆訂單｜總數量 ${fmt(bQty)}｜總金額 $${fmt(bSum)}）</span></div>
           <button class="btn btn-m-toggle">展開</button>
         </div>
         <div class="mbody">
           <table class="table">
             <thead>
-              <tr><th>時間</th><th>品項</th><th>單價</th><th>數量</th><th>小計</th></tr>
+              <tr><th>到貨日期</th><th>品項</th><th>單價</th><th>數量</th><th>小計</th></tr>
             </thead>
             <tbody></tbody>
           </table>
@@ -970,11 +981,15 @@ window.onerror = function(message, source, lineno, colno, error) {
       });
 
       const tbody = sec.querySelector('tbody');
-      list.forEach(r=>{
+      
+      // 依照日期排序訂單
+      orders.sort((a,b) => (a.delivery_date || '').localeCompare(b.delivery_date || ''));
+
+      orders.forEach(r=>{
         (r.items||[]).forEach(it=>{
           const tr = document.createElement('tr');
           const name = `${catLabelMap[it.cat] ? catLabelMap[it.cat]+'－' : ''}${it.name}`;
-          const timeDisplay = r.delivery_date || r.ts || '';
+          const timeDisplay = r.delivery_date || r.ts.split(' ')[0] || '';
           tr.innerHTML = `
             <td style="text-align:left;font-size:0.9em">${timeDisplay}</td>
             <td style="text-align:left">${name}</td>
@@ -995,10 +1010,13 @@ window.onerror = function(message, source, lineno, colno, error) {
     const bm = sel.value;
     if(!bm) return;
 
+    // V9.1 修正過濾邏輯：只過濾「目前正在進行中」的批次
+    // 上週備份的資料（LAST_WEEK_DATE）應該要顯示在月彙總裡，因為它已經結單了
     const targetRows = ALL_FETCHED_ROWS.filter(row => {
         const rowDate = row.delivery_date || (row.ts ? row.ts.split(' ')[0].replace(/\//g,'-') : '');
+        
+        // 只過濾掉「目前」的，保留「上週」的
         if (CURRENT_BATCH?.delivery_date && rowDate === CURRENT_BATCH.delivery_date) return false;
-        if (LAST_WEEK_DATE && rowDate === LAST_WEEK_DATE) return false;
 
         let rowM = null;
         if (row.billing_month) rowM = row.billing_month;
@@ -1160,6 +1178,7 @@ window.onerror = function(message, source, lineno, colno, error) {
         </div>
       `;
       const tbody = card.querySelector('tbody');
+      const catLabelMap = {'2500':'2,500cc 袋裝','1050':'1,050cc 口栓袋','330':'330cc 杯裝'};
       (arc.orders || []).forEach(o => {
         const tr = document.createElement('tr');
         const itemsStr = (o.items || []).map(it => {
@@ -1332,6 +1351,40 @@ window.onerror = function(message, source, lineno, colno, error) {
     const currentBillingMonth = ymFromYmd(confirmCurrentDate);
 
     try {
+        // --- V8.6 新增: 自動救援舊 Archive 到 Orders ---
+        // V8.9 修正：確保 ARCHIVE_ROWS_CACHE 存在且不為空才執行
+        if (typeof ARCHIVE_ROWS_CACHE !== 'undefined' && ARCHIVE_ROWS_CACHE && ARCHIVE_ROWS_CACHE.length > 0) {
+            const legacyItems = ARCHIVE_ROWS_CACHE.filter(item => !item.order_id);
+            if (legacyItems.length > 0) {
+                console.log(`自動救援 ${legacyItems.length} 筆舊資料...`);
+                const rescueBatch = writeBatch(db);
+                // 使用變數前的檢查
+                const rescueDate = LAST_WEEK_DATE || new Date().toISOString().slice(0,10);
+                const rescueMonth = ymFromYmd(rescueDate);
+                const rescueBatchId = 'rescued_legacy_' + rescueDate.replace(/-/g, '');
+
+                legacyItems.forEach(row => {
+                    const newDocRef = doc(collection(db, 'orders'));
+                    rescueBatch.set(newDocRef, {
+                        buyer: row.buyer,
+                        ts: row.ts,
+                        items: row.items,
+                        sum_2500: Number(row.sum_2500 || 0),
+                        sum_1050: Number(row.sum_1050 || 0),
+                        sum_330: Number(row.sum_330 || 0),
+                        grand: Number(row.grand || 0),
+                        created_at: serverTimestamp(),
+                        
+                        batch_id: rescueBatchId,
+                        delivery_date: rescueDate,
+                        billing_month: rescueMonth,
+                        deleted_at: null
+                    });
+                });
+                await rescueBatch.commit();
+            }
+        }
+
         if(CURRENT_BATCH && CURRENT_BATCH.batch_id){
           const rows = await getBatchOrders(CURRENT_BATCH.batch_id);
           
@@ -1410,146 +1463,65 @@ window.onerror = function(message, source, lineno, colno, error) {
 
   safeAddListener('btn-clear-all', 'click', closeAndOpenNewBatch);
   
-  safeAddListener('btn-restore-archive', 'click', async () => {
-    if (!ARCHIVE_ROWS_CACHE || ARCHIVE_ROWS_CACHE.length === 0) {
-        alert("目前沒有可還原的備份資料。");
-        return;
-    }
-    
-    const restoreDate = prompt("請輸入這批備份資料的正確到貨日 (YYYY-MM-DD)：", LAST_WEEK_DATE || "");
-    if (!restoreDate) return;
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(restoreDate)) { alert("格式錯誤"); return; }
-    
-    const restoreMonth = ymFromYmd(restoreDate);
-    const restoreBatchId = 'restored_' + restoreDate.replace(/-/g,'');
-    
-    if(!confirm(`確定要將 ${ARCHIVE_ROWS_CACHE.length} 筆資料寫回資料庫嗎？\n(這會讓它們出現在「月彙總」中)`)) return;
-    
-    try {
-        const batch = writeBatch(db);
-        ARCHIVE_ROWS_CACHE.forEach(row => {
-            const newDocRef = doc(collection(db, 'orders'));
-            batch.set(newDocRef, {
-                buyer: row.buyer,
-                ts: row.ts,
-                items: row.items,
-                sum_2500: Number(row.sum_2500 || 0),
-                sum_1050: Number(row.sum_1050 || 0),
-                sum_330: Number(row.sum_330 || 0),
-                grand: Number(row.grand || 0),
-                created_at: serverTimestamp(),
-                
-                batch_id: restoreBatchId,
-                delivery_date: restoreDate,
-                billing_month: restoreMonth,
-                deleted_at: null
+  // V8.8 修正：移除已不存在的 btn-restore-archive 的監聽綁定
+  // 原本的 btn-restore-archive 已經在 V8.6 被移除，但這段 code 沒刪掉導致 null error
+  // 如果未來要加回來，請確保 HTML 有這個 ID
+  if(document.getElementById('btn-restore-archive')){
+      safeAddListener('btn-restore-archive', 'click', async () => {
+        // ... (保留原本邏輯，以防萬一 UI 加回來) ...
+        if (!ARCHIVE_ROWS_CACHE || ARCHIVE_ROWS_CACHE.length === 0) {
+            alert("目前沒有可還原的備份資料（可能已自動歸檔或無資料）。");
+            return;
+        }
+        
+        const restoreDate = prompt("請輸入這批備份資料的正確到貨日 (YYYY-MM-DD)：", LAST_WEEK_DATE || "");
+        if (!restoreDate) return;
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(restoreDate)) { alert("格式錯誤"); return; }
+        
+        const restoreMonth = ymFromYmd(restoreDate);
+        const restoreBatchId = 'restored_' + restoreDate.replace(/-/g,'');
+        
+        if(!confirm(`確定要將 ${ARCHIVE_ROWS_CACHE.length} 筆資料寫回資料庫嗎？\n(這會讓它們出現在「月彙總」中)`)) return;
+        
+        try {
+            const batch = writeBatch(db);
+            ARCHIVE_ROWS_CACHE.forEach(row => {
+                const newDocRef = doc(collection(db, 'orders'));
+                batch.set(newDocRef, {
+                    buyer: row.buyer,
+                    ts: row.ts,
+                    items: row.items,
+                    sum_2500: Number(row.sum_2500 || 0),
+                    sum_1050: Number(row.sum_1050 || 0),
+                    sum_330: Number(row.sum_330 || 0),
+                    grand: Number(row.grand || 0),
+                    created_at: serverTimestamp(),
+                    
+                    batch_id: restoreBatchId,
+                    delivery_date: restoreDate,
+                    billing_month: restoreMonth,
+                    deleted_at: null
+                });
             });
-        });
-        await batch.commit();
-        alert("✅ 還原成功！請重新整理頁面查看月彙總。");
-    } catch(e) {
-        alert("還原失敗：" + e.message);
-    }
-  });
+            await batch.commit();
+            alert("✅ 還原成功！請重新整理頁面查看月彙總。");
+        } catch(e) {
+            alert("還原失敗：" + e.message);
+        }
+      });
+  }
 
   safeAddListener('btn-month-refresh', 'click', refreshMonthly);
   safeAddListener('monthly-month', 'change', refreshMonthly);
 
   // ========= 初始化 =========
-  // V9.0 Debug: Direct alert on start
-  // console.log("V9.0 Script Loaded");
-  
   document.getElementById('ts').textContent = nowTS();
   document.getElementById('buyer-name').textContent = (document.getElementById('buyer')?.value || '');
   recalc();
 
-  // Load Everything
-  (async () => {
-      try {
-        await loadCurrentBatch(); 
-        listenCurrentBatch();
-        subscribeArchives();
-      } catch(e) {
-          console.error("Critical Init Error:", e);
-          alert("系統初始化失敗：" + e.message);
-      }
-  })();
-
-  // 1. Alert user if clicked
-  safeAddListener('btn-add-record', 'click', async () => {
-    console.log("Submit button clicked!");
-    try {
-        const buyerEl = document.getElementById('buyer');
-        const buyerValue = buyerEl.value.trim();
-        if(!buyerValue){
-          alert('請先填寫「訂購人姓名」。');
-          buyerEl.focus();
-          return;
-        }
-
-        // V9.0 Hybrid Mode: Calculate fallback date if batch is missing
-        let useBatchId = CURRENT_BATCH?.batch_id;
-        let useDeliveryDate = CURRENT_BATCH?.delivery_date;
-        let useBillingMonth = CURRENT_BATCH?.billing_month;
-
-        if (!useBatchId) {
-            // Fallback to "V5 Mode" (Next Friday as default)
-            useDeliveryDate = nextFridayYmd();
-            useBillingMonth = ymFromYmd(useDeliveryDate);
-            useBatchId = 'fallback_' + useDeliveryDate; // Temp batch ID
-            console.log("Using Fallback Batch:", useBatchId);
-        }
-
-        const quantities = []; 
-        document.querySelectorAll('.item').forEach(card => 
-            quantities.push(parseInt(card.querySelector('input[type="number"]').value||'0',10)||0)
-        );
-
-        const itemsPicked = [];
-        let sum2500=0,sum1050=0,sum330=0, grand=0;
-
-        quantities.forEach((qty,idx)=>{
-            if(qty<=0) return;
-            const it=items[idx];
-            const money=qty*it.price;
-            itemsPicked.push({idx, name:it.name, cat:it.cat, price:it.price, qty, money});
-            if(it.cat==='2500') sum2500+=money;
-            else if(it.cat==='1050') sum1050+=money;
-            else sum330+=money;
-            grand+=money;
-        });
-
-        if(itemsPicked.length === 0) {
-            alert('目前沒有填寫任何數量。'); return;
-        }
-
-        const payload = {
-            buyer: buyerValue,
-            ts: nowTS(),
-            items: itemsPicked,
-            sum_2500: sum2500,
-            sum_1050: sum1050,
-            sum_330:  sum330,
-            grand:    grand,
-            created_at: serverTimestamp(),
-            batch_id: useBatchId,
-            delivery_date: useDeliveryDate,
-            billing_month: useBillingMonth,
-            deleted_at: null
-        };
-
-        console.log("Sending payload:", payload);
-        await addDoc(collection(db, 'orders'), payload);
-        alert('✅ 已提交到雲端！');
-
-        document.querySelectorAll('.item input[type="number"]').forEach(i=>i.value=0);
-        recalc();
-
-    } catch(err){
-      console.error(err);
-      alert('❌ 提交失敗：' + err.message);
-    }
-  });
+  await loadCurrentBatch(); 
+  listenCurrentBatch();
+  subscribeArchives();
 
 </script>
 </body>
