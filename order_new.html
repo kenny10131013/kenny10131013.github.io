@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>每週豆漿團購登記 V9.5(114/12/25_版)</title>
+<title>每週豆漿團購登記 V9.6(114/12/25_版)</title>
 
 <style>
 :root{
@@ -173,13 +173,13 @@ input[type="text"]:required:invalid{border-color:#ff6b6b;background:#fff5f5;}
 
 <body>
 <div class="wrap" id="wrap">
-  <h1>每週豆漿團購登記 V9.5(114/12/25_版)</h1>
+  <h1>每週豆漿團購登記 V9.6(114/12/25_版)</h1>
 
   <!-- 本次到貨日/批次狀態 -->
   <div class="badgeLine">
     <div class="badge" id="badge-batch">
       本次到貨日：<strong id="delivery-date-text">（檢查中...）</strong>
-      <button id="btn-edit-date" type="button" style="margin-left:5px; border:none; background:none; cursor:pointer; padding:0; font-size:1.1em;" title="點此修正日期">✏️</button>
+      <button id="btn-edit-date" type="button" style="margin-left:5px; border:none; background:none; cursor:pointer; padding:0; font-size:1.1em; position:relative; z-index:10;" title="點此修正日期">✏️</button>
     </div>
     <div class="badge warn" id="badge-batch-status">
       批次狀態：<strong id="batch-status-text">...</strong>
@@ -301,7 +301,7 @@ input[type="text"]:required:invalid{border-color:#ff6b6b;background:#fff5f5;}
       <button class="btn restore-btn" id="btn-restore-archive" style="display:none;">♻️ 將此備份還原回資料庫（補上日期）</button>
     </div>
     <div class="muted" style="margin-top:5px; margin-bottom:10px;">
-       提示：此區顯示最近一次結單的備份資料。若為舊版資料，系統已自動嘗試將其歸檔至月彙總。
+       提示：此區顯示最近一次結單的備份資料。若為舊版資料，系統自動將其歸檔至月彙總。
     </div>
     <div id="archives-list" class="records"></div>
   </div>
@@ -668,7 +668,7 @@ window.onerror = function(message, source, lineno, colno, error) {
     measurementId: "G-Z3PHZMCGNW"
   };
 
-  console.log("正在初始化 Firebase (V9.5)...");
+  console.log("正在初始化 Firebase (V9.6)...");
   const app = initializeApp(firebaseConfig);
   const db  = getFirestore(app);
   console.log("Firebase 初始化完成，資料庫實例：", db);
@@ -1268,6 +1268,48 @@ window.onerror = function(message, source, lineno, colno, error) {
       alert(`✅ 成功搬移！目前清單已清空。`);
     } catch(e) {
       alert("搬移失敗：" + e.message);
+    }
+  });
+
+  // V9.6 修正：確保 ✏️ 按鈕的事件綁定移到這裡
+  safeAddListener('btn-edit-date', 'click', async () => {
+    if (!CURRENT_BATCH || CURRENT_BATCH.status !== 'open') {
+        alert("目前沒有開放中的批次，無法修改。請先按「🚀 系統初始化」建立批次。");
+        return;
+    }
+    const oldDate = CURRENT_BATCH.delivery_date;
+    const newDate = prompt("請輸入修正後的到貨日 (YYYY-MM-DD)：", oldDate);
+    if (!newDate || newDate === oldDate) return;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(newDate)) {
+        alert("格式錯誤，請使用 YYYY-MM-DD 格式"); return;
+    }
+    
+    const newBillingMonth = ymFromYmd(newDate);
+    
+    try {
+        await updateDoc(currentBatchRef, {
+            delivery_date: newDate,
+            billing_month: newBillingMonth,
+            updated_at: serverTimestamp()
+        });
+        
+        const rows = await getBatchOrders(CURRENT_BATCH.batch_id);
+        
+        if (rows.length > 0) {
+            const batch = writeBatch(db);
+            rows.forEach(row => {
+                const ref = doc(db, 'orders', row.id);
+                batch.update(ref, {
+                    delivery_date: newDate,
+                    billing_month: newBillingMonth
+                });
+            });
+            await batch.commit();
+        }
+        
+        alert(`✅ 已修正日期為 ${newDate}\n相關訂單也已同步更新。`);
+    } catch(e) {
+        alert("修正失敗：" + e.message);
     }
   });
 
