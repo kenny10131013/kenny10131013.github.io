@@ -2,23 +2,39 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>股票代號辨識（優化版）</title>
+<title>股票代號辨識（最穩定版）</title>
 
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4"></script>
 
 <style>
 body { margin:0; background:black; }
-video { width:100%; }
 
+video {
+  width:100%;
+}
+
+/* 中央掃描框 */
+#scanBox {
+  position: fixed;
+  top: 35%;
+  left: 10%;
+  width: 80%;
+  height: 20%;
+  border: 2px solid #00ffcc;
+  box-sizing: border-box;
+}
+
+/* 按鈕 */
 #btn {
   position: fixed;
-  bottom: 80px;
+  bottom: 90px;
   left: 50%;
   transform: translateX(-50%);
   padding: 12px 20px;
   font-size: 18px;
 }
 
+/* 結果 */
 #result {
   position: fixed;
   bottom: 20px;
@@ -36,11 +52,13 @@ video { width:100%; }
 <body>
 
 <video id="camera" autoplay playsinline></video>
+<div id="scanBox"></div>
+
 <button id="btn">📸 辨識股票</button>
-<div id="result">準備中...</div>
+<div id="result">初始化中...</div>
 
 <script>
-// 📦 股票資料（先少量，之後可換JSON）
+// 📦 股票資料（可擴充）
 const stocks = [
   { name: "台積電", code: "2330" },
   { name: "鴻海", code: "2317" },
@@ -49,26 +67,24 @@ const stocks = [
   { name: "國泰金", code: "2882" }
 ];
 
-// 🔤 模糊比對
+// 🔤 簡單模糊比對
 function similarity(a, b) {
-  let longer = a.length > b.length ? a : b;
-  let shorter = a.length > b.length ? b : a;
   let same = 0;
-  for (let i = 0; i < shorter.length; i++) {
-    if (longer.includes(shorter[i])) same++;
+  for (let i = 0; i < b.length; i++) {
+    if (a.includes(b[i])) same++;
   }
-  return same / longer.length;
+  return same / b.length;
 }
 
 // 🔍 找公司
 function findCompany(text) {
   let best = null;
-  let score = 0;
+  let bestScore = 0;
 
   stocks.forEach(s => {
-    let sScore = similarity(text, s.name);
-    if (sScore > score && sScore > 0.5) {
-      score = sScore;
+    let score = similarity(text, s.name);
+    if (score > bestScore && score > 0.5) {
+      bestScore = score;
       best = s;
     }
   });
@@ -76,8 +92,10 @@ function findCompany(text) {
   return best;
 }
 
-// 🎯 判斷股票
+// 🎯 判斷
 function detect(text) {
+
+  console.log("OCR結果:", text);
 
   const company = findCompany(text);
   if (company) {
@@ -92,7 +110,7 @@ function detect(text) {
   return "找不到";
 }
 
-// 📷 開相機（後鏡頭 + 高解析度）
+// 📷 開相機（後鏡頭）
 const video = document.getElementById("camera");
 
 navigator.mediaDevices.getUserMedia({
@@ -103,15 +121,28 @@ navigator.mediaDevices.getUserMedia({
   }
 }).then(stream => {
   video.srcObject = stream;
+}).catch(err => {
+  document.getElementById("result").innerText =
+    "相機錯誤：" + err.message;
 });
 
-// 🔥 OCR worker（關鍵）
+// 🔥 OCR Worker
 let worker;
 
 async function initOCR() {
-  worker = await Tesseract.createWorker();
-  await worker.loadLanguage('chi_tra+eng');
-  await worker.initialize('chi_tra+eng');
+  worker = await Tesseract.createWorker({
+    logger: m => console.log(m)
+  });
+
+  await worker.loadLanguage('chi_tra');
+  await worker.initialize('chi_tra');
+
+  // 🔥 白名單（提升準確度）
+  await worker.setParameters({
+    tessedit_char_whitelist:
+      '0123456789台積電鴻海聯發科中華電信國泰金'
+  });
+
   document.getElementById("result").innerText = "準備完成";
 }
 
@@ -123,19 +154,29 @@ document.getElementById("btn").onclick = async () => {
   document.getElementById("result").innerText = "辨識中...";
 
   const canvas = document.createElement("canvas");
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
+
+  const w = video.videoWidth;
+  const h = video.videoHeight;
+
+  canvas.width = w * 2;
+  canvas.height = h * 2;
 
   const ctx = canvas.getContext("2d");
 
   // 🔥 圖像強化
   ctx.filter = "contrast(150%) brightness(110%) grayscale(100%)";
-  ctx.drawImage(video, 0, 0);
+
+  // 🔥 只抓中間區域（掃描框）
+  ctx.drawImage(
+    video,
+    w * 0.1, h * 0.35,   // 起點
+    w * 0.8, h * 0.25,   // 範圍
+    0, 0,
+    canvas.width, canvas.height
+  );
 
   try {
     const { data: { text } } = await worker.recognize(canvas);
-
-    console.log(text);
 
     const result = detect(text);
     document.getElementById("result").innerText = result;
